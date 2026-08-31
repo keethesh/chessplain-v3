@@ -26,7 +26,8 @@ const stripe = new Stripe(config.stripeSecretKey, {
 async function bootstrap() {
   // 1. Plugins
   await fastify.register(cors, {
-    origin: true,
+    // Allowlist: prod web origin + vercel preview deployments
+    origin: [config.webOrigin, /\.vercel\.app$/],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
@@ -222,8 +223,13 @@ async function bootstrap() {
     let sentMomentsCount = 0;
     let isFinished = false;
 
+    let lastPing = Date.now();
     const interval = setInterval(async () => {
       try {
+        if (Date.now() - lastPing > 15000) {
+          reply.raw.write(': ping\n\n'); // SSE comment keeps proxies from idling the stream
+          lastPing = Date.now();
+        }
         const { data: analysis, error } = await supabase
           .from('game_analyses')
           .select('id, status, moments, summary, completed_at')

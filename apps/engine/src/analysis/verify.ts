@@ -105,7 +105,9 @@ export async function verifyCandidates(
     const vSwing = vEvalAfter - vEvalBefore;
 
     // Drop candidate if swing < 1.0 pawn, unless it is a Quiet drift single candidate
-    if (Math.abs(vSwing) < 1.0 && candidates.length > 1 && c.candidateType !== 'Quiet drift') {
+    // Plan contract: drop if verified swing < 1.0 pawn (signed — a d20-evaluated
+    // positive swing means the depth-1.5k sweep disagreed, drop it too)
+    if (vSwing > -1.0 && candidates.length > 1 && c.candidateType !== 'Quiet drift') {
       continue;
     }
 
