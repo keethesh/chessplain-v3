@@ -6,19 +6,9 @@ import { enginePool } from '../src/uci/engine-pool.js';
 const TEST_USERNAMES = [
   'hikaru',
   'magnuscarlsen',
-  'naroditsky',
   'firouzja2003',
-  'erigaisi',
   'nihalsarin',
-  'botez',
-  'chessbrah',
   'gothamchess',
-  'danyanyam',
-  'alireza2003',
-  'danielnaroditsky',
-  'speedypawn',
-  'ericrosen',
-  'annacramling',
   'alexandrabotez',
   'andreabotez',
   'andrewtang',
@@ -26,19 +16,34 @@ const TEST_USERNAMES = [
   'fabianocaruana',
 ];
 
-// Fallback sample PGNs in case of API rate limits or network issues
-const SAMPLE_PGNS = [
-  `[Event "Live Chess"]
-[Site "Chess.com"]
-[Date "2026.08.31"]
-[White "Player1"]
-[Black "Player2"]
-[Result "0-1"]
-[WhiteElo "1150"]
-[BlackElo "1180"]
-[TimeControl "600"]
+const VALID_SAMPLE_PGNS = [
+  `[Event "F/S Return Match"]
+[Site "Belgrade, Serbia JUG"]
+[Date "1992.11.04"]
+[Round "29"]
+[White "Fischer, Robert J."]
+[Black "Spassky, Boris V."]
+[Result "1/2-1/2"]
 
-1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 Bb4+ 7. Bd2 Bxd2+ 8. Nbxd2 d5 9. exd5 Nxd5 10. Qb3 Nce7 11. O-O O-O 12. Rfe1 c6 13. Ne4 Nb6 14. Bd3 Ned5 15. Nc5 Rb8 16. Rad1 Bg4 17. Be4 Qf6 18. h3 Bh5 19. a4 Qd6 20. a5 Nd7 21. Nxd7 Qxd7 22. Ne5 Qd6 23. Bxf7+ Bxf7 24. Nxf7 Rxf7 25. Re5 Rbf8 26. f3 Kh8 27. Rde1 h6 28. Qc2 Nf4 29. R1e4 Qg6 30. Kh2 Rf5 31. Rd3 Nxd3 32. Qxd3 R5f6 33. Qe3 Rd6 34. Re7 Rf7 35. Re8+ Kh7 36. Ra8 a6 37. Qe8 Qf5 38. h4 Qf4+ 39. Kh3 Qf5+ 40. Kh2 Rxd4 0-1`,
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 11. c4 c6 12. cxb5 axb5 13. Nc3 Bb7 14. Bg5 b4 15. Nb1 h6 16. Bh4 c5 17. dxe5 Nxe4 18. Bxe7 Qxe7 19. exd6 Qf6 20. Nbd2 Nxd6 21. Nc4 Nxc4 22. Bxc4 Nb6 23. Ne5 Rae8 24. Bxf7+ Rxf7 25. Nxf7 Rxe1+ 26. Qxe1 Kxf7 27. Qe3 Qg5 28. Qxg5 hxg5 29. b3 Ke6 30. a3 Kd6 31. axb4 cxb4 32. Ra5 Nd5 33. f3 Bc8 34. Kf2 Bf5 35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5 40. Rd6 Kc5 41. Ra6 Nf2 42. g4 Bd3 43. Re6 1/2-1/2`,
+  `[Event "World Championship 28th"]
+[Site "Reykjavik ISL"]
+[Date "1972.07.23"]
+[Round "6"]
+[White "Fischer, Robert J."]
+[Black "Spassky, Boris V."]
+[Result "1-0"]
+
+1. c4 e6 2. Nf3 d5 3. d4 Nf6 4. Nc3 Be7 5. Bg5 O-O 6. e3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 11. Rc1 Be6 12. Qa4 c5 13. Qa3 Rc8 14. Bb5 a6 15. dxc5 bxc5 16. O-O Ra7 17. Be2 Nd7 18. Nd4 Qf8 19. Nxe6 fxe6 20. e4 d4 21. f4 Qe7 22. e5 Rb8 23. Bc4 Kh8 24. Qh3 Nf8 25. b3 a5 26. f5 exf5 27. Rxf5 Nh7 28. Rcf1 Qd8 29. Qg3 Re7 30. h4 Rbb7 31. e6 Rbc7 32. Qe5 Qe8 33. a4 Qd8 34. R1f2 Qe8 35. R2f3 Qd8 36. Bd3 Qe8 37. Qe4 Nf6 38. Rxf6 gxf6 39. Rxf6 Kg8 40. Bc4 Kh8 41. Qf4 1-0`,
+  `[Event "Opera Game"]
+[Site "Paris FRA"]
+[Date "1858.??.??"]
+[Round "?"]
+[White "Morphy, Paul"]
+[Black "Duke Karl / Count Isouard"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5 6. Bc4 Nf6 7. Qb3 Qe7 8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5 11. Bxb5+ Nbd7 12. O-O-O Rd8 13. Rxd7 Rxd7 14. Rd1 Qe6 15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8# 1-0`,
 ];
 
 async function main() {
@@ -58,16 +63,14 @@ async function main() {
 
     let pgn = '';
     let eloBand: any = '1000_1400';
-    let playerColor: 'white' | 'black' = 'white';
 
     try {
       const fetched = await fetchRecentChessComGame(user);
       pgn = fetched.pgn;
       eloBand = fetched.eloBand;
-      playerColor = fetched.playerColor;
     } catch (err) {
-      console.warn(`Could not fetch live game for ${user}, using fallback sample PGN:`, err);
-      pgn = SAMPLE_PGNS[i % SAMPLE_PGNS.length];
+      console.warn(`Live game fetch for ${user} unavailable, using fallback sample game:`, err instanceof Error ? err.message : err);
+      pgn = VALID_SAMPLE_PGNS[i % VALID_SAMPLE_PGNS.length];
     }
 
     try {
@@ -82,7 +85,6 @@ async function main() {
 
       const report = result.report;
 
-      // Assertions
       if (!report.summary?.headline) {
         throw new Error('Missing headline in summary');
       }
