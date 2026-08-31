@@ -49,7 +49,7 @@ export async function verifyCandidates(
     console.warn('[Verify] Error checking d20 cache:', err);
   }
 
-  // 2. Evaluate remaining FENs at depth 20
+  // 2. Evaluate remaining FENs in parallel at depth 20
   const missingFens = Array.from(fensToVerify).filter((fen) => !d20Map.has(fen));
   const toCache: Array<{
     fen: string;
@@ -60,8 +60,8 @@ export async function verifyCandidates(
     multipv: unknown;
   }> = [];
 
-  for (let i = 0; i < missingFens.length; i++) {
-    const fen = missingFens[i];
+  let completedCount = 0;
+  const evalPromises = missingFens.map(async (fen) => {
     const result = await enginePool.evaluate(fen, { depth: 20, multiPv: 2 });
     d20Map.set(fen, result);
     toCache.push({
@@ -72,10 +72,13 @@ export async function verifyCandidates(
       pv: result.pv,
       multipv: result.multipv,
     });
+    completedCount++;
     if (onProgress) {
-      onProgress(i + 1, missingFens.length);
+      onProgress(completedCount, missingFens.length);
     }
-  }
+  });
+
+  await Promise.all(evalPromises);
 
   // Write back to cache
   if (toCache.length > 0) {
