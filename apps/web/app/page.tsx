@@ -26,7 +26,7 @@ const HERO_COPY = {
 
 export default function HomePage() {
   const router = useRouter();
-  const [heroVariant, setHeroVariant] = useState<'A' | 'B' | 'E'>('A');
+  const [heroVariant, setHeroVariant] = useState<'A' | 'B' | 'E' | null>(null);
   const [tab, setTab] = useState<'username' | 'pgn'>('username');
   const [username, setUsername] = useState('');
   const [pgn, setPgn] = useState('');
@@ -43,6 +43,9 @@ export default function HomePage() {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+
+    // Variant is assigned on mount; without it there is nothing to attribute
+    if (!heroVariant) return;
 
     const isUsername = tab === 'username';
     const method = isUsername ? 'chesscom' : 'pgn';
@@ -81,11 +84,12 @@ export default function HomePage() {
     }
   };
 
-  const copy = HERO_COPY[heroVariant];
+  const copy = heroVariant ? HERO_COPY[heroVariant] : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20">
-      {/* Hero Section */}
+      {/* Hero Section — suppressed until the variant is computed client-side (no wrong-variant flash) */}
+      {copy && (
       <div className="text-center">
         <span className="badge-accent mb-4 inline-flex text-xs font-semibold uppercase tracking-wider">
           {copy.hook}
@@ -97,6 +101,7 @@ export default function HomePage() {
           {copy.subhead}
         </p>
       </div>
+      )}
 
       {/* Input Box Card */}
       <div className="card-box mt-10 shadow-sm border border-[var(--w-border)]">
