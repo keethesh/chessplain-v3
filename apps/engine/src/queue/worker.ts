@@ -39,6 +39,8 @@ export async function processNextJob(): Promise<boolean> {
     .from('game_analyses')
     .select('id, source_game_id, user_id, status, attempts, share_id, elo_band, hero_variant')
     .eq('status', 'pending')
+    // Honor retry backoff: skip rows whose next attempt is still in the future
+    .or(`next_attempt_at.is.null,next_attempt_at.lte.${new Date().toISOString()}`)
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -55,6 +57,7 @@ export async function processNextJob(): Promise<boolean> {
     .update({
       status: 'sweeping',
       attempts: (analysis.attempts || 0) + 1,
+      next_attempt_at: null,
       locked_at: new Date().toISOString(),
     })
     .eq('id', analysis.id)
@@ -171,6 +174,9 @@ export async function processNextJob(): Promise<boolean> {
       .from('game_analyses')
       .update({
         status: shouldRetry ? 'pending' : 'failed',
+        // ponytail: linear backoff (60s per prior attempt); go exponential if the
+        // LLM gateway needs longer recovery windows
+        next_attempt_at: shouldRetry ? new Date(Date.now() + attempts * 60_000).toISOString() : null,
       })
       .eq('id', analysis.id);
 
