@@ -102,7 +102,9 @@ async function bootstrap() {
       }
 
       // Check quota for free/anon users (2 reports in 7 days per IP)
-      if (!isPremium && clientIp) {
+      // Exempt localhost/tunnel testing
+      const isLocalOrDev = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost';
+      if (!isPremium && clientIp && !isLocalOrDev) {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { count, error: countErr } = await supabase
           .from('game_analyses')
@@ -117,7 +119,6 @@ async function bootstrap() {
           });
         }
       }
-
       const shareId = nanoid(8);
 
       // Insert source_games
