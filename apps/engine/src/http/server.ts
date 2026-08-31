@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import Stripe from 'stripe';
 import { nanoid } from 'nanoid';
+import { Chess } from 'chess.js';
 import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
@@ -79,6 +80,21 @@ async function bootstrap() {
         return reply.status(400).send({ error: 'Must provide either pgn or chesscom_username' });
       }
 
+      if (body.pgn) {
+        try {
+          const parsed = new Chess();
+          parsed.loadPgn(body.pgn);
+          if (parsed.history().length === 0) {
+            throw new Error('PGN contains no moves');
+          }
+        } catch (err) {
+          return reply.status(400).send({
+            error: 'invalid_pgn',
+            message: err instanceof Error ? err.message : 'Could not parse PGN',
+          });
+        }
+      }
+
       const clientIp = request.ip;
 
       // Extract auth token if provided
@@ -113,6 +129,7 @@ async function bootstrap() {
           .from('game_analyses')
           .select('id', { count: 'exact', head: true })
           .eq('ip', clientIp)
+          .neq('status', 'failed') // abandoned/failed runs don't consume quota
           .gte('created_at', sevenDaysAgo);
 
         if (!countErr && typeof count === 'number' && count >= 2) {
