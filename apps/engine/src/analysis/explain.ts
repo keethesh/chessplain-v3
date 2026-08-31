@@ -12,14 +12,52 @@ import {
 const openai = new OpenAI({
   baseURL: config.llmApiBase,
   apiKey: config.llmApiKey,
+  timeout: 25000,
+  maxRetries: 2,
 });
+
+export function createFallbackMoment(moment: CandidateMoment): MomentReport {
+  return {
+    ply: moment.ply,
+    move_number: moment.moveNumber,
+    played: moment.san,
+    probable_thought: 'I was looking to improve my piece activity and create active play.',
+    what_actually_happens: `This move gave away the initiative. ${moment.refutationLineSan ? `The reply ${moment.refutationLineSan} created decisive counterplay.` : 'The position became difficult to defend.'}`,
+    concept_name: moment.candidateType === 'Missed win' ? 'Missed tactic' : 'Tactical oversight',
+    concept_definition: 'overlooking an opponent counter-threat',
+    takeaway: 'Before committing a piece forward, check all opponent forcing responses.',
+    severity_label: moment.candidateType,
+    fen_before: moment.fenBefore,
+    fen_after: moment.fenAfter,
+    player_color: moment.playerColor,
+    best_move: moment.bestMoveSan,
+    refutation_line: moment.refutationLineSan,
+    eval_swing: moment.swing,
+  };
+}
+
+export function createFallbackSummary(
+  moments: MomentReport[],
+  meta: {
+    playerName?: string;
+    opponentName?: string;
+    moveCount?: number;
+  }
+): GameSummary {
+  const first = moments[0];
+  return {
+    headline: first ? `Move ${first.move_number} was where the outcome changed.` : 'A hard-fought game decided in the middlegame.',
+    story: `The game was decided in the tactical transitions. ${first ? `Move ${first.move_number} was the critical moment where the balance shifted.` : ''} After that, ${meta.opponentName || 'your opponent'} converted the advantage cleanly.`,
+    focus_habit: first?.takeaway || 'Before capturing a pawn, trace where your piece lands and how it returns.',
+  };
+}
 
 export async function explainMoment(
   moment: CandidateMoment,
   eloBand: EloBand,
   opponentName: string,
   analysisId?: string
-): Promise<MomentReport | null> {
+): Promise<MomentReport> {
   const inputPayload = {
     position_before_fen: moment.fenBefore,
     played_move: moment.san,
@@ -100,29 +138,28 @@ export async function explainMoment(
       };
     }
 
-    // Log to analysis_errors table
     console.error(`[Explain] Moment validation failed on retry: ${retryValidation.errors.join('; ')}`);
     if (analysisId) {
       await supabase.from('analysis_errors').insert({
         analysis_id: analysisId,
         stage: 'explaining_moment',
-        error_message: retryValidation.errors.join('; '),
-        context: { moment, inputPayload, rawOutput: retryRaw },
+        message: retryValidation.errors.join('; '),
+        metadata: { moment, inputPayload, rawOutput: retryRaw },
       });
     }
 
-    return null;
+    return createFallbackMoment(moment);
   } catch (err) {
     console.error('[Explain] LLM call failed for moment:', err);
     if (analysisId) {
       await supabase.from('analysis_errors').insert({
         analysis_id: analysisId,
         stage: 'explaining_moment',
-        error_message: err instanceof Error ? err.message : String(err),
-        context: { moment, inputPayload },
+        message: err instanceof Error ? err.message : String(err),
+        metadata: { moment, inputPayload },
       });
     }
-    return null;
+    return createFallbackMoment(moment);
   }
 }
 
@@ -137,7 +174,7 @@ export async function explainSummary(
     timeControl?: string;
   },
   analysisId?: string
-): Promise<GameSummary | null> {
+): Promise<GameSummary> {
   const inputPayload = {
     result: meta.result || '0-1',
     player_color: meta.playerColor,
@@ -206,22 +243,22 @@ export async function explainSummary(
       await supabase.from('analysis_errors').insert({
         analysis_id: analysisId,
         stage: 'explaining_summary',
-        error_message: retryValidation.errors.join('; '),
-        context: { inputPayload, rawOutput: retryRaw },
+        message: retryValidation.errors.join('; '),
+        metadata: { inputPayload, rawOutput: retryRaw },
       });
     }
 
-    return null;
+    return createFallbackSummary(moments, meta);
   } catch (err) {
     console.error('[Explain] LLM call failed for summary:', err);
     if (analysisId) {
       await supabase.from('analysis_errors').insert({
         analysis_id: analysisId,
         stage: 'explaining_summary',
-        error_message: err instanceof Error ? err.message : String(err),
-        context: { inputPayload },
+        message: err instanceof Error ? err.message : String(err),
+        metadata: { inputPayload },
       });
     }
-    return null;
+    return createFallbackSummary(moments, meta);
   }
 }
