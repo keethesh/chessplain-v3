@@ -1,0 +1,12 @@
+{
+  "name": "chessplain-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter ./apps/* build",
+    "lint": "pnpm --filter ./apps/* lint"
+  },
+  "packageManager": "pnpm@10.28.2"
+}

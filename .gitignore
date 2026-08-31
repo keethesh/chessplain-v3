@@ -1,0 +1,7 @@
+node_modules/
+.env*
+!.env.example
+dist/
+.next/
+data/*.db*
+.DS_Store
