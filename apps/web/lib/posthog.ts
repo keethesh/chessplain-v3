@@ -11,7 +11,7 @@ export function initPostHog(): void {
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
     person_profiles: 'identified_only',
-    capture_pageview: false, // manual capture
+    capture_pageview: true, // SPA auto-capture; init is eager via PostHogProvider
   });
 
   isInitialized = true;

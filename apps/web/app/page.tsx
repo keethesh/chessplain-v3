@@ -59,17 +59,20 @@ export default function HomePage() {
       return;
     }
 
-    captureEvent('pgn_submitted', {
-      method,
-      hero_variant: heroVariant,
-    });
-
     try {
       const payload = isUsername
         ? { chesscom_username: username.trim(), hero_variant: heroVariant }
         : { pgn: pgn.trim(), hero_variant: heroVariant };
 
       const response = await submitReport(payload);
+      // Count only accepted submissions in the funnel
+      captureEvent('pgn_submitted', {
+        method,
+        hero_variant: heroVariant,
+      });
+      const priorSubmissions = Number(localStorage.getItem('cp_submissions') || '0');
+      captureEvent('game_submitted', { is_repeat: priorSubmissions > 0 });
+      localStorage.setItem('cp_submissions', String(priorSubmissions + 1));
       router.push(`/report/${response.id}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Submission failed';

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PostHogProvider } from '../components/PostHogProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export default function RootLayout({
             </div>
           </div>
         </header>
-        <main>{children}</main>
+        <main><PostHogProvider>{children}</PostHogProvider></main>
       </body>
     </html>
   );

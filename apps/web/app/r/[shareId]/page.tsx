@@ -1,6 +1,6 @@
 import React from 'react';
-import Link from 'next/navigation';
 import { getReportByShareId } from '../../../lib/api';
+import { ShareViewTracker } from '../../../components/ShareViewTracker';
 import { ChessboardView } from '../../../components/ChessboardView';
 import { MomentCard } from '../../../components/MomentCard';
 import { ArrowRight } from 'lucide-react';
@@ -39,6 +39,7 @@ export default async function SharedReportPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      <ShareViewTracker shareId={shareId} />
       {/* Banner Call to Action */}
       <div className="mb-8 rounded-lg bg-[var(--w-accent-soft)] p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-[var(--w-accent)]/20">
         <div>

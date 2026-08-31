@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Sparkles, Zap, Shield, HelpCircle } from 'lucide-react';
 import { createCheckoutSession } from '../../lib/api';
 import { captureEvent } from '../../lib/posthog';
@@ -9,6 +9,10 @@ export default function PricingPage() {
   const [interval, setInterval] = useState<'month' | 'year'>('month');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    captureEvent('paywall_viewed', {});
+  }, []);
 
   const handleCheckout = async (chosenInterval: 'month' | 'year') => {
     setIsLoading(true);
