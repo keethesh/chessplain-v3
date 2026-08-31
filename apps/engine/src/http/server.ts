@@ -297,7 +297,17 @@ async function bootstrap() {
       .eq('id', id)
       .single();
 
-    await supabase.from('game_analyses').update({ user_id: userId }).eq('id', id);
+    // Only claim anonymous reports; never reassign one that already has an owner
+    const { data: claimed } = await supabase
+      .from('game_analyses')
+      .update({ user_id: userId })
+      .eq('id', id)
+      .is('user_id', null)
+      .select('id');
+
+    if (!claimed || claimed.length === 0) {
+      return reply.status(409).send({ error: 'report_already_claimed' });
+    }
 
     if (analysis?.source_game_id) {
       await supabase.from('source_games').update({ user_id: userId }).eq('id', analysis.source_game_id);
