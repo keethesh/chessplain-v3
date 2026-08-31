@@ -17,6 +17,7 @@ import { supabase } from '../../../lib/supabase';
 import { ChessboardView } from '../../../components/ChessboardView';
 import { MomentCard, MomentSkeleton } from '../../../components/MomentCard';
 import { EvalSparkline } from '../../../components/EvalSparkline';
+import { Chess } from 'chess.js';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -173,6 +174,17 @@ export default function ReportPage({ params }: PageProps) {
   const currentMoment = moments[activeMomentIndex] || moments[0];
   const activeFen = currentMoment?.fen_before || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
+  // Played-move arrow for the active moment (plan: board shows played move arrows)
+  const playedArrow = (() => {
+    if (!currentMoment) return undefined;
+    try {
+      const mv = new Chess(currentMoment.fen_before).move(currentMoment.played);
+      return mv ? { startSquare: mv.from, endSquare: mv.to, color: '#4338ca' } : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+
   // Stalled or Failed Callout Screen
   if (status === 'failed' || isStalled) {
     return (
@@ -252,6 +264,7 @@ export default function ReportPage({ params }: PageProps) {
               fen={activeFen}
               orientation={report?.player_color || 'white'}
               boardWidth={360}
+              arrows={playedArrow ? [playedArrow] : []}
             />
           </div>
 

@@ -4,6 +4,7 @@ import { ShareViewTracker } from '../../../components/ShareViewTracker';
 import { ChessboardView } from '../../../components/ChessboardView';
 import { MomentCard } from '../../../components/MomentCard';
 import { ArrowRight } from 'lucide-react';
+import { Chess } from 'chess.js';
 
 interface PageProps {
   params: Promise<{ shareId: string }>;
@@ -37,6 +38,14 @@ export default async function SharedReportPage({ params }: PageProps) {
   const moments = report.moments || [];
   const firstFen = moments[0]?.fen_before || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
+  let firstArrow: Array<{ startSquare: string; endSquare: string; color?: string }> = [];
+  try {
+    const mv = moments[0] ? new Chess(moments[0].fen_before).move(moments[0].played) : null;
+    if (mv) firstArrow = [{ startSquare: mv.from, endSquare: mv.to, color: '#4338ca' }];
+  } catch {
+    firstArrow = [];
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <ShareViewTracker shareId={shareId} />
@@ -64,6 +73,7 @@ export default async function SharedReportPage({ params }: PageProps) {
               fen={firstFen}
               orientation={report.player_color || 'white'}
               boardWidth={360}
+              arrows={firstArrow}
             />
           </div>
         </div>
