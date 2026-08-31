@@ -173,7 +173,8 @@ async function bootstrap() {
 
     const { data: analysis, error } = await supabase
       .from('game_analyses')
-      .select('*, source_games(*)')
+      // Explicit column list: never expose submitter ip/user_id on public report endpoints
+      .select('id, source_game_id, status, share_id, hero_variant, elo_band, moments, summary, created_at, completed_at, source_games(id, pgn, player_color, white_player, black_player)')
       .eq('id', id)
       .single();
 
@@ -190,7 +191,8 @@ async function bootstrap() {
 
     const { data: analysis, error } = await supabase
       .from('game_analyses')
-      .select('*, source_games(*)')
+      // Explicit column list: never expose submitter ip/user_id on public report endpoints
+      .select('id, source_game_id, status, share_id, hero_variant, elo_band, moments, summary, created_at, completed_at, source_games(id, pgn, player_color, white_player, black_player)')
       .eq('share_id', shareId)
       .single();
 
