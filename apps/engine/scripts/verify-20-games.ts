@@ -14,6 +14,16 @@ const TEST_USERNAMES = [
   'andrewtang',
   'hansontwitch',
   'fabianocaruana',
+  'danielnaroditsky',
+  'anishgiri',
+  'wonderfultime',
+  'levonaronian',
+  'viditchess',
+  'agadmator',
+  'chessnetwork',
+  'thechesswebsite',
+  'erik',
+  'samshankchess',
 ];
 
 const VALID_SAMPLE_PGNS = [
@@ -55,6 +65,7 @@ async function main() {
   const latencies: number[] = [];
   let successful = 0;
   let failed = 0;
+  let usedSamples = 0;
   const errors: string[] = [];
 
   for (let i = 0; i < 20; i++) {
@@ -70,6 +81,7 @@ async function main() {
       eloBand = fetched.eloBand;
     } catch (err) {
       console.warn(`Live game fetch for ${user} unavailable, using fallback sample game:`, err instanceof Error ? err.message : err);
+      usedSamples++;
       pgn = VALID_SAMPLE_PGNS[i % VALID_SAMPLE_PGNS.length];
     }
 
@@ -134,6 +146,7 @@ async function main() {
   console.log('\n================ VERIFICATION SUMMARY ================');
   console.log(`Success rate: ${successful}/20 (${(successful / 20) * 100}%)`);
   console.log(`Median Latency: ${(medianLatency / 1000).toFixed(2)}s (Target <= 30s)`);
+  console.log(`Sample fallbacks used: ${usedSamples}/20`);
   if (errors.length > 0) {
     console.log('\nFailures:\n' + errors.map((e) => `  - ${e}`).join('\n'));
   }
@@ -142,6 +155,14 @@ async function main() {
 
   if (successful < 19) {
     console.error(`\nGATE FAILED: Success rate ${successful}/20 is below 19/20 requirement.`);
+    process.exit(1);
+  }
+  if (usedSamples > 2) {
+    console.error(`\nGATE FAILED: ${usedSamples}/20 games used bundled samples — live chess.com fetching is broken.`);
+    process.exit(1);
+  }
+  if (medianLatency > 30_000) {
+    console.error(`\nGATE FAILED: Median latency ${(medianLatency / 1000).toFixed(2)}s exceeds the 30s target.`);
     process.exit(1);
   }
 
