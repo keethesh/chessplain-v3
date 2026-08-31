@@ -15,12 +15,12 @@ const HERO_COPY = {
   B: {
     hook: "It wasn't a blunder. It was a plan that almost worked.",
     headline: 'Chessplain figures out why you played that move.',
-    subhead: 'We explain the flaw in your plan, not the move. See the missed threat through human eyes.',
+    subhead: 'Explains the flaw in the plan, not the move.',
   },
   E: {
     hook: "You just lost. You don't know why. The engine won't tell you.",
-    headline: 'Paste a game. Get an explanation you will actually understand.',
-    subhead: 'Like a patient friend with a 3200 rating who translates engine depth into plain English.',
+    headline: "Paste a game. Get an explanation you'll actually understand.",
+    subhead: 'Like a patient friend with a 3200 rating.',
   },
 };
 

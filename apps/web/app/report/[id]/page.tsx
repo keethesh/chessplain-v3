@@ -169,7 +169,7 @@ export default function ReportPage({ params }: PageProps) {
           </div>
           <h2 className="t-heading mb-2">This is taking longer than it should.</h2>
           <p className="t-body muted mb-6">
-            Your game is safely queued. High engine load can occasionally cause a brief queue delay — try refreshing in a minute.
+            Your game is queued — try refreshing in a minute.
           </p>
           <div className="flex justify-center gap-3">
             <button
@@ -177,7 +177,7 @@ export default function ReportPage({ params }: PageProps) {
               className="rounded-md bg-[var(--w-accent)] px-4 py-2 text-sm font-medium text-[var(--w-on-accent)] hover:opacity-90 transition-all flex items-center gap-2"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Refresh report</span>
+              <span>Try again</span>
             </button>
             <button
               onClick={() => router.push('/')}
@@ -301,7 +301,8 @@ export default function ReportPage({ params }: PageProps) {
             )}
           </div>
 
-          {/* Email Capture Section */}
+          {/* Email Capture Section — plan: capture happens AFTER the report renders */}
+          {status === 'completed' && (
           <div className="card-box mt-4 border border-[var(--w-border)]">
             <h3 className="t-section text-base mb-1">Want to keep this report?</h3>
             <p className="t-caption muted mb-4">
@@ -332,6 +333,7 @@ export default function ReportPage({ params }: PageProps) {
               </form>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>
