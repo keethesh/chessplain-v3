@@ -16,6 +16,32 @@ const openai = new OpenAI({
   maxRetries: 2,
 });
 
+export function extractJsonString(choice?: OpenAI.Chat.Completions.ChatCompletion.Choice): string {
+  if (!choice) return '{}';
+  const content = choice.message?.content?.trim();
+  if (content && content.length > 2) {
+    return cleanJsonString(content);
+  }
+
+  const rawMsg = choice.message as { reasoning_content?: string };
+  const reasoning = rawMsg.reasoning_content?.trim();
+  if (reasoning && reasoning.length > 2) {
+    return cleanJsonString(reasoning);
+  }
+
+  return '{}';
+}
+
+function cleanJsonString(str: string): string {
+  const unquoted = str
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  const match = unquoted.match(/\{[\s\S]*\}/);
+  return match ? match[0] : unquoted;
+}
+
 export function createFallbackMoment(moment: CandidateMoment): MomentReport {
   return {
     ply: moment.ply,
@@ -87,8 +113,13 @@ export async function explainMoment(
       max_tokens: 450,
     });
 
-    const rawText = response.choices[0]?.message?.content || '{}';
-    const parsed = JSON.parse(rawText);
+    const rawJson = extractJsonString(response.choices[0]);
+    let parsed: unknown = {};
+    try {
+      parsed = JSON.parse(rawJson);
+    } catch {
+      parsed = {};
+    }
     const validation = validateMomentJson(parsed);
 
     if (validation.isValid && validation.parsed) {
@@ -120,8 +151,13 @@ export async function explainMoment(
       max_tokens: 450,
     });
 
-    const retryRaw = retryResponse.choices[0]?.message?.content || '{}';
-    const retryParsed = JSON.parse(retryRaw);
+    const retryRawJson = extractJsonString(retryResponse.choices[0]);
+    let retryParsed: unknown = {};
+    try {
+      retryParsed = JSON.parse(retryRawJson);
+    } catch {
+      retryParsed = {};
+    }
     const retryValidation = validateMomentJson(retryParsed);
 
     if (retryValidation.isValid && retryValidation.parsed) {
@@ -144,7 +180,7 @@ export async function explainMoment(
         analysis_id: analysisId,
         stage: 'explaining_moment',
         message: retryValidation.errors.join('; '),
-        metadata: { moment, inputPayload, rawOutput: retryRaw },
+        metadata: { moment, inputPayload, rawOutput: retryRawJson },
       });
     }
 
@@ -208,8 +244,13 @@ export async function explainSummary(
       max_tokens: 350,
     });
 
-    const rawText = response.choices[0]?.message?.content || '{}';
-    const parsed = JSON.parse(rawText);
+    const rawJson = extractJsonString(response.choices[0]);
+    let parsed: unknown = {};
+    try {
+      parsed = JSON.parse(rawJson);
+    } catch {
+      parsed = {};
+    }
     const validation = validateSummaryJson(parsed);
 
     if (validation.isValid && validation.parsed) {
@@ -231,8 +272,13 @@ export async function explainSummary(
       max_tokens: 350,
     });
 
-    const retryRaw = retryResponse.choices[0]?.message?.content || '{}';
-    const retryParsed = JSON.parse(retryRaw);
+    const retryRawJson = extractJsonString(retryResponse.choices[0]);
+    let retryParsed: unknown = {};
+    try {
+      retryParsed = JSON.parse(retryRawJson);
+    } catch {
+      retryParsed = {};
+    }
     const retryValidation = validateSummaryJson(retryParsed);
 
     if (retryValidation.isValid && retryValidation.parsed) {
@@ -244,7 +290,7 @@ export async function explainSummary(
         analysis_id: analysisId,
         stage: 'explaining_summary',
         message: retryValidation.errors.join('; '),
-        metadata: { inputPayload, rawOutput: retryRaw },
+        metadata: { inputPayload, rawOutput: retryRawJson },
       });
     }
 
