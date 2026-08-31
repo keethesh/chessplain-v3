@@ -161,7 +161,7 @@ export default function ReportPage({ params }: PageProps) {
       await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/report/${id}`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?report_id=${id}`,
         },
       });
       setIsEmailSent(true);
