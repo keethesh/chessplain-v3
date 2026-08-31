@@ -127,7 +127,9 @@ async function bootstrap() {
           user_id: userId,
           ip: clientIp,
           pgn: body.pgn,
-          chesscom_username: body.chesscom_username,
+          source: body.chesscom_username ? 'chesscom' : 'pgn',
+          external_id: body.chesscom_username || null,
+          metadata: body.chesscom_username ? { chesscom_username: body.chesscom_username } : {},
         })
         .select('id')
         .single();

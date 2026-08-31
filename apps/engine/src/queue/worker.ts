@@ -4,7 +4,7 @@ import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { runAnalysisPipeline } from '../analysis/pipeline.js';
 import { fetchRecentChessComGame } from '../analysis/chesscom.js';
-import { EloBand, MomentReport } from '../types.js';
+import { EloBand } from '../types.js';
 
 const posthog = new PostHog(config.posthogKey, {
   host: config.posthogHost,
@@ -28,15 +28,13 @@ interface GameAnalysisRow {
 interface SourceGameRow {
   id: string;
   pgn?: string;
-  chesscom_username?: string;
+  source?: string;
+  external_id?: string;
+  metadata?: Record<string, unknown>;
   user_id?: string;
 }
 
 export async function processNextJob(): Promise<boolean> {
-  // Lock next pending job using Supabase RPC or direct update
-  // Since Supabase JS client doesn't directly support FOR UPDATE SKIP LOCKED without RPC or raw SQL,
-  // we use a PostgreSQL function or direct update query via execute_sql / rpc, with a fallback optimistic update.
-
   const { data: candidate, error: fetchErr } = await supabase
     .from('game_analyses')
     .select('id, source_game_id, user_id, status, attempts, share_id, elo_band, hero_variant')
@@ -57,6 +55,7 @@ export async function processNextJob(): Promise<boolean> {
     .update({
       status: 'sweeping',
       attempts: (analysis.attempts || 0) + 1,
+      locked_at: new Date().toISOString(),
     })
     .eq('id', analysis.id)
     .eq('status', 'pending')
@@ -78,24 +77,33 @@ export async function processNextJob(): Promise<boolean> {
     if (analysis.source_game_id) {
       const { data: sourceData } = await supabase
         .from('source_games')
-        .select('id, pgn, chesscom_username')
+        .select('id, pgn, source, external_id, metadata')
         .eq('id', analysis.source_game_id)
         .single();
 
       const source = sourceData as SourceGameRow | null;
+      const metadata = source?.metadata || {};
+      const chesscomUser = (metadata['chesscom_username'] as string) || (source?.source === 'chesscom' ? source?.external_id : undefined);
+
       if (source?.pgn) {
         pgn = source.pgn;
-      } else if (source?.chesscom_username) {
-        const fetched = await fetchRecentChessComGame(source.chesscom_username);
+      } else if (chesscomUser) {
+        const fetched = await fetchRecentChessComGame(chesscomUser);
         pgn = fetched.pgn;
         eloBand = fetched.eloBand;
-        targetPlayer = source.chesscom_username;
+        targetPlayer = chesscomUser;
 
-        // Persist fetched PGN back to source_games
-        await supabase
-          .from('source_games')
-          .update({ pgn })
-          .eq('id', source.id);
+        if (source) {
+          await supabase
+            .from('source_games')
+            .update({
+              pgn,
+              player_color: fetched.playerColor,
+              white_player: fetched.playerColor === 'white' ? chesscomUser : fetched.opponentUsername,
+              black_player: fetched.playerColor === 'black' ? chesscomUser : fetched.opponentUsername,
+            })
+            .eq('id', source.id);
+        }
       }
     }
 
@@ -168,9 +176,9 @@ export async function processNextJob(): Promise<boolean> {
 
     await supabase.from('analysis_errors').insert({
       analysis_id: analysis.id,
-      stage: 'worker_execution',
-      error_message: errorMsg,
-      context: { attempts, shouldRetry },
+      stage: 'engine',
+      message: errorMsg,
+      metadata: { attempts, shouldRetry },
     });
 
     posthog.capture({
