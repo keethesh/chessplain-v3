@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Sparkles,
@@ -35,6 +35,7 @@ export default function ReportPage({ params }: PageProps) {
   const [isEmailSent, setIsEmailSent] = useState(false);
   const [isStalled, setIsStalled] = useState(false);
   const [expandedMoments, setExpandedMoments] = useState<Set<number>>(new Set());
+  const engagedRef = useRef(false);
 
   // 1. Setup SSE streaming and initial fetch
   useEffect(() => {
@@ -54,17 +55,22 @@ export default function ReportPage({ params }: PageProps) {
       })
       .catch((err) => console.warn('Initial report fetch error:', err));
 
-    // Stalled fallback timer (60s)
-    const stallTimer = setTimeout(() => {
-      if (status !== 'completed' && status !== 'failed') {
-        setIsStalled(true);
-      }
-    }, 60000);
+    // Stall watchdog: 60s without any stream activity (re-armed on every event),
+    // not 60s since mount — a slow-but-live stream must never read as stalled
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
+    const armStall = () => {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => setIsStalled(true), 60000);
+    };
+    armStall();
+
+    let streamFinished = false;
 
     // Setup SSE
     const eventSource = new EventSource(`${API_BASE_URL}/api/reports/${id}/events`);
 
     eventSource.onmessage = (event) => {
+      armStall(); // any message is stream activity
       try {
         const payload = JSON.parse(event.data);
         if (payload.type === 'stage') {
@@ -77,6 +83,8 @@ export default function ReportPage({ params }: PageProps) {
             return updated;
           });
         } else if (payload.type === 'done' && payload.report) {
+          streamFinished = true;
+          if (stallTimer) clearTimeout(stallTimer);
           setReport(payload.report);
           setStatus('completed');
           if (payload.report.moments) {
@@ -84,6 +92,8 @@ export default function ReportPage({ params }: PageProps) {
           }
           eventSource.close();
         } else if (payload.type === 'failed') {
+          streamFinished = true;
+          if (stallTimer) clearTimeout(stallTimer);
           setStatus('failed');
           eventSource.close();
         }
@@ -93,14 +103,14 @@ export default function ReportPage({ params }: PageProps) {
     };
 
     eventSource.onerror = () => {
-      // Keep trying unless completed
-      if (status === 'completed') {
+      // Keep trying unless the stream reached a terminal state
+      if (streamFinished) {
         eventSource.close();
       }
     };
 
     return () => {
-      clearTimeout(stallTimer);
+      if (stallTimer) clearTimeout(stallTimer);
       eventSource.close();
     };
   }, [id]);
@@ -108,7 +118,10 @@ export default function ReportPage({ params }: PageProps) {
   // 2. Dwell time & engagement tracking
   useEffect(() => {
     const dwellTimer = setTimeout(() => {
-      captureEvent('report_engaged', { report_id: id, reason: 'dwell_60s' });
+      if (!engagedRef.current) {
+        engagedRef.current = true;
+        captureEvent('report_engaged', { report_id: id, reason: 'dwell_60s' });
+      }
     }, 60000);
 
     return () => clearTimeout(dwellTimer);
@@ -124,7 +137,8 @@ export default function ReportPage({ params }: PageProps) {
         moment_index: index,
         concept_name: m.concept_name,
       });
-      if (nextExpanded.size >= 2) {
+      if (nextExpanded.size >= 2 && !engagedRef.current) {
+        engagedRef.current = true;
         captureEvent('report_engaged', { report_id: id, reason: 'moments_expanded_2' });
       }
     }
