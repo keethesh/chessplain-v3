@@ -45,7 +45,8 @@ export async function explainMoment(
         { role: 'user', content: userContent },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.3,
+      temperature: 0.2,
+      max_tokens: 450,
     });
 
     const rawText = response.choices[0]?.message?.content || '{}';
@@ -77,7 +78,8 @@ export async function explainMoment(
         { role: 'user', content: retryUserContent },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.2,
+      temperature: 0.1,
+      max_tokens: 450,
     });
 
     const retryRaw = retryResponse.choices[0]?.message?.content || '{}';
@@ -165,7 +167,8 @@ export async function explainSummary(
         { role: 'user', content: userContent },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.3,
+      temperature: 0.2,
+      max_tokens: 350,
     });
 
     const rawText = response.choices[0]?.message?.content || '{}';
@@ -187,7 +190,8 @@ export async function explainSummary(
         { role: 'user', content: retryUserContent },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.2,
+      temperature: 0.1,
+      max_tokens: 350,
     });
 
     const retryRaw = retryResponse.choices[0]?.message?.content || '{}';
