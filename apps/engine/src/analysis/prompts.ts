@@ -146,9 +146,14 @@ export function validateMomentJson(data: unknown): { isValid: boolean; errors: s
 
   const conceptDef = record['concept_definition'];
   if (typeof conceptDef === 'string') {
-    const wordCount = conceptDef.trim().split(/\s+/).length;
-    if (wordCount > 8) {
-      errors.push(`concept_definition exceeds 8 words (${wordCount} words): "${conceptDef}"`);
+    const trimmed = conceptDef.trim();
+    const words = trimmed.split(/\s+/);
+    if (words.length > 8 && words.length <= 11) {
+      // Auto-clamp minor overages (9-11 words) to 8 words to prevent slow roundtrips
+      const clamped = words.slice(0, 8).join(' ');
+      record['concept_definition'] = clamped;
+    } else if (words.length > 8) {
+      errors.push(`concept_definition exceeds 8 words (${words.length} words): "${trimmed}"`);
     }
   }
 
