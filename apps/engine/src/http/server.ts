@@ -102,9 +102,11 @@ async function bootstrap() {
       }
 
       // Check quota for free/anon users (2 reports in 7 days per IP)
-      // Exempt localhost/tunnel testing
-      const isLocalOrDev = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost';
-      if (!isPremium && clientIp && !isLocalOrDev) {
+      // ponytail: exemption is env-gated, not IP-matched — the old 127.0.0.1 check
+      // was spoofable via X-Forwarded-For with trustProxy enabled. If NAT collisions
+      // bite, use the plan's fallback (email OTP before report 2).
+      const quotaEnforced = config.nodeEnv === 'production';
+      if (!isPremium && clientIp && quotaEnforced) {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { count, error: countErr } = await supabase
           .from('game_analyses')
