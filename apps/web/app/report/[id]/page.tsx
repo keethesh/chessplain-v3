@@ -312,7 +312,7 @@ export default function ReportPage({ params }: PageProps) {
     if (!currentMoment) return undefined;
     try {
       const mv = new Chess(currentMoment.fen_before).move(currentMoment.played);
-      return mv ? { startSquare: mv.from, endSquare: mv.to, color: 'rgba(180, 83, 9, 0.85)' } : undefined;
+      return mv ? { startSquare: mv.from, endSquare: mv.to, color: 'var(--w-accent)' } : undefined;
     } catch {
       return undefined;
     }

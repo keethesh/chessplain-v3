@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PostHogProvider } from '../components/PostHogProvider';
+import { Newsreader } from 'next/font/google';
 import './globals.css';
+
+const newsreader = Newsreader({ subsets: ['latin'], variable: '--font-newsreader', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Chessplain — Your games, explained like a person',
@@ -18,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={newsreader.variable}>
       <body className="min-h-screen flex flex-col bg-[var(--w-canvas)] text-[var(--w-ink1)] antialiased">
         <header className="border-b border-[var(--w-border)] bg-[var(--w-surface)]/80 backdrop-blur-sm sticky top-0 z-20 px-4 py-3 sm:px-6">
           <div className="mx-auto flex max-w-5xl items-center justify-between">

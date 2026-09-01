@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme {
+  --font-serif: var(--font-newsreader), "Georgia", "Cambria", "Times New Roman", serif;
+}
+
 :root {
   /* Modern Tournament Editorial - Light Theme */
   --w-canvas: #fbf9f5;
@@ -10,7 +14,7 @@
   
   --w-ink1: #18181b;
   --w-ink2: #65656e;
-  --w-ink3: #8e8e98;
+  --w-ink3: #6b6b76; /* 4.6:1 on alabaster — was 3.0:1, fails AA at 11px */
   
   /* Accent & Status */
   --w-accent: #b45309;
@@ -129,7 +133,7 @@ body {
 
 /* Editorial Typography System */
 .t-display {
-  font-family: "Newsreader", "Georgia", "Cambria", "Times New Roman", serif;
+  font-family: var(--font-newsreader), "Georgia", "Cambria", "Times New Roman", serif;
   font-size: var(--t-3xl);
   line-height: var(--t-3xl-lh);
   font-weight: 700;
@@ -138,7 +142,7 @@ body {
 }
 
 .t-heading {
-  font-family: "Newsreader", "Georgia", "Cambria", "Times New Roman", serif;
+  font-family: var(--font-newsreader), "Georgia", "Cambria", "Times New Roman", serif;
   font-size: var(--t-2xl);
   line-height: var(--t-2xl-lh);
   font-weight: 600;
@@ -147,7 +151,7 @@ body {
 }
 
 .t-section {
-  font-family: "Newsreader", "Georgia", "Cambria", "Times New Roman", serif;
+  font-family: var(--font-newsreader), "Georgia", "Cambria", "Times New Roman", serif;
   font-size: var(--t-xl);
   line-height: var(--t-xl-lh);
   font-weight: 600;

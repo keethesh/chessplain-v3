@@ -22,7 +22,7 @@ export function ChessboardView({
 
   for (const sq of highlightSquares) {
     customSquareStyles[sq] = {
-      backgroundColor: 'rgba(180, 83, 9, 0.35)',
+      backgroundColor: 'color-mix(in srgb, var(--w-accent) 35%, transparent)',
       borderRadius: '2px',
     };
   }
@@ -30,7 +30,7 @@ export function ChessboardView({
   const customArrows = arrows.map((a) => ({
     startSquare: a.startSquare,
     endSquare: a.endSquare,
-    color: a.color || 'rgba(180, 83, 9, 0.85)',
+    color: a.color || 'var(--w-accent)',
   }));
 
   return (
