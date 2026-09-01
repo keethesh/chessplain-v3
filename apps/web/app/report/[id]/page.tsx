@@ -13,7 +13,7 @@ import {
   ArrowRight,
   BookOpen,
 } from 'lucide-react';
-import { API_BASE_URL, ReportDetail, MomentReport } from '../../../lib/api';
+import { API_BASE_URL, getReportById, ReportDetail, MomentReport } from '../../../lib/api';
 import { captureEvent } from '../../../lib/posthog';
 import { supabase } from '../../../lib/supabase';
 import { ChessboardView } from '../../../components/ChessboardView';
@@ -130,13 +130,22 @@ export default function ReportPage({ params }: PageProps) {
 
     let eventSource: EventSource | null = null;
     let isMounted = true;
+    let streamFinished = false;
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
+
+    // Stall watchdog: 60s without ANY stream activity (re-armed on every SSE
+    // message), not 60s since mount — a slow-but-live stream never reads as stalled
+    const armStall = () => {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => setIsStalled(true), 60000);
+    };
+    armStall();
 
     const fetchInitialData = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/reports/${id}`);
-        if (!res.ok) throw new Error('Report not found');
-        const data: ReportDetail = await res.json();
+        const data = await getReportById(id);
         if (!isMounted) return;
+        armStall();
 
         setReport(data);
         setStatus(data.status);
@@ -148,29 +157,42 @@ export default function ReportPage({ params }: PageProps) {
           return;
         }
 
-        // Connect SSE if report is still processing
-        eventSource = new EventSource(`${API_BASE_URL}/reports/${id}/stream`);
+        // Connect SSE if report is still processing (engine route: /api/reports/:id/events)
+        eventSource = new EventSource(`${API_BASE_URL}/api/reports/${id}/events`);
 
         eventSource.onmessage = (event) => {
           if (!isMounted) return;
+          armStall(); // any message (stage/moment/done/ping) is stream activity
           try {
             const update = JSON.parse(event.data);
-            if (update.status) setStatus(update.status);
-            if (update.moments) setMoments(update.moments);
-            if (update.summary) {
-              setReport((prev) => (prev ? { ...prev, summary: update.summary } : prev));
-            }
-
-            if (update.status === 'completed' || update.status === 'failed') {
+            if (update.type === 'stage' && update.status) {
+              setStatus(update.status);
+            } else if (update.type === 'moment' && update.moment) {
+              // Engine re-sends moments from 0 on reconnect — dedupe by ply
+              setMoments((prev) =>
+                prev.some((m) => m.ply === update.moment.ply) ? prev : [...prev, update.moment]
+              );
+            } else if (update.type === 'done' && update.report) {
+              setReport((prev) => (prev ? { ...prev, ...update.report } : update.report));
+              setStatus('completed');
+              streamFinished = true;
+              eventSource?.close();
+            } else if (update.type === 'failed' || update.type === 'error') {
+              streamFinished = true;
+              setStatus('failed');
               eventSource?.close();
             }
+            // {type:'ping'} needs no handling beyond the re-arm above
           } catch (e) {
             console.error('Failed to parse SSE payload:', e);
           }
         };
 
         eventSource.onerror = () => {
-          eventSource?.close();
+          // Native EventSource auto-reconnects; only stop once terminal
+          if (streamFinished) {
+            eventSource?.close();
+          }
         };
       } catch (err) {
         console.error('Fetch error:', err);
@@ -180,19 +202,12 @@ export default function ReportPage({ params }: PageProps) {
 
     fetchInitialData();
 
-    // Fallback stall detection after 25s
-    const stallTimer = setTimeout(() => {
-      if (isMounted && status === 'pending') {
-        setIsStalled(true);
-      }
-    }, 25000);
-
     return () => {
       isMounted = false;
       eventSource?.close();
-      clearTimeout(stallTimer);
+      if (stallTimer) clearTimeout(stallTimer);
     };
-  }, [id, isDemo, status]);
+  }, [id, isDemo]);
 
   // 2. Dwell time & engagement tracking
   useEffect(() => {
