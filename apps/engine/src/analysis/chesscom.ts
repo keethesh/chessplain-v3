@@ -75,18 +75,6 @@ export async function fetchRecentChessComGame(username: string): Promise<ChessCo
     }
   }
   if (games.length === 0) {
-    // Try previous month
-    const prevDate = new Date(Date.UTC(yyyy, now.getUTCMonth() - 1, 1));
-    const prevY = prevDate.getUTCFullYear();
-    const prevM = String(prevDate.getUTCMonth() + 1).padStart(2, '0');
-    const prevRes = await fetch(`https://api.chess.com/pub/player/${cleanUsername}/games/${prevY}/${prevM}`, { headers });
-    if (prevRes.ok) {
-      const prevData = (await prevRes.json()) as ChessComGamesResponse;
-      games = prevData.games || [];
-    }
-  }
-
-  if (games.length === 0) {
     throw new Error(`No recent games found for Chess.com user '${username}'`);
   }
 
