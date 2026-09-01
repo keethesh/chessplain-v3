@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { Sparkles, ArrowRight, ShieldCheck, Zap, BookOpen, Compass } from 'lucide-react';
 import { submitReport } from '../lib/api';
 import { captureEvent, getDeterministicHeroVariant } from '../lib/posthog';
 
@@ -44,7 +45,6 @@ export default function HomePage() {
     setError(null);
     setIsLoading(true);
 
-    // Variant is assigned on mount; without it there is nothing to attribute
     if (!heroVariant) return;
 
     const isUsername = tab === 'username';
@@ -68,7 +68,6 @@ export default function HomePage() {
         : { pgn: pgn.trim(), hero_variant: heroVariant };
 
       const response = await submitReport(payload);
-      // Count only accepted submissions in the funnel
       captureEvent('pgn_submitted', {
         method,
         hero_variant: heroVariant,
@@ -87,88 +86,114 @@ export default function HomePage() {
   const copy = heroVariant ? HERO_COPY[heroVariant] : null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20">
-      {/* Hero Section — suppressed until the variant is computed client-side (no wrong-variant flash) */}
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      {/* Hero Section */}
       {copy && (
-      <div className="text-center">
-        <span className="badge-accent mb-4 inline-flex text-xs font-semibold uppercase tracking-wider">
-          {copy.hook}
-        </span>
-        <h1 className="t-display sm:text-4xl text-3xl font-extrabold tracking-tight mt-2 text-[var(--w-ink1)]">
-          {copy.headline}
-        </h1>
-        <p className="t-body sm:text-lg text-base muted mt-4 max-w-2xl mx-auto">
-          {copy.subhead}
-        </p>
-      </div>
+        <div className="text-center">
+          <span className="badge-accent mb-3 inline-flex text-xs font-semibold uppercase tracking-wider">
+            {copy.hook}
+          </span>
+          <h1 className="t-display sm:text-5xl text-3xl font-extrabold tracking-tight mt-1 text-[var(--w-ink1)]">
+            {copy.headline}
+          </h1>
+          <p className="t-body sm:text-lg text-base text-[var(--w-ink2)] mt-4 max-w-2xl mx-auto leading-relaxed">
+            {copy.subhead}
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <Link
+              href="/report/demo"
+              onClick={() => captureEvent('sample_game_clicked', { source: 'hero' })}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--w-accent)] hover:underline"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>See an interactive sample game report (1200 Elo) →</span>
+            </Link>
+          </div>
+        </div>
       )}
 
       {/* Input Box Card */}
-      <div className="card-box mt-10 shadow-sm border border-[var(--w-border)]">
+      <div className="card-box mt-8 p-6 sm:p-8 border border-[var(--w-border-strong)] bg-[var(--w-surface)] shadow-md">
         {/* Method Toggle Tabs */}
-        <div className="flex border-b border-[var(--w-border)] mb-6">
-          <button
-            type="button"
-            onClick={() => { setTab('username'); setError(null); }}
-            className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-colors ${
-              tab === 'username'
-                ? 'border-[var(--w-accent)] text-[var(--w-accent)]'
-                : 'border-transparent text-[var(--w-ink2)] hover:text-[var(--w-ink1)]'
-            }`}
+        <div className="flex items-center justify-between border-b border-[var(--w-border)] mb-6 pb-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setTab('username'); setError(null); }}
+              className={`pb-2 px-3 text-sm font-semibold border-b-2 transition-all ${
+                tab === 'username'
+                  ? 'border-[var(--w-accent)] text-[var(--w-accent)]'
+                  : 'border-transparent text-[var(--w-ink2)] hover:text-[var(--w-ink1)]'
+              }`}
+            >
+              Chess.com Username
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTab('pgn'); setError(null); }}
+              className={`pb-2 px-3 text-sm font-semibold border-b-2 transition-all ${
+                tab === 'pgn'
+                  ? 'border-[var(--w-accent)] text-[var(--w-accent)]'
+                  : 'border-transparent text-[var(--w-ink2)] hover:text-[var(--w-ink1)]'
+              }`}
+            >
+              Paste PGN
+            </button>
+          </div>
+
+          <Link
+            href="/report/demo"
+            onClick={() => captureEvent('sample_game_clicked', { source: 'tab_header' })}
+            className="hidden sm:inline-flex items-center gap-1 text-xs text-[var(--w-ink2)] hover:text-[var(--w-accent)] transition-colors"
           >
-            Chess.com Username
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab('pgn'); setError(null); }}
-            className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-colors ${
-              tab === 'pgn'
-                ? 'border-[var(--w-accent)] text-[var(--w-accent)]'
-                : 'border-transparent text-[var(--w-ink2)] hover:text-[var(--w-ink1)]'
-            }`}
-          >
-            Paste PGN
-          </button>
+            <span>Try sample game</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {tab === 'username' ? (
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-[var(--w-ink1)] mb-1">
-                Enter your Chess.com username
+              <label htmlFor="username" className="block text-sm font-semibold text-[var(--w-ink1)] mb-1.5">
+                Your Chess.com username
               </label>
               <input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. hikaru"
+                placeholder="e.g. GothamChess"
                 disabled={isLoading}
-                className="w-full rounded-md border border-[var(--w-border)] bg-[var(--w-canvas)] px-3.5 py-2.5 text-sm text-[var(--w-ink1)] placeholder-[var(--w-ink2)] focus:border-[var(--w-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--w-accent)]"
+                className="w-full rounded-lg border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-3 text-sm text-[var(--w-ink1)] placeholder-[var(--w-ink3)] focus:border-[var(--w-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--w-accent)] transition-colors"
               />
-              <p className="t-caption muted mt-1.5">
-                We'll automatically analyze your most recent game.
+              <p className="t-caption text-[var(--w-ink2)] mt-2">
+                We'll automatically fetch your most recent completed game.
               </p>
             </div>
           ) : (
             <div>
-              <label htmlFor="pgn" className="block text-sm font-medium text-[var(--w-ink1)] mb-1">
-                Paste your game PGN
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="pgn" className="block text-sm font-semibold text-[var(--w-ink1)]">
+                  Game PGN
+                </label>
+                <span className="t-caption text-[var(--w-ink3)]">
+                  From Chess.com or Lichess: Share → Copy PGN
+                </span>
+              </div>
               <textarea
                 id="pgn"
                 rows={5}
                 value={pgn}
                 onChange={(e) => setPgn(e.target.value)}
-                placeholder="1. e4 e5 2. Nf3 Nc6 3. Bc4..."
+                placeholder="1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4..."
                 disabled={isLoading}
-                className="w-full rounded-md border border-[var(--w-border)] bg-[var(--w-canvas)] px-3.5 py-2.5 font-mono text-xs text-[var(--w-ink1)] placeholder-[var(--w-ink2)] focus:border-[var(--w-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--w-accent)]"
+                className="w-full rounded-lg border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-3 font-mono text-xs text-[var(--w-ink1)] placeholder-[var(--w-ink3)] focus:border-[var(--w-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--w-accent)] transition-colors"
               />
             </div>
           )}
 
           {error && (
-            <div className="rounded-md bg-[var(--w-error-soft)] p-3 text-sm text-[var(--w-error)] border border-[var(--w-error)]/20">
+            <div className="rounded-lg bg-[var(--w-error-soft)] p-3 text-sm text-[var(--w-error)] border border-[var(--w-error)]/20 font-medium">
               {error}
             </div>
           )}
@@ -176,12 +201,12 @@ export default function HomePage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 rounded-md bg-[var(--w-accent)] px-4 py-3 text-sm font-semibold text-[var(--w-on-accent)] shadow hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--w-accent)] focus:ring-offset-2 disabled:opacity-50 transition-all"
+            className="flex items-center justify-center gap-2 rounded-lg bg-[var(--w-accent)] px-5 py-3.5 text-sm font-bold text-[var(--w-on-accent)] shadow-sm hover:bg-[var(--w-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--w-accent)] focus:ring-offset-2 disabled:opacity-50 transition-all cursor-pointer"
           >
             {isLoading ? (
               <>
                 <Sparkles className="w-4 h-4 animate-spin" />
-                <span>Analyzing your game...</span>
+                <span>Reading your moves (~15s)...</span>
               </>
             ) : (
               <>
@@ -195,26 +220,32 @@ export default function HomePage() {
 
       {/* Trust & Features Footer */}
       <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3 text-center border-t border-[var(--w-border)] pt-8">
-        <div>
-          <div className="flex justify-center mb-2">
-            <Zap className="w-5 h-5 text-[var(--w-accent)]" />
+        <div className="flex flex-col items-center">
+          <div className="w-8 h-8 rounded-full bg-[var(--w-surface-subtle)] flex items-center justify-center mb-2 text-[var(--w-accent)] border border-[var(--w-border)]">
+            <Zap className="w-4 h-4" />
           </div>
-          <p className="t-body-strong">Instant Analysis</p>
-          <p className="t-caption muted mt-0.5">3-stage engine evaluation in under 20 seconds.</p>
+          <p className="t-body-strong text-[var(--w-ink1)]">Fast Explanation</p>
+          <p className="t-caption text-[var(--w-ink2)] mt-0.5 max-w-[200px]">
+            Engine-evaluated in ~15 seconds without waiting in long queues.
+          </p>
         </div>
-        <div>
-          <div className="flex justify-center mb-2">
-            <Sparkles className="w-5 h-5 text-[var(--w-accent)]" />
+        <div className="flex flex-col items-center">
+          <div className="w-8 h-8 rounded-full bg-[var(--w-surface-subtle)] flex items-center justify-center mb-2 text-[var(--w-accent)] border border-[var(--w-border)]">
+            <Compass className="w-4 h-4" />
           </div>
-          <p className="t-body-strong">Plain English</p>
-          <p className="t-caption muted mt-0.5">Teachable concepts & checkable habits for next game.</p>
+          <p className="t-body-strong text-[var(--w-ink1)]">Plain English</p>
+          <p className="t-caption text-[var(--w-ink2)] mt-0.5 max-w-[200px]">
+            No accuracy score. One clear habit to check next time.
+          </p>
         </div>
-        <div>
-          <div className="flex justify-center mb-2">
-            <ShieldCheck className="w-5 h-5 text-[var(--w-accent)]" />
+        <div className="flex flex-col items-center">
+          <div className="w-8 h-8 rounded-full bg-[var(--w-surface-subtle)] flex items-center justify-center mb-2 text-[var(--w-accent)] border border-[var(--w-border)]">
+            <ShieldCheck className="w-4 h-4" />
           </div>
-          <p className="t-body-strong">Free, No Signup</p>
-          <p className="t-caption muted mt-0.5">First 2 games free every week without creating an account.</p>
+          <p className="t-body-strong text-[var(--w-ink1)]">Free, No Account</p>
+          <p className="t-caption text-[var(--w-ink2)] mt-0.5 max-w-[200px]">
+            First 2 games free every week without signing up.
+          </p>
         </div>
       </div>
     </div>

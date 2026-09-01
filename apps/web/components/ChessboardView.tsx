@@ -14,7 +14,7 @@ interface ChessboardViewProps {
 export function ChessboardView({
   fen,
   orientation = 'white',
-  boardWidth = 340,
+  boardWidth = 360,
   highlightSquares = [],
   arrows = [],
 }: ChessboardViewProps) {
@@ -22,19 +22,19 @@ export function ChessboardView({
 
   for (const sq of highlightSquares) {
     customSquareStyles[sq] = {
-      backgroundColor: 'rgba(67, 56, 202, 0.35)',
-      borderRadius: '4px',
+      backgroundColor: 'rgba(180, 83, 9, 0.35)',
+      borderRadius: '2px',
     };
   }
 
   const customArrows = arrows.map((a) => ({
     startSquare: a.startSquare,
     endSquare: a.endSquare,
-    color: a.color || '#4338ca',
+    color: a.color || 'rgba(180, 83, 9, 0.85)',
   }));
 
   return (
-    <div className="flex justify-center items-center select-none overflow-hidden rounded-lg border border-[var(--w-border)] bg-[var(--w-surface)] p-2 shadow-sm">
+    <div className="flex justify-center items-center select-none overflow-hidden rounded-xl border border-[var(--w-border-strong)] bg-[var(--w-surface)] p-2 shadow-sm">
       <div style={{ width: `${boardWidth}px`, maxWidth: '100%' }}>
         <Chessboard
           options={{
@@ -43,8 +43,8 @@ export function ChessboardView({
             allowDragging: false,
             squareStyles: customSquareStyles,
             arrows: customArrows,
-            darkSquareStyle: { backgroundColor: '#c8c8cf' },
-            lightSquareStyle: { backgroundColor: '#ffffff' },
+            darkSquareStyle: { backgroundColor: '#b58863' },
+            lightSquareStyle: { backgroundColor: '#f0d9b5' },
           }}
         />
       </div>
