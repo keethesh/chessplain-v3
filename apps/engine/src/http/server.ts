@@ -244,7 +244,9 @@ async function bootstrap() {
     const interval = setInterval(async () => {
       try {
         if (Date.now() - lastPing > 15000) {
-          reply.raw.write(': ping\n\n'); // SSE comment keeps proxies from idling the stream
+          // Progress event (not an SSE comment): re-arms the client’s 60s stall
+          // watchdog during long silent stages and keeps proxies from idling
+          reply.raw.write('data: {"type":"ping"}\n\n');
           lastPing = Date.now();
         }
         const { data: analysis, error } = await supabase
