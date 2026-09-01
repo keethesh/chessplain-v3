@@ -18,6 +18,6 @@ export const config = {
   posthogHost: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
   enginePath: process.env.ENGINE_PATH || (process.platform === 'win32' ? 'stockfish' : '/usr/local/bin/stockfish18_clang'),
   syzygyPath: process.env.SYZYGY_PATH || '/var/chess/syzygy',
-  webOrigin: process.env.WEB_ORIGIN || 'https://chessplain.com',
+  webOrigin: process.env.WEB_ORIGIN || 'https://getchessplain.com',
   enginePoolSize: parseInt(process.env.ENGINE_POOL_SIZE || '4', 10),
 };

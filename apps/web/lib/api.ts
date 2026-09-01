@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.chessplain.com';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.getchessplain.com';
 
 export interface SubmitReportPayload {
   pgn?: string;

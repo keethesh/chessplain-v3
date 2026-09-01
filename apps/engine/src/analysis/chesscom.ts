@@ -38,7 +38,7 @@ export function mapEloToBand(rating: number): EloBand {
 export async function fetchRecentChessComGame(username: string): Promise<ChessComGameResult> {
   const cleanUsername = username.trim().toLowerCase();
   const headers = {
-    'User-Agent': 'Chessplain/3.0 (contact@chessplain.com)',
+    'User-Agent': 'Chessplain/3.0 (contact@getchessplain.com)',
     'Accept': 'application/json',
   };
 
