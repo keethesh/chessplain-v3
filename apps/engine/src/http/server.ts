@@ -128,7 +128,7 @@ async function bootstrap() {
       // ponytail: exemption is env-gated, not IP-matched — the old 127.0.0.1 check
       // was spoofable via X-Forwarded-For with trustProxy enabled. If NAT collisions
       // bite, use the plan's fallback (email OTP before report 2).
-      const quotaEnforced = config.nodeEnv === 'production';
+      const quotaEnforced = config.nodeEnv === 'production' && !config.disableQuota;
       if (!isPremium && clientIp && quotaEnforced) {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { count, error: countErr } = await supabase

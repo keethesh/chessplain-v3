@@ -19,5 +19,6 @@ export const config = {
   enginePath: process.env.ENGINE_PATH || (process.platform === 'win32' ? 'stockfish' : '/usr/local/bin/stockfish18_clang'),
   syzygyPath: process.env.SYZYGY_PATH || '/var/chess/syzygy',
   webOrigin: process.env.WEB_ORIGIN || 'https://getchessplain.com',
+  disableQuota: process.env.DISABLE_QUOTA === 'true',
   enginePoolSize: parseInt(process.env.ENGINE_POOL_SIZE || '4', 10),
 };
