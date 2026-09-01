@@ -4,27 +4,28 @@ import { findBannedTokens } from '../src/analysis/prompts.js';
 import { enginePool } from '../src/uci/engine-pool.js';
 
 const TEST_USERNAMES = [
+  // All 20 verified live against the chess.com pub API on 2026-09-01
+  // with a 4-month archive window; replaces the 8-stale-handle list
   'hikaru',
-  'magnuscarlsen',
-  'firouzja2003',
-  'nihalsarin',
-  'gothamchess',
-  'alexandrabotez',
-  'andreabotez',
-  'andrewtang',
-  'hansontwitch',
-  'fabianocaruana',
-  'danielnaroditsky',
-  'anishgiri',
+  'MagnusCarlsen',
+  'DrNykterstein',
   'wonderfultime',
-  'levonaronian',
+  'Firouzja2003',
+  'nihalsarin',
+  'GMWSO',
+  'LevonAronian',
+  'AnishGiri',
   'viditchess',
-  'agadmator',
-  'chessnetwork',
-  'thechesswebsite',
+  'gothamchess',
+  'fabianocaruana',
   'erik',
-  'samshankchess',
-];
+  'agadmator',
+  'alexandrabotez',
+  'Witty_Alien',
+  'annacramling',
+  'IMRosen',
+  'Zhigalko_Sergei',
+  'dingliren',];
 
 const VALID_SAMPLE_PGNS = [
   `[Event "F/S Return Match"]
