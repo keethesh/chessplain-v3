@@ -27,8 +27,14 @@ const stripe = new Stripe(config.stripeSecretKey, {
 async function bootstrap() {
   // 1. Plugins
   await fastify.register(cors, {
-    // Allowlist: prod web origin + vercel preview deployments
-    origin: [config.webOrigin, /\.vercel\.app$/],
+    // Allowlist: prod web origin (apex + www) + vercel previews + local dev
+    origin: [
+      config.webOrigin,
+      'https://www.getchessplain.com',
+      /\.vercel\.app$/,
+      /^https?:\/\/localhost(:\d+)?$/,
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
