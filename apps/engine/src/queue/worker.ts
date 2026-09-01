@@ -202,11 +202,23 @@ export async function processNextJob(): Promise<boolean> {
   }
 }
 
+// ponytail: blunt crash recovery — anything mid-flight when the process died
+// (deploy restarts, OOM) would sit in a non-pending state forever; requeue on boot
+async function requeueInterruptedJobs(): Promise<void> {
+  const { error, count } = await supabase
+    .from('game_analyses')
+    .update({ status: 'pending' })
+    .in('status', ['sweeping', 'verifying', 'explaining']);
+  if (error) console.error('[Worker] Failed to requeue interrupted jobs:', error.message);
+  else if (count) console.log(`[Worker] Requeued ${count} interrupted job(s) from a previous run`);
+}
+
 export async function startWorker(): Promise<void> {
   if (isRunning) return;
   isRunning = true;
 
   await enginePool.init();
+  await requeueInterruptedJobs();
   console.log(`[Worker] Background queue worker started with ${enginePool.totalCount} engine instances.`);
 
   while (isRunning) {
