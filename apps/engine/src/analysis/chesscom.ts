@@ -59,18 +59,21 @@ export async function fetchRecentChessComGame(username: string): Promise<ChessCo
 
   const eloBand = mapEloToBand(rating);
 
-  // 2. Fetch games from current month, fallback to previous month if empty
+  // 2. Fetch games walking back up to 4 monthly archives — a user returning
+  // from a chess break must not hit "no recent games" after only 2 months
   const now = new Date();
-  const yyyy = now.getUTCFullYear();
-  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
 
   let games: ChessComGameItem[] = [];
-  const gamesRes = await fetch(`https://api.chess.com/pub/player/${cleanUsername}/games/${yyyy}/${mm}`, { headers });
-  if (gamesRes.ok) {
-    const data = (await gamesRes.json()) as ChessComGamesResponse;
-    games = data.games || [];
+  for (let back = 0; back < 4 && games.length === 0; back++) {
+    const monthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+    const y = monthDate.getUTCFullYear();
+    const m = String(monthDate.getUTCMonth() + 1).padStart(2, '0');
+    const res = await fetch(`https://api.chess.com/pub/player/${cleanUsername}/games/${y}/${m}`, { headers });
+    if (res.ok) {
+      const data = (await res.json()) as ChessComGamesResponse;
+      games = data.games || [];
+    }
   }
-
   if (games.length === 0) {
     // Try previous month
     const prevDate = new Date(Date.UTC(yyyy, now.getUTCMonth() - 1, 1));
