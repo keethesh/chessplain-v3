@@ -8,6 +8,7 @@ import {
   validateMomentJson,
   validateSummaryJson,
 } from './prompts.js';
+import { buildTacticalContext } from './chess-facts.js';
 
 const openai = new OpenAI({
   baseURL: config.llmApiBase,
@@ -84,11 +85,19 @@ export async function explainMoment(
   opponentName: string,
   analysisId?: string
 ): Promise<MomentReport> {
+  const tacticalContext = buildTacticalContext(
+    moment.fenBefore,
+    moment.san,
+    moment.bestMoveSan,
+    moment.refutationLineSan
+  );
+
   const inputPayload = {
     position_before_fen: moment.fenBefore,
     played_move: moment.san,
     player_color: moment.playerColor,
     player_elo_band: eloBand,
+    tactical_context: tacticalContext,
     eval_before_pawns: parseFloat(moment.evalBefore.toFixed(2)),
     eval_after_pawns: parseFloat(moment.evalAfter.toFixed(2)),
     best_move: moment.bestMoveSan,
@@ -110,7 +119,7 @@ export async function explainMoment(
       ],
       response_format: { type: 'json_object' },
       temperature: 0.2,
-      max_tokens: 450,
+      max_tokens: 500,
     });
 
     const rawJson = extractJsonString(response.choices[0]);
@@ -148,7 +157,7 @@ export async function explainMoment(
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
-      max_tokens: 450,
+      max_tokens: 500,
     });
 
     const retryRawJson = extractJsonString(retryResponse.choices[0]);
