@@ -116,6 +116,7 @@ export default function ReportPage({ params }: PageProps) {
   const [isEmailSent, setIsEmailSent] = useState(false);
   const [isStalled, setIsStalled] = useState(false);
   const engagedRef = useRef(false);
+  const selectedMomentsRef = useRef<Set<number>>(new Set());
 
   // Auto-orient board when report loads
   useEffect(() => {
@@ -123,6 +124,11 @@ export default function ReportPage({ params }: PageProps) {
       setOrientation(report.player_color);
     }
   }, [report?.player_color]);
+
+  // Funnel step 2: report_viewed (plan section 6.6)
+  useEffect(() => {
+    captureEvent('report_viewed', { report_id: id, is_shared: false, is_demo: isDemo });
+  }, [id, isDemo]);
 
   // 1. Setup SSE streaming and initial fetch (skip if demo)
   useEffect(() => {
@@ -209,14 +215,15 @@ export default function ReportPage({ params }: PageProps) {
     };
   }, [id, isDemo]);
 
-  // 2. Dwell time & engagement tracking
+  // 2. Engagement tracking — report_engaged fires at 60s dwell (single-fire);
+  // the other trigger (2+ distinct moments selected) lives in handleSelectMoment
   useEffect(() => {
     const dwellTimer = setTimeout(() => {
       if (!engagedRef.current) {
         engagedRef.current = true;
-        captureEvent('report_dwell_15s', { report_id: id, is_demo: isDemo });
+        captureEvent('report_engaged', { report_id: id, reason: 'dwell_60s', is_demo: isDemo });
       }
-    }, 15000);
+    }, 60000);
 
     return () => clearTimeout(dwellTimer);
   }, [id, isDemo]);
@@ -224,13 +231,20 @@ export default function ReportPage({ params }: PageProps) {
   const handleSelectMoment = useCallback(
     (index: number) => {
       setActiveMomentIndex(index);
-      captureEvent('moment_selected', {
+      captureEvent('moment_expanded', {
         report_id: id,
         moment_index: index,
+        concept_name: moments[index]?.concept_name,
         is_demo: isDemo,
       });
+      // Plan funnel: report_engaged fires on 2+ distinct moments viewed OR 60s dwell
+      selectedMomentsRef.current.add(index);
+      if (selectedMomentsRef.current.size >= 2 && !engagedRef.current) {
+        engagedRef.current = true;
+        captureEvent('report_engaged', { report_id: id, reason: 'moments_selected_2', is_demo: isDemo });
+      }
     },
-    [id, isDemo]
+    [id, isDemo, moments]
   );
 
   const toggleOrientation = useCallback(() => {
