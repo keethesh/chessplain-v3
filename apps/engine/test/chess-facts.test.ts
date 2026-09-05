@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { extractMoveFacts, buildTacticalContext } from '../src/analysis/chess-facts.js';
+import {
+  extractMoveFacts,
+  buildTacticalContext,
+  getAttacksFromSquare,
+} from '../src/analysis/chess-facts.js';
 
 describe('Chess Facts Extraction', () => {
   it('identifies piece, origin, and threats before/after a retreat move', () => {
@@ -39,12 +43,52 @@ describe('Chess Facts Extraction', () => {
     expect(ctx.threat_summary).toContain('under attack');
   });
 
-  it('handles checkmate move correctly', () => {
+  it('handles checkmate move correctly and filters king from attacks_after_move', () => {
     const fenBefore = '3rrk2/R7/7R/8/1P2p2P/P2B2P1/5P2/6K1 w - - 0 44';
     const facts = extractMoveFacts(fenBefore, 'Rh8#');
 
     expect(facts).not.toBeNull();
     expect(facts?.is_checkmate).toBe(true);
     expect(facts?.description).toContain('checkmate');
+    // F2: Must not report the opposing king as an attacked/capturable piece
+    for (const attack of facts?.attacks_after_move || []) {
+      expect(attack.toLowerCase()).not.toContain('king');
+    }
+  });
+
+  it('correctly reports en passant captured square on original pawn rank (F1)', () => {
+    // En passant: black d4 pawn takes white e4 pawn landing on e3
+    const fenBefore = 'rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 3';
+    const facts = extractMoveFacts(fenBefore, 'dxe3');
+
+    expect(facts).not.toBeNull();
+    expect(facts?.from).toBe('d4');
+    expect(facts?.to).toBe('e3');
+    // Captured piece was on e4, NOT e3
+    expect(facts?.captured).toBe('White pawn on e4');
+    expect(facts?.description).toContain('capturing White pawn on e4');
+  });
+
+  it('accurately describes promotions and landing piece (F4)', () => {
+    const fenBefore = 'rnbqkbnr/pPp1pppp/8/8/8/8/P1PPPPPP/RNBQKBNR w KQkq - 0 5';
+    const facts = extractMoveFacts(fenBefore, 'bxa8=Q');
+
+    expect(facts).not.toBeNull();
+    expect(facts?.piece).toBe('White queen');
+    expect(facts?.from).toBe('b7');
+    expect(facts?.to).toBe('a8');
+    expect(facts?.captured).toBe('Black rook on a8');
+    expect(facts?.description).toContain('promoting to queen');
+    expect(facts?.description).toContain('capturing Black rook on a8');
+  });
+
+  it('deduplicates attacks from square on capture-promotions (F3)', () => {
+    const fenBefore = 'rnbqkbnr/pPp1pppp/8/8/8/8/P1PPPPPP/RNBQKBNR w KQkq - 0 5';
+    const attacks = getAttacksFromSquare(fenBefore, 'b7');
+
+    const uniqueAttacks = new Set(attacks);
+    expect(attacks.length).toBe(uniqueAttacks.size);
+    expect(attacks).toContain('Black rook on a8');
+    expect(attacks).toContain('Black bishop on c8');
   });
 });

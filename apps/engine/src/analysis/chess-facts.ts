@@ -40,6 +40,7 @@ export function getAttacksFromSquare(fen: string, square: string): string[] {
 
     for (const m of moves) {
       if (m.captured) {
+        if (m.captured === 'k') continue; // F2: King captures are illegal in chess; artifact of flipped active color
         const targetPiece = testChess.get(m.to as Square);
         const targetDesc = targetPiece
           ? getPieceDescription(targetPiece.type, targetPiece.color)
@@ -47,7 +48,7 @@ export function getAttacksFromSquare(fen: string, square: string): string[] {
         attacks.push(`${targetDesc} on ${m.to}`);
       }
     }
-    return attacks;
+    return Array.from(new Set(attacks)); // F3: Deduplicate (e.g. multiple promotion choices attacking same target)
   } catch {
     return [];
   }
@@ -107,8 +108,12 @@ export function extractMoveFacts(fenBefore: string, moveSan: string): MoveFacts 
     if (!move) return null;
 
     const pieceName = getPieceDescription(move.piece, move.color);
+    // F1: For en passant captures, the captured pawn is on move.to[0] + move.from[1], not move.to
+    const capturedSquare = move.flags.includes('e')
+      ? `${move.to[0]}${move.from[1]}`
+      : move.to;
     const capturedName = move.captured
-      ? getPieceDescription(move.captured, move.color === 'w' ? 'b' : 'w') + ` on ${move.to}`
+      ? getPieceDescription(move.captured, move.color === 'w' ? 'b' : 'w') + ` on ${capturedSquare}`
       : null;
     const isCheck = chess.isCheck();
     const isCheckmate = chess.isCheckmate();
@@ -119,13 +124,22 @@ export function extractMoveFacts(fenBefore: string, moveSan: string): MoveFacts 
     let desc = `${pieceName} from ${move.from} to ${move.to}`;
     if (move.flags.includes('k')) desc = `${move.color === 'w' ? 'White' : 'Black'} castles kingside`;
     if (move.flags.includes('q')) desc = `${move.color === 'w' ? 'White' : 'Black'} castles queenside`;
+    // F4: Accurately describe promotions and what piece now occupies the square
+    if (move.promotion) {
+      const promoPiece = PIECE_NAMES[move.promotion.toLowerCase()] || 'queen';
+      desc += `, promoting to ${promoPiece}`;
+    }
     if (capturedName) desc += `, capturing ${capturedName}`;
     if (isCheckmate) desc += ' (checkmate)';
     else if (isCheck) desc += ' (check)';
 
+    const landedPieceName = move.promotion
+      ? getPieceDescription(move.promotion, move.color)
+      : pieceName;
+
     return {
       san: move.san,
-      piece: pieceName,
+      piece: landedPieceName,
       from: move.from,
       to: move.to,
       captured: capturedName,

@@ -43,6 +43,27 @@ function cleanJsonString(str: string): string {
   return match ? match[0] : unquoted;
 }
 
+export function isCreditExhaustionError(err: unknown): boolean {
+  if (!err) return false;
+  const e = err as { status?: number; message?: string; error?: { message?: string } };
+  if (e.status === 401) return true;
+  const msg = String(e.message || '') + ' ' + String(e.error?.message || '');
+  return /not enough credits|credits exhausted|insufficient credits/i.test(msg);
+}
+
+async function createChatCompletion(
+  params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming
+): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  const body = {
+    ...params,
+    reasoning_effort: 'none',
+  } as unknown as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming;
+
+  return openai.chat.completions.create(body, {
+    signal: AbortSignal.timeout(30000),
+  });
+}
+
 export function createFallbackMoment(moment: CandidateMoment): MomentReport {
   return {
     ply: moment.ply,
@@ -111,7 +132,7 @@ export async function explainMoment(
 
   // Attempt 1
   try {
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: config.llmModel,
       messages: [
         { role: 'system', content: MOMENT_SYSTEM_PROMPT },
@@ -149,7 +170,7 @@ export async function explainMoment(
     console.warn(`[Explain] Moment validation failed on attempt 1: ${validation.errors.join('; ')}. Retrying...`);
     const retryUserContent = `${userContent}\n\nPREVIOUS ATTEMPT FAILED VALIDATION:\n${validation.errors.map((e) => `- ${e}`).join('\n')}\nFix these issues and return strict compliant JSON.`;
 
-    const retryResponse = await openai.chat.completions.create({
+    const retryResponse = await createChatCompletion({
       model: config.llmModel,
       messages: [
         { role: 'system', content: MOMENT_SYSTEM_PROMPT },
@@ -195,6 +216,18 @@ export async function explainMoment(
 
     return createFallbackMoment(moment);
   } catch (err) {
+    if (isCreditExhaustionError(err)) {
+      console.error('[Explain] Upstream gateway credit exhaustion (401). Aborting retries.');
+      if (analysisId) {
+        await supabase.from('analysis_errors').insert({
+          analysis_id: analysisId,
+          stage: 'llm_credits_exhausted',
+          message: err instanceof Error ? err.message : String(err),
+          metadata: { moment, inputPayload },
+        });
+      }
+      return createFallbackMoment(moment);
+    }
     console.error('[Explain] LLM call failed for moment:', err);
     if (analysisId) {
       await supabase.from('analysis_errors').insert({
@@ -242,7 +275,7 @@ export async function explainSummary(
 
   // Attempt 1
   try {
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: config.llmModel,
       messages: [
         { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
@@ -270,7 +303,7 @@ export async function explainSummary(
     console.warn(`[Explain] Summary validation failed on attempt 1: ${validation.errors.join('; ')}. Retrying...`);
     const retryUserContent = `${userContent}\n\nPREVIOUS ATTEMPT FAILED VALIDATION:\n${validation.errors.map((e) => `- ${e}`).join('\n')}\nFix these issues and return strict compliant JSON.`;
 
-    const retryResponse = await openai.chat.completions.create({
+    const retryResponse = await createChatCompletion({
       model: config.llmModel,
       messages: [
         { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
@@ -305,6 +338,18 @@ export async function explainSummary(
 
     return createFallbackSummary(moments, meta);
   } catch (err) {
+    if (isCreditExhaustionError(err)) {
+      console.error('[Explain] Upstream gateway credit exhaustion (401). Aborting retries.');
+      if (analysisId) {
+        await supabase.from('analysis_errors').insert({
+          analysis_id: analysisId,
+          stage: 'llm_credits_exhausted',
+          message: err instanceof Error ? err.message : String(err),
+          metadata: { inputPayload },
+        });
+      }
+      return createFallbackSummary(moments, meta);
+    }
     console.error('[Explain] LLM call failed for summary:', err);
     if (analysisId) {
       await supabase.from('analysis_errors').insert({
