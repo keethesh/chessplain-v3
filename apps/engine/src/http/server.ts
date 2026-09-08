@@ -7,22 +7,22 @@ import { Chess } from 'chess.js';
 import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
-import { startWorker } from '../queue/worker.js';
+import { startWorker, stopWorker } from '../queue/worker.js';
 
 interface RawBodyRequest extends FastifyRequest {
   rawBody?: Buffer;
 }
 
 const fastify = Fastify({
-  trustProxy: true,
+  trustProxy: config.trustProxy,
   logger: {
     level: config.nodeEnv === 'production' ? 'info' : 'debug',
   },
 });
 
-const stripe = new Stripe(config.stripeSecretKey, {
+const stripe = config.stripeSecretKey ? new Stripe(config.stripeSecretKey, {
   apiVersion: '2025-02-24.acacia',
-});
+}) : null;
 
 async function bootstrap() {
   // 1. Plugins
@@ -56,9 +56,11 @@ async function bootstrap() {
   });
 
   // 2. Health check
-  fastify.get('/healthz', async () => {
+  fastify.get('/healthz', async (_request, reply) => {
+    const healthy = enginePool.totalCount > 0;
+    reply.status(healthy ? 200 : 503);
     return {
-      status: 'ok',
+      status: healthy ? 'ok' : 'unavailable',
       engines: enginePool.totalCount,
       available: enginePool.availableCount,
     };
@@ -76,11 +78,25 @@ async function bootstrap() {
       },
     },
     async (request, reply) => {
+      if (!request.body || typeof request.body !== 'object') {
+        return reply.status(400).send({ error: 'invalid_input', message: 'Paste a PGN or enter a Chess.com username.' });
+      }
       const body = request.body as {
         pgn?: string;
         chesscom_username?: string;
         hero_variant?: string;
+        player_color?: 'white' | 'black';
       };
+
+      if ((body.pgn !== undefined && (typeof body.pgn !== 'string' || body.pgn.length > 100_000)) ||
+          (body.chesscom_username !== undefined && (typeof body.chesscom_username !== 'string' || !/^[a-zA-Z0-9_-]{3,25}$/.test(body.chesscom_username))) ||
+          (body.player_color !== undefined && !['white', 'black'].includes(body.player_color))) {
+        return reply.status(400).send({ error: 'invalid_input', message: 'Enter a valid Chess.com username or a PGN under 100 KB, and choose your side.' });
+      }
+
+      if (body.pgn && body.chesscom_username) {
+        return reply.status(400).send({ error: 'invalid_input', message: 'Submit either a PGN or a Chess.com username, one at a time.' });
+      }
 
       if (!body.pgn && !body.chesscom_username) {
         return reply.status(400).send({ error: 'Must provide either pgn or chesscom_username' });
@@ -93,6 +109,7 @@ async function bootstrap() {
           if (parsed.history().length === 0) {
             throw new Error('PGN contains no moves');
           }
+          if (parsed.history().length > 1000) throw new Error('This game exceeds the 1,000 half-move analysis limit.');
         } catch (err) {
           return reply.status(400).send({
             error: 'invalid_pgn',
@@ -111,6 +128,7 @@ async function bootstrap() {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
         const { data: userData } = await supabase.auth.getUser(token);
+        if (!userData?.user) return reply.status(401).send({ error: 'Please sign in again before submitting this game.' });
         if (userData?.user) {
           userId = userData.user.id;
           const { data: profile } = await supabase
@@ -138,7 +156,8 @@ async function bootstrap() {
           .neq('status', 'failed') // abandoned/failed runs don't consume quota
           .gte('created_at', sevenDaysAgo);
 
-        if (!countErr && typeof count === 'number' && count >= 2) {
+        if (countErr) return reply.status(503).send({ error: 'quota_unavailable', message: 'We could not check your report allowance. Please try again shortly.' });
+        if (typeof count === 'number' && count >= 2) {
           return reply.status(402).send({
             error: 'quota_exceeded',
             message: 'Free quota reached (2 free reports per 7 days). Upgrade to Premium for unlimited reports.',
@@ -156,7 +175,7 @@ async function bootstrap() {
           pgn: body.pgn,
           source: body.chesscom_username ? 'chesscom' : 'pgn',
           external_id: body.chesscom_username || null,
-          metadata: body.chesscom_username ? { chesscom_username: body.chesscom_username } : {},
+          metadata: body.chesscom_username ? { chesscom_username: body.chesscom_username } : { player_color: body.player_color || 'white' },
         })
         .select('id')
         .single();
@@ -243,11 +262,14 @@ async function bootstrap() {
     reply.raw.flushHeaders?.();
 
     let lastStatus = '';
-    let sentMomentsCount = 0;
+    const sentPlies = new Set<number>();
     let isFinished = false;
 
     let lastPing = Date.now();
+    let polling = false;
     const interval = setInterval(async () => {
+      if (polling || reply.raw.destroyed) return;
+      polling = true;
       try {
         if (Date.now() - lastPing > 15000) {
           // Progress event (not an SSE comment): re-arms the client’s 60s stall
@@ -274,11 +296,10 @@ async function bootstrap() {
         }
 
         const moments = Array.isArray(analysis.moments) ? analysis.moments : [];
-        if (moments.length > sentMomentsCount) {
-          for (let i = sentMomentsCount; i < moments.length; i++) {
-            reply.raw.write(`data: ${JSON.stringify({ type: 'moment', moment: moments[i], count: moments.length })}\n\n`);
-          }
-          sentMomentsCount = moments.length;
+        for (const moment of moments) {
+          if (sentPlies.has(moment.ply)) continue;
+          reply.raw.write(`data: ${JSON.stringify({ type: 'moment', moment, count: moments.length })}\n\n`);
+          sentPlies.add(moment.ply);
         }
 
         if (analysis.status === 'completed') {
@@ -294,10 +315,12 @@ async function bootstrap() {
         }
       } catch (err) {
         console.error('[SSE] Polling error:', err);
+      } finally {
+        polling = false;
       }
     }, 500);
 
-    request.raw.on('close', () => {
+    reply.raw.on('close', () => {
       if (!isFinished) {
         clearInterval(interval);
       }
@@ -349,15 +372,31 @@ async function bootstrap() {
 
   // 8. POST /api/billing/checkout (Stripe Checkout)
   fastify.post('/api/billing/checkout', async (request, reply) => {
-    const body = request.body as {
+    if (!stripe) return reply.status(503).send({ error: 'Billing is not configured yet.' });
+    const token = request.headers.authorization?.replace(/^Bearer /, '');
+    if (!token) return reply.status(401).send({ error: 'Sign in before subscribing.' });
+    const { data: auth, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !auth.user) return reply.status(401).send({ error: 'Please sign in again.' });
+    const body = (request.body || {}) as {
       interval?: 'month' | 'year';
       user_id?: string;
       customer_email?: string;
       return_url?: string;
     };
 
+    if (!['month', 'year'].includes(body.interval || '')) return reply.status(400).send({ error: 'Choose monthly or yearly billing.' });
+    const { data: profile, error: profileError } = await supabase.from('profiles')
+      .select('stripe_customer_id, stripe_subscription_id').eq('id', auth.user.id).single();
+    if (profileError || !profile) return reply.status(503).send({ error: 'Your account is not ready for billing. Please try again shortly.' });
+    if (profile.stripe_customer_id) {
+      const subscriptions = await stripe.subscriptions.list({ customer: profile.stripe_customer_id, status: 'all', limit: 100 });
+      if (subscriptions.data.some(sub => !['canceled', 'incomplete_expired'].includes(sub.status))) {
+        return reply.status(409).send({ error: 'You already have a subscription or pending payment. Use Manage subscription below.' });
+      }
+    }
+
     const priceId = body.interval === 'year' ? config.stripePriceYearly : config.stripePriceMonthly;
-    const origin = body.return_url || config.webOrigin;
+    const origin = config.webOrigin.replace(/\/$/, '');
 
     try {
       const session = await stripe.checkout.sessions.create({
@@ -369,14 +408,15 @@ async function bootstrap() {
             quantity: 1,
           },
         ],
-        customer_email: body.customer_email,
-        client_reference_id: body.user_id,
+        ...(profile.stripe_customer_id ? { customer: profile.stripe_customer_id } : { customer_email: auth.user.email }),
+        client_reference_id: auth.user.id,
         metadata: {
-          user_id: body.user_id || '',
+          user_id: auth.user.id,
         },
-        success_url: `${origin}/pricing?session_id={CHECKOUT_SESSION_ID}&status=success`,
-        cancel_url: `${origin}/pricing?status=cancelled`,
-      });
+        subscription_data: { metadata: { user_id: auth.user.id } },
+        success_url: `${origin}/pricing?checkout=success`,
+        cancel_url: `${origin}/pricing?checkout=cancelled`,
+      }, { idempotencyKey: 'checkout:' + auth.user.id + ':' + priceId + ':' + Math.floor(Date.now() / 1800000) });
 
       return reply.send({ url: session.url });
     } catch (err) {
@@ -386,8 +426,26 @@ async function bootstrap() {
     }
   });
 
+  fastify.post('/api/billing/portal', async (request, reply) => {
+    if (!stripe) return reply.status(503).send({ error: 'Billing is not configured yet.' });
+    const token = request.headers.authorization?.replace(/^Bearer /, '');
+    if (!token) return reply.status(401).send({ error: 'Sign in to manage your subscription.' });
+    const { data: auth, error } = await supabase.auth.getUser(token);
+    if (error || !auth.user) return reply.status(401).send({ error: 'Please sign in again.' });
+    const { data: profile, error: profileError } = await supabase.from('profiles')
+      .select('stripe_customer_id').eq('id', auth.user.id).single();
+    if (profileError) return reply.status(503).send({ error: 'Could not load billing details. Try again shortly.' });
+    if (!profile?.stripe_customer_id) return reply.status(404).send({ error: 'No subscription found for this account.' });
+    const session = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: `${config.webOrigin.replace(/\/$/, '')}/pricing`,
+    });
+    return reply.send({ url: session.url });
+  });
+
   // 9. POST /api/billing/webhook (Stripe Webhook)
   fastify.post('/api/billing/webhook', async (request, reply) => {
+    if (!stripe || !config.stripeWebhookSecret) return reply.status(503).send({ error: 'Billing is not configured yet.' });
     const sig = request.headers['stripe-signature'];
     const rawBody = (request as RawBodyRequest).rawBody;
 
@@ -409,36 +467,44 @@ async function bootstrap() {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.client_reference_id || session.metadata?.user_id;
         if (userId) {
-          await supabase
+          const subscription = typeof session.subscription === 'string'
+            ? await stripe.subscriptions.retrieve(session.subscription) : null;
+          const premium = subscription?.status === 'active' || subscription?.status === 'trialing';
+          const { error } = await supabase
             .from('profiles')
             .update({
-              subscription_tier: 'premium',
+              subscription_tier: premium ? 'premium' : 'free',
               stripe_customer_id: session.customer as string,
               stripe_subscription_id: session.subscription as string,
             })
             .eq('id', userId);
+          if (error) throw error;
         }
         break;
       }
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription;
-        const status = sub.status;
+        // Stripe events can arrive out of order; apply current subscription state.
+        const current = await stripe.subscriptions.retrieve(sub.id);
+        const status = current.status;
         const customerId = sub.customer as string;
         const tier = status === 'active' || status === 'trialing' ? 'premium' : 'free';
 
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({ subscription_tier: tier })
-          .eq('stripe_customer_id', customerId);
+          .eq('stripe_subscription_id', sub.id);
+        if (error) throw error;
         break;
       }
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({ subscription_tier: 'free' })
-          .eq('stripe_customer_id', customerId);
+          .eq('stripe_subscription_id', sub.id);
+        if (error) throw error;
         break;
       }
     }
@@ -448,17 +514,28 @@ async function bootstrap() {
 
   // 10. Start HTTP server and background worker
   try {
+    await enginePool.init();
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
     console.log(`[HTTP] Server listening on http://0.0.0.0:${config.port}`);
 
     // Start background queue worker in the same process
     startWorker().catch((err) => {
       console.error('[Worker] Fatal worker error:', err);
+      process.exit(1);
     });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
   }
+}
+
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.once(signal, () => {
+    stopWorker();
+    // Stop accepting requests; the next single-worker boot requeues interrupted jobs.
+    void fastify.close();
+    void enginePool.shutdown().finally(() => process.exit(0));
+  });
 }
 
 bootstrap();

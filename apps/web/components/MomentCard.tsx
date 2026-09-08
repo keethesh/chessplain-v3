@@ -1,8 +1,6 @@
 'use client';
 
-import React from 'react';
-import { Check, Compass } from 'lucide-react';
-import { MomentReport } from '../lib/api';
+import type { MomentReport } from '../lib/api';
 
 interface MomentCardProps {
   moment: MomentReport;
@@ -11,128 +9,52 @@ interface MomentCardProps {
   onSelect?: () => void;
 }
 
-export function MomentCard({ moment, index, isActive, onSelect }: MomentCardProps) {
-  const getBadgeClass = (severity: string) => {
-    switch (severity) {
-      case 'Turning point':
-        return 'badge-accent';
-      case 'Last chance':
-      case 'Missed win':
-        return 'badge-error';
-      default:
-        return 'badge-muted';
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSelect?.();
-    }
-  };
-
+export function MomentCard({ moment, index, isActive = true, onSelect }: MomentCardProps) {
   return (
-    <article
-      tabIndex={0}
-      role="button"
-      aria-pressed={isActive}
-      aria-label={`Moment ${index + 1}: Move ${moment.move_number}, ${moment.played}`}
-      onClick={onSelect}
-      onKeyDown={handleKeyDown}
-      className={`card-box cursor-pointer p-4 sm:p-5 transition-all focus-ring ${
-        isActive
-          ? 'ring-2 ring-[var(--w-accent)] border-[var(--w-accent)] shadow-md bg-[var(--w-surface)]'
-          : 'hover:border-[var(--w-border-strong)] bg-[var(--w-surface)]'
-      }`}
-    >
-      <div className="flex flex-col gap-3.5">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--t-xs)] uppercase tracking-wider font-semibold text-[var(--w-ink3)]">
-              Moment {index + 1}
-            </span>
-            <span className="text-[var(--w-border-strong)]">·</span>
-            <span className="t-notation font-semibold text-[var(--w-ink2)]">
-              Move {moment.move_number}
-            </span>
+    <article aria-label={`Moment ${index + 1}: ${moment.concept_name}`} className="min-w-0">
+      {onSelect && !isActive ? (
+        <button onClick={onSelect} className="focus-ring w-full rounded-xl border border-[var(--w-border)] p-5 text-left hover:bg-[var(--w-surface-subtle)]">
+          <span className="t-caption text-[var(--w-ink2)]">Move {moment.move_number} · {moment.played}</span>
+          <span className="mt-1 block t-section">{moment.concept_name}</span>
+        </button>
+      ) : (
+        <>
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <span className="badge-accent">{moment.severity_label}</span>
+            <span className="text-sm text-[var(--w-ink2)]">You played <strong className="t-notation text-[var(--w-ink1)]">{moment.move_number}{moment.player_color === 'black' ? '…' : '.'}{moment.played.replace(/^\d+\.+\s*/, '')}</strong></span>
           </div>
-          <span className={getBadgeClass(moment.severity_label)}>{moment.severity_label}</span>
-        </div>
-
-        {/* Played move */}
-        <div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="t-caption text-[var(--w-ink2)]">You played</span>
-            <span className="t-notation font-bold text-[var(--t-lg)] text-[var(--w-ink1)] bg-[var(--w-surface-subtle)] px-2 py-0.5 rounded border border-[var(--w-border)]">
-              {moment.played}
-            </span>
+          <h2 className="t-heading mb-5 text-3xl leading-tight sm:text-4xl">{moment.concept_name}</h2>
+          {moment.concept_definition && <p className="mb-6 text-sm leading-relaxed text-[var(--w-ink2)]">{moment.concept_definition}</p>}
+          {moment.probable_thought && (
+            <div className="mb-6">
+              <h3 className="mb-2 text-sm font-semibold text-[var(--w-ink2)]">The idea may have been</h3>
+              <p className="text-lg italic leading-relaxed text-[var(--w-ink2)]">“{moment.probable_thought}”</p>
+              <p className="mt-2 text-xs text-[var(--w-ink3)]">A possible intention, inferred from the move.</p>
+            </div>
+          )}
+          <div className="mb-6">
+            <h3 className="mb-2 text-sm font-semibold">What the position shows</h3>
+            <p className="text-base leading-relaxed text-[var(--w-ink2)]">{moment.what_actually_happens}</p>
           </div>
-
-          {/* Probable thought */}
-          <div className="bg-[var(--w-surface-subtle)] p-3 rounded-lg border border-[var(--w-border)]">
-            <p className="t-caption font-semibold text-[var(--w-ink3)] uppercase tracking-wider mb-1">
-              You probably thought
-            </p>
-            <p className="t-body italic text-[var(--w-ink1)] leading-relaxed">
-              "{moment.probable_thought}"
-            </p>
+          <div className="border-t border-[var(--w-border)] pt-5">
+            <h3 className="mb-2 text-sm font-semibold text-[var(--w-accent)]">Try this next game</h3>
+            <p className="text-lg font-medium leading-relaxed">{moment.takeaway}</p>
           </div>
-        </div>
-
-        {/* What actually happens */}
-        <div>
-          <p className="t-caption font-semibold text-[var(--w-ink3)] uppercase tracking-wider mb-1">
-            What actually happened
-          </p>
-          <p className="t-body text-[var(--w-ink1)] leading-relaxed">
-            {moment.what_actually_happens}
-          </p>
-        </div>
-
-        {/* Concept definition */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--w-border)]">
-          <span className="badge-muted font-medium inline-flex items-center gap-1">
-            <Compass className="w-3 h-3 text-[var(--w-accent)]" />
-            {moment.concept_name}
-          </span>
-          <span className="t-caption text-[var(--w-ink2)]">{moment.concept_definition}</span>
-        </div>
-
-        {/* Takeaway */}
-        <div className="takeaway-box mt-1">
-          <div className="w-5 h-5 rounded-full bg-[var(--w-accent-soft)] flex items-center justify-center shrink-0 mt-0.5">
-            <Check className="w-3.5 h-3.5 text-[var(--w-accent)]" />
-          </div>
-          <div>
-            <p className="t-caption font-bold text-[var(--w-accent)] uppercase tracking-wider mb-0.5">
-              Takeaway Rule
-            </p>
-            <p className="t-body-strong text-[var(--w-ink1)] leading-snug">{moment.takeaway}</p>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </article>
   );
 }
 
-export function MomentSkeleton({ moveNumber = '...', index = 1 }: { moveNumber?: string | number; index?: number }) {
+export function MomentSkeleton() {
   return (
-    <article className="card-box p-4 sm:p-5 opacity-80">
-      <div className="flex flex-col gap-3.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[var(--t-xs)] uppercase font-semibold text-[var(--w-ink3)] tracking-wider">
-            Moment {index} · Move {moveNumber}
-          </span>
-          <span className="t-caption text-[var(--w-accent)] font-medium animate-pulse">
-            Analyzing intention (~10s)...
-          </span>
-        </div>
-        <div className="skeleton h-6 w-1/3"></div>
-        <div className="skeleton h-16 w-full"></div>
-        <div className="skeleton h-14 w-full"></div>
-        <div className="skeleton h-12 w-full"></div>
+    <div role="status" aria-label="Preparing your next lesson" className="py-8">
+      <p className="mb-4 text-sm text-[var(--w-ink2)]">Preparing your next lesson…</p>
+      <div aria-hidden="true" className="space-y-3">
+        <div className="skeleton h-7 w-2/3" />
+        <div className="skeleton h-4 w-full" />
+        <div className="skeleton h-4 w-5/6" />
       </div>
-    </article>
+    </div>
   );
 }

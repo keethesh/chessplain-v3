@@ -43,7 +43,7 @@ export function parsePgn(pgn: string, targetPlayer?: string): ParsedGame {
   }
 
   // Replay moves to extract FENs and positions
-  const replayChess = new Chess();
+  const replayChess = new Chess(headers['FEN']);
   const history = chess.history({ verbose: true });
   const positions: PositionInfo[] = [];
 
@@ -59,7 +59,7 @@ export function parsePgn(pgn: string, targetPlayer?: string): ParsedGame {
     });
 
     const fenAfter = replayChess.fen();
-    const moveNumber = Math.floor(i / 2) + 1;
+    const moveNumber = Number(fenBefore.split(' ')[5]);
     const sanWithNumber = move.color === 'w' ? `${moveNumber}.${move.san}` : `${moveNumber}...${move.san}`;
 
     positions.push({

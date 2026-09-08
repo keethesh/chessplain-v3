@@ -107,7 +107,7 @@ export async function verifyCandidates(
     // Drop candidate if swing < 1.0 pawn, unless it is a Quiet drift single candidate
     // Plan contract: drop if verified swing < 1.0 pawn (signed — a d20-evaluated
     // positive swing means the depth-1.5k sweep disagreed, drop it too)
-    if (vSwing > -1.0 && candidates.length > 1 && c.candidateType !== 'Quiet drift') {
+    if (vSwing > -1.0 && c.candidateType !== 'Quiet drift') {
       continue;
     }
 
@@ -125,11 +125,6 @@ export async function verifyCandidates(
       refutationLineSan: refutationSan || c.refutationLineSan,
       verified: true,
     });
-  }
-
-  // Fallback to initial candidate if all got dropped
-  if (verifiedList.length === 0 && candidates.length > 0) {
-    verifiedList.push({ ...candidates[0], verified: true });
   }
 
   return verifiedList;

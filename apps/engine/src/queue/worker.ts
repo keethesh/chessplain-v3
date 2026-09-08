@@ -5,6 +5,7 @@ import { enginePool } from '../uci/engine-pool.js';
 import { runAnalysisPipeline } from '../analysis/pipeline.js';
 import { fetchRecentChessComGame } from '../analysis/chesscom.js';
 import { EloBand } from '../types.js';
+import { parsePgn } from '../analysis/pgn.js';
 
 const posthog = new PostHog(config.posthogKey, {
   host: config.posthogHost,
@@ -87,9 +88,13 @@ export async function processNextJob(): Promise<boolean> {
       const source = sourceData as SourceGameRow | null;
       const metadata = source?.metadata || {};
       const chesscomUser = (metadata['chesscom_username'] as string) || (source?.source === 'chesscom' ? source?.external_id : undefined);
+      targetPlayer = chesscomUser;
 
       if (source?.pgn) {
         pgn = source.pgn;
+        if (!targetPlayer && metadata['player_color'] === 'black') {
+          targetPlayer = parsePgn(pgn).headers['Black'] || 'Black';
+        }
       } else if (chesscomUser) {
         const fetched = await fetchRecentChessComGame(chesscomUser);
         pgn = fetched.pgn;
@@ -114,6 +119,16 @@ export async function processNextJob(): Promise<boolean> {
       throw new Error(`Analysis ${analysis.id} has no valid PGN or Chess.com username`);
     }
 
+    const parsed = parsePgn(pgn, targetPlayer);
+    if (analysis.source_game_id) {
+      const { error } = await supabase.from('source_games').update({
+        player_color: parsed.playerColor,
+        white_player: parsed.headers['White'] || 'White',
+        black_player: parsed.headers['Black'] || 'Black',
+      }).eq('id', analysis.source_game_id);
+      if (error) throw error;
+    }
+
     // 2. Run Pipeline
     const result = await runAnalysisPipeline({
       pgn,
@@ -123,21 +138,23 @@ export async function processNextJob(): Promise<boolean> {
       shareId: analysis.share_id || analysis.id,
       heroVariant: analysis.hero_variant,
       onStageChange: async (stage) => {
-        await supabase
+        const { error } = await supabase
           .from('game_analyses')
           .update({ status: stage })
           .eq('id', analysis.id);
+        if (error) throw error;
       },
       onMomentReady: async (_moment, allMoments) => {
-        await supabase
+        const { error } = await supabase
           .from('game_analyses')
           .update({ moments: allMoments })
           .eq('id', analysis.id);
+        if (error) throw error;
       },
     });
 
     // 3. Mark Completed
-    await supabase
+    const { error: completionError } = await supabase
       .from('game_analyses')
       .update({
         status: 'completed',
@@ -145,8 +162,10 @@ export async function processNextJob(): Promise<boolean> {
         moments: result.report.moments,
         summary: result.report.summary,
         completed_at: new Date().toISOString(),
+        locked_at: null,
       })
       .eq('id', analysis.id);
+    if (completionError) throw completionError;
 
     console.log(`[Worker] Analysis ${analysis.id} completed successfully in ${result.durationMs}ms with ${result.momentsCount} moments`);
 
@@ -174,6 +193,7 @@ export async function processNextJob(): Promise<boolean> {
       .from('game_analyses')
       .update({
         status: shouldRetry ? 'pending' : 'failed',
+        locked_at: null,
         // ponytail: linear backoff (60s per prior attempt); go exponential if the
         // LLM gateway needs longer recovery windows
         next_attempt_at: shouldRetry ? new Date(Date.now() + attempts * 60_000).toISOString() : null,
@@ -207,7 +227,7 @@ export async function processNextJob(): Promise<boolean> {
 async function requeueInterruptedJobs(): Promise<void> {
   const { error, count } = await supabase
     .from('game_analyses')
-    .update({ status: 'pending' })
+    .update({ status: 'pending', locked_at: null })
     .in('status', ['sweeping', 'verifying', 'explaining']);
   if (error) console.error('[Worker] Failed to requeue interrupted jobs:', error.message);
   else if (count) console.log(`[Worker] Requeued ${count} interrupted job(s) from a previous run`);

@@ -1,5 +1,7 @@
 # Chessplain v3 Rebuild — Execution Plan
 
+> Historical plan. For the changes actually implemented in September 2026, start with [the change record](docs/CHANGES_2026-09-06.md) and [current documentation index](docs/README.md). The steps and assertions below are not a completed-work checklist, current production evidence, or authorization to execute destructive migration/deployment actions.
+
 ## Context
 Chessplain is being rebuilt around its single validated loop: user pastes a PGN or enters a chess.com username → 3-stage Stockfish 18 analysis on a 4-core VPS identifies turning points → LLM explains the player's mistakes in plain language ("what you were probably thinking", why the plan fails, concept name, checkable habit). This plan implements the full v1 production stack (Supabase migrations, server-side Stockfish 18 engine service, Next.js web application, PostHog analytics, Stripe billing, GitHub branch hygiene, and Vercel/VPS deployments), replacing the inactive v2 daily-coach product.
 

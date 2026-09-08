@@ -6,3 +6,4 @@ dist/
 data/*.db*
 .DS_Store
 .impeccable/
+.omp/

@@ -24,7 +24,7 @@ export default function PrivacyPage() {
           <ul className="list-disc pl-5 space-y-1.5 text-sm text-[var(--w-ink2)]">
             <li>Public chess games and usernames submitted for analysis.</li>
             <li>IP addresses for rate limiting and anonymous quota enforcement.</li>
-            <li>Email address if you choose to receive private report links or subscribe.</li>
+            <li>Email address if you choose to receive sign-in links or subscribe. Report links are accessible to anyone who has them.</li>
             <li>Usage analytics (via PostHog) to improve the product experience.</li>
           </ul>
         </div>
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
           <h2 className="t-section text-lg font-bold mb-2">3. Third-Party Services</h2>
           <p className="text-sm text-[var(--w-ink2)]">
-            We use Stripe for secure payment processing (we never store raw card details), Supabase for authentication and database services, and PostHog for privacy-respecting product analytics.
+            We use Stripe for payment processing, Supabase for authentication and database services, and PostHog for product analytics. Game positions, selected moves, and contextual game information are sent to the configured AI provider to generate written explanations.
           </p>
         </div>
 

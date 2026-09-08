@@ -1,9 +1,12 @@
+import { Chess } from 'chess.js';
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.getchessplain.com';
 
 export interface SubmitReportPayload {
   pgn?: string;
   chesscom_username?: string;
   hero_variant?: string;
+  player_color?: 'white' | 'black';
 }
 
 export interface SubmitReportResponse {
@@ -56,93 +59,72 @@ export interface ReportDetail {
   source_games?: {
     pgn?: string;
     chesscom_username?: string;
+    player_color?: 'white' | 'black';
+    white_player?: string;
+    black_player?: string;
   };
 }
 
-export async function submitReport(payload: SubmitReportPayload, token?: string): Promise<SubmitReportResponse> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) { super(message); this.name = 'ApiError'; }
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(API_BASE_URL + path, { ...options, signal: options.signal || AbortSignal.timeout(20000) });
+  } catch {
+    throw new ApiError('We couldn’t reach Chessplain. Check your connection and try again.', 0);
   }
-
-  const res = await fetch(`${API_BASE_URL}/api/reports`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
-
-  if (res.status === 402) {
-    const errData = await res.json();
-    throw new Error(errData.message || 'Free quota exceeded');
-  }
-
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.error || 'Failed to submit report');
+    const fallback = res.status === 404 ? 'We couldn’t find that report.' : res.status === 429 ? 'Too many requests. Please wait a little before trying again.' : 'Something went wrong. Please try again.';
+    throw new ApiError(data.message || data.error || fallback, res.status);
   }
-
-  return res.json();
+  return data as T;
 }
 
+export function normalizeReport(data: ReportDetail): ReportDetail {
+  const source = data.source_games;
+  const color = data.player_color || source?.player_color || data.moments?.[0]?.player_color;
+  let headers: Record<string, string> = {};
+  let moveCount: number | undefined;
+  if (source?.pgn) {
+    try {
+      const game = new Chess();
+      game.loadPgn(source.pgn);
+      headers = game.getHeaders();
+      moveCount = Math.ceil(game.history().length / 2);
+    } catch { /* A report can still be read when its source PGN is unavailable. */ }
+  }
+  const white = source?.white_player || headers.White;
+  const black = source?.black_player || headers.Black;
+  return {
+    ...data, moments: Array.isArray(data.moments) ? data.moments : [],
+    player_color: color,
+    player_name: data.player_name || (color === 'black' ? black : white),
+    opponent_name: data.opponent_name || (color === 'black' ? white : black),
+    result: data.result || headers.Result,
+    move_count: data.move_count ?? moveCount,
+  };
+}
+
+export function submitReport(payload: SubmitReportPayload, token?: string): Promise<SubmitReportResponse> {
+  return request('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify(payload) });
+}
 export async function getReportById(id: string): Promise<ReportDetail> {
-  const res = await fetch(`${API_BASE_URL}/api/reports/${id}`, {
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    throw new Error('Report not found');
-  }
-  return res.json();
+  return normalizeReport(await request<ReportDetail>('/api/reports/' + encodeURIComponent(id), { cache: 'no-store' }));
 }
-
 export async function getReportByShareId(shareId: string): Promise<ReportDetail> {
-  const res = await fetch(`${API_BASE_URL}/api/reports/share/${shareId}`, {
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    throw new Error('Report not found');
-  }
-  return res.json();
+  return normalizeReport(await request<ReportDetail>('/api/reports/share/' + encodeURIComponent(shareId), { cache: 'no-store' }));
 }
-
-export async function createCheckoutSession(params: {
-  interval: 'month' | 'year';
-  userId?: string;
-  customerEmail?: string;
-  returnUrl?: string;
-}): Promise<{ url: string }> {
-  const res = await fetch(`${API_BASE_URL}/api/billing/checkout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      interval: params.interval,
-      user_id: params.userId,
-      customer_email: params.customerEmail,
-      return_url: params.returnUrl,
-    }),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to create checkout session');
-  }
-
-  return res.json();
+export function createCheckoutSession(params: { interval: 'month' | 'year'; token: string }): Promise<{ url: string }> {
+  return request('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + params.token }, body: JSON.stringify({ interval: params.interval }) });
 }
-
-export async function claimReport(id: string, token: string): Promise<{ success: boolean; user_id: string }> {
-  const res = await fetch(`${API_BASE_URL}/api/reports/${id}/claim`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error('Failed to claim report');
-  }
-
-  return res.json();
+export function createBillingPortal(token: string): Promise<{ url: string }> {
+  return request('/api/billing/portal', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+}
+export function claimReport(id: string, token: string): Promise<{ success: boolean; user_id: string }> {
+  return request('/api/reports/' + encodeURIComponent(id) + '/claim', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
 }

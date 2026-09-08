@@ -69,10 +69,10 @@ export function createFallbackMoment(moment: CandidateMoment): MomentReport {
     ply: moment.ply,
     move_number: moment.moveNumber,
     played: moment.san,
-    probable_thought: 'I was looking to improve my piece activity and create active play.',
-    what_actually_happens: `This move gave away the initiative. ${moment.refutationLineSan ? `The reply ${moment.refutationLineSan} created decisive counterplay.` : 'The position became difficult to defend.'}`,
-    concept_name: moment.candidateType === 'Missed win' ? 'Missed tactic' : 'Tactical oversight',
-    concept_definition: 'overlooking an opponent counter-threat',
+    probable_thought: 'Your intention cannot be inferred from the moves alone.',
+    what_actually_happens: `The written explanation is unavailable. ${moment.refutationLineSan ? `Explore this calculated continuation: ${moment.refutationLineSan}.` : 'Compare the played move with the suggested alternative on the board.'}`,
+    concept_name: 'Position to review',
+    concept_definition: 'a position worth comparing with an alternative',
     takeaway: 'Before committing a piece forward, check all opponent forcing responses.',
     severity_label: moment.candidateType,
     fen_before: moment.fenBefore,
@@ -94,9 +94,9 @@ export function createFallbackSummary(
 ): GameSummary {
   const first = moments[0];
   return {
-    headline: first ? `Move ${first.move_number} was where the outcome changed.` : 'A hard-fought game decided in the middlegame.',
-    story: `The game was decided in the tactical transitions. ${first ? `Move ${first.move_number} was the critical moment where the balance shifted.` : ''} After that, ${meta.opponentName || 'your opponent'} converted the advantage cleanly.`,
-    focus_habit: first?.takeaway || 'Before capturing a pawn, trace where your piece lands and how it returns.',
+    headline: first ? `Start your review at move ${first.move_number}.` : 'No clear turning point found in this review.',
+    story: first ? 'The written game summary is unavailable. The selected positions and calculated alternatives are available to explore on the board.' : 'This review did not identify a clear moment to explain. That does not mean every move was best; try reviewing another game.',
+    focus_habit: first?.takeaway || 'Before choosing a move, check your opponent’s checks, captures, and threats.',
   };
 }
 
@@ -155,6 +155,7 @@ export async function explainMoment(
     if (validation.isValid && validation.parsed) {
       return {
         ...validation.parsed,
+        played: moment.san,
         ply: moment.ply,
         move_number: moment.moveNumber,
         fen_before: moment.fenBefore,
@@ -193,6 +194,7 @@ export async function explainMoment(
     if (retryValidation.isValid && retryValidation.parsed) {
       return {
         ...retryValidation.parsed,
+        played: moment.san,
         ply: moment.ply,
         move_number: moment.moveNumber,
         fen_before: moment.fenBefore,
@@ -254,12 +256,12 @@ export async function explainSummary(
   analysisId?: string
 ): Promise<GameSummary> {
   const inputPayload = {
-    result: meta.result || '0-1',
+    result: meta.result || '*',
     player_color: meta.playerColor,
     player_name: meta.playerName,
     opponent_name: meta.opponentName,
     move_count: meta.moveCount,
-    time_control: meta.timeControl || '10+0',
+    time_control: meta.timeControl || 'unknown',
     moments: moments.map((m) => ({
       played: m.played,
       probable_thought: m.probable_thought,

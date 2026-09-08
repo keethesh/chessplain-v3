@@ -59,6 +59,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   // 3. Stage 3: LLM Explanation
   if (onStageChange) await onStageChange('explaining');
   const completedMoments: MomentReport[] = [];
+  let publication = Promise.resolve();
 
   const explainPromises = verifiedCandidates.map(async (candidate) => {
     const explained = await explainMoment(
@@ -72,7 +73,9 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
       // Sort in ply order
       completedMoments.sort((a, b) => a.ply - b.ply);
       if (onMomentReady) {
-        await onMomentReady(explained, completedMoments);
+        const snapshot = [...completedMoments];
+        publication = publication.then(async () => { await onMomentReady(explained, snapshot); });
+        await publication;
       }
     }
   });
@@ -96,7 +99,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
     analysisId
   );
 
-  if (onStageChange) await onStageChange('completed');
+  // The caller publishes completion only when the full report is persisted.
 
   const durationMs = Date.now() - startTime;
 

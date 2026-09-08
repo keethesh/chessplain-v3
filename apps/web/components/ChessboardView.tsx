@@ -34,8 +34,8 @@ export function ChessboardView({
   }));
 
   return (
-    <div className="flex justify-center items-center select-none overflow-hidden rounded-xl border border-[var(--w-border-strong)] bg-[var(--w-surface)] p-2 shadow-sm">
-      <div style={{ width: `${boardWidth}px`, maxWidth: '100%' }}>
+    <div className="w-full select-none overflow-hidden rounded-xl bg-[var(--w-surface)]" style={{ maxWidth: boardWidth }}>
+      <div className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${fen.split(' ')[1] === 'w' ? 'White' : 'Black'} to move.`}>
         <Chessboard
           options={{
             position: fen,
@@ -43,8 +43,8 @@ export function ChessboardView({
             allowDragging: false,
             squareStyles: customSquareStyles,
             arrows: customArrows,
-            darkSquareStyle: { backgroundColor: '#b58863' },
-            lightSquareStyle: { backgroundColor: '#f0d9b5' },
+            darkSquareStyle: { backgroundColor: '#8b9b83' },
+            lightSquareStyle: { backgroundColor: '#ede8dc' },
           }}
         />
       </div>

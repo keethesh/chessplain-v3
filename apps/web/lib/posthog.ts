@@ -8,25 +8,27 @@ let isInitialized = false;
 export function initPostHog(): void {
   if (typeof window === 'undefined' || isInitialized) return;
 
-  posthog.init(POSTHOG_KEY, {
+  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) return;
+  try { posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
     person_profiles: 'identified_only',
     capture_pageview: true, // SPA auto-capture; init is eager via PostHogProvider
   });
 
   isInitialized = true;
+  } catch { /* Analytics is optional; never block the product. */ }
 }
 
 export function captureEvent(eventName: string, properties?: Record<string, unknown>): void {
   if (typeof window === 'undefined') return;
   initPostHog();
-  posthog.capture(eventName, properties);
+  if (isInitialized) { try { posthog.capture(eventName, properties); } catch { /* Non-critical telemetry. */ } }
 }
 
 export function identifyUser(userId: string, properties?: Record<string, unknown>): void {
   if (typeof window === 'undefined') return;
   initPostHog();
-  posthog.identify(userId, properties);
+  if (isInitialized) { try { posthog.identify(userId, properties); } catch { /* Non-critical telemetry. */ } }
 }
 
 export function getDistinctId(): string {

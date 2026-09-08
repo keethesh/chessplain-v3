@@ -1,3 +1,5 @@
+> Historical strategy, retained for context. Its reported revenue, customer metrics, performance numbers, and competitor claims were not revalidated in the September 2026 work. See the [current documentation index](README.md), [implemented change record](CHANGES_2026-09-06.md), and [current product assessment](PRODUCT_REVIEW_2026-09-06.md) before using it to guide new work.
+
 Using \*\*strategize\*\* to frame this rebuild. I pulled everything from your live infrastructure first — and the data changes the diagnosis. Here's the strategy.
 
 

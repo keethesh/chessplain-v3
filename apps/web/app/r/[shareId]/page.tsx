@@ -1,4 +1,5 @@
 import React from 'react';
+import { DEMO_REPORT } from '../../../lib/demo-report';
 import Link from 'next/link';
 import { getReportByShareId } from '../../../lib/api';
 import { ShareViewTracker } from '../../../components/ShareViewTracker';
@@ -14,7 +15,7 @@ export default async function SharedReportPage({ params }: PageProps) {
   let report = null;
 
   try {
-    report = await getReportByShareId(shareId);
+    report = shareId === 'demo-sample' ? DEMO_REPORT : await getReportByShareId(shareId);
   } catch {
     // Handled below
   }
@@ -25,7 +26,7 @@ export default async function SharedReportPage({ params }: PageProps) {
         <div className="card-box p-8 border border-[var(--w-border-strong)] bg-[var(--w-surface)] shadow-md">
           <h2 className="t-heading text-2xl mb-2 text-[var(--w-ink1)]">Report not found</h2>
           <p className="t-body text-[var(--w-ink2)] mb-6">
-            This shared game analysis link is expired or invalid.
+            The link may be incorrect, or the service may be temporarily unavailable. Try opening it again shortly.
           </p>
           <div className="flex justify-center gap-3">
             <Link

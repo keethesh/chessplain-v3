@@ -1,253 +1,108 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sparkles, ArrowRight, ShieldCheck, Zap, BookOpen, Compass } from 'lucide-react';
-import { submitReport } from '../lib/api';
-import { captureEvent, getDeterministicHeroVariant } from '../lib/posthog';
-
-const HERO_COPY = {
-  A: {
-    hook: "Chess.com gave you a 47%. I'll tell you why.",
-    headline: 'Your games, explained like a person.',
-    subhead: 'No accuracy score. No engine jargon. What you were thinking, why it lost the game, and what to check next time.',
-  },
-  B: {
-    hook: "It wasn't a blunder. It was a plan that almost worked.",
-    headline: 'Chessplain figures out why you played that move.',
-    subhead: 'Explains the flaw in the plan, not the move.',
-  },
-  E: {
-    hook: "You just lost. You don't know why. The engine won't tell you.",
-    headline: "Paste a game. Get an explanation you'll actually understand.",
-    subhead: 'Like a patient friend with a 3200 rating.',
-  },
-};
+import { ArrowRight, Check, ChevronRight, LoaderCircle, MoveUpRight } from 'lucide-react';
+import { ApiError, submitReport } from '../lib/api';
+import { captureEvent } from '../lib/posthog';
+import { supabase } from '../lib/supabase';
+import { ChessboardView } from '../components/ChessboardView';
+import { DEMO_REPORT } from '../lib/demo-report';
 
 export default function HomePage() {
   const router = useRouter();
-  const [heroVariant, setHeroVariant] = useState<'A' | 'B' | 'E' | null>(null);
-  const [tab, setTab] = useState<'username' | 'pgn'>('username');
+  const [method, setMethod] = useState<'username' | 'pgn'>('username');
   const [username, setUsername] = useState('');
   const [pgn, setPgn] = useState('');
+  const [color, setColor] = useState<'white' | 'black'>('white');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaReached, setQuotaReached] = useState(false);
+  const [showMove, setShowMove] = useState(false);
+  const submitting = useRef(false);
+  const sample = DEMO_REPORT.moments[0];
 
-  useEffect(() => {
-    const variant = getDeterministicHeroVariant();
-    setHeroVariant(variant);
-    captureEvent('landing_viewed', { hero_variant: variant });
-  }, []);
+  useEffect(() => { captureEvent('landing_viewed', { hero_variant: 'editorial_v1' }); }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (submitting.current) return;
     setError(null);
+    setQuotaReached(false);
+    const value = method === 'username' ? username.trim() : pgn.trim();
+    if (!value) {
+      setError(method === 'username' ? 'Enter your Chess.com username to find your latest game.' : 'Paste the moves from a completed game.');
+      return;
+    }
+    submitting.current = true;
     setIsLoading(true);
-
-    if (!heroVariant) return;
-
-    const isUsername = tab === 'username';
-    const method = isUsername ? 'chesscom' : 'pgn';
-
-    if (isUsername && !username.trim()) {
-      setError('Please enter a Chess.com username');
-      setIsLoading(false);
-      return;
-    }
-
-    if (!isUsername && !pgn.trim()) {
-      setError('Please paste a valid PGN');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const payload = isUsername
-        ? { chesscom_username: username.trim(), hero_variant: heroVariant }
-        : { pgn: pgn.trim(), hero_variant: heroVariant };
-
-      const response = await submitReport(payload);
-      captureEvent('pgn_submitted', {
-        method,
-        hero_variant: heroVariant,
-      });
-      const priorSubmissions = Number(localStorage.getItem('cp_submissions') || '0');
-      captureEvent('game_submitted', { is_repeat: priorSubmissions > 0 });
-      localStorage.setItem('cp_submissions', String(priorSubmissions + 1));
-      router.push(`/report/${response.id}`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Submission failed';
-      setError(msg);
+      const { data } = await supabase.auth.getSession();
+      const response = await submitReport(method === 'username'
+        ? { chesscom_username: value, hero_variant: 'editorial_v1' }
+        : { pgn: value, player_color: color, hero_variant: 'editorial_v1' }, data.session?.access_token);
+      captureEvent('game_submitted', { method: method === 'username' ? 'chesscom' : 'pgn' });
+      router.push('/report/' + response.id);
+    } catch (err) {
+      setQuotaReached(err instanceof ApiError && err.status === 402);
+      setError(err instanceof Error ? err.message : 'We couldn’t submit your game. Please try again.');
+      submitting.current = false;
       setIsLoading(false);
     }
-  };
-
-  const copy = heroVariant ? HERO_COPY[heroVariant] : null;
+  }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
-      {/* Hero Section */}
-      {copy && (
-        <div className="text-center">
-          <span className="badge-accent mb-3 inline-flex text-xs font-semibold uppercase tracking-wider">
-            {copy.hook}
-          </span>
-          <h1 className="t-display sm:text-5xl text-3xl font-extrabold tracking-tight mt-1 text-[var(--w-ink1)]">
-            {copy.headline}
-          </h1>
-          <p className="t-body sm:text-lg text-base text-[var(--w-ink2)] mt-4 max-w-2xl mx-auto leading-relaxed">
-            {copy.subhead}
-          </p>
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <Link
-              href="/report/demo"
-              onClick={() => captureEvent('sample_game_clicked', { source: 'hero' })}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--w-accent)] hover:underline"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>See an interactive sample game report (1200 Elo) →</span>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Input Box Card */}
-      <div className="card-box mt-8 p-6 sm:p-8 border border-[var(--w-border-strong)] bg-[var(--w-surface)] shadow-md">
-        {/* Method Toggle Tabs */}
-        <div className="flex items-center justify-between border-b border-[var(--w-border)] mb-6 pb-2">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => { setTab('username'); setError(null); }}
-              className={`pb-2 px-3 text-sm font-semibold border-b-2 transition-all ${
-                tab === 'username'
-                  ? 'border-[var(--w-accent)] text-[var(--w-accent)]'
-                  : 'border-transparent text-[var(--w-ink2)] hover:text-[var(--w-ink1)]'
-              }`}
-            >
-              Chess.com Username
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTab('pgn'); setError(null); }}
-              className={`pb-2 px-3 text-sm font-semibold border-b-2 transition-all ${
-                tab === 'pgn'
-                  ? 'border-[var(--w-accent)] text-[var(--w-accent)]'
-                  : 'border-transparent text-[var(--w-ink2)] hover:text-[var(--w-ink1)]'
-              }`}
-            >
-              Paste PGN
-            </button>
-          </div>
-
-          <Link
-            href="/report/demo"
-            onClick={() => captureEvent('sample_game_clicked', { source: 'tab_header' })}
-            className="hidden sm:inline-flex items-center gap-1 text-xs text-[var(--w-ink2)] hover:text-[var(--w-accent)] transition-colors"
-          >
-            <span>Try sample game</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          {tab === 'username' ? (
-            <div>
-              <label htmlFor="username" className="block text-sm font-semibold text-[var(--w-ink1)] mb-1.5">
-                Your Chess.com username
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. GothamChess"
-                disabled={isLoading}
-                className="w-full rounded-lg border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-3 text-sm text-[var(--w-ink1)] placeholder-[var(--w-ink3)] focus:border-[var(--w-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--w-accent)] transition-colors"
-              />
-              <p className="t-caption text-[var(--w-ink2)] mt-2">
-                We'll automatically fetch your most recent completed game.
-              </p>
+    <div className="home-page">
+      <section className="home-hero page-width">
+        <div className="hero-copy">
+          <h1>A little clarity.<br />A better <em>next game.</em></h1>
+          <p className="hero-lede">Understand the moments that changed your game, see what happened on the board, and leave with one thing to work on.</p>
+          <div className="submit-panel" id="analyze">
+            <div className="method-tabs" aria-label="Choose how to add your game">
+              <button type="button" aria-pressed={method === 'username'} disabled={isLoading} onClick={() => { setMethod('username'); setError(null); setQuotaReached(false); }}>Chess.com username</button>
+              <button type="button" aria-pressed={method === 'pgn'} disabled={isLoading} onClick={() => { setMethod('pgn'); setError(null); setQuotaReached(false); }}>Paste a PGN</button>
             </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="pgn" className="block text-sm font-semibold text-[var(--w-ink1)]">
-                  Game PGN
-                </label>
-                <span className="t-caption text-[var(--w-ink3)]">
-                  From Chess.com or Lichess: Share → Copy PGN
-                </span>
-              </div>
-              <textarea
-                id="pgn"
-                rows={5}
-                value={pgn}
-                onChange={(e) => setPgn(e.target.value)}
-                placeholder="1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4..."
-                disabled={isLoading}
-                className="w-full rounded-lg border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-3 font-mono text-xs text-[var(--w-ink1)] placeholder-[var(--w-ink3)] focus:border-[var(--w-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--w-accent)] transition-colors"
-              />
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-lg bg-[var(--w-error-soft)] p-3 text-sm text-[var(--w-error)] border border-[var(--w-error)]/20 font-medium">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex items-center justify-center gap-2 rounded-lg bg-[var(--w-accent)] px-5 py-3.5 text-sm font-bold text-[var(--w-on-accent)] shadow-sm hover:bg-[var(--w-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--w-accent)] focus:ring-offset-2 disabled:opacity-50 transition-all cursor-pointer"
-          >
-            {isLoading ? (
-              <>
-                <Sparkles className="w-4 h-4 animate-spin" />
-                <span>Reading your moves (~15s)...</span>
-              </>
-            ) : (
-              <>
-                <span>Explain my game free</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-
-      {/* Trust & Features Footer */}
-      <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3 text-center border-t border-[var(--w-border)] pt-8">
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-[var(--w-surface-subtle)] flex items-center justify-center mb-2 text-[var(--w-accent)] border border-[var(--w-border)]">
-            <Zap className="w-4 h-4" />
+            <form onSubmit={handleSubmit} className="submit-form" aria-busy={isLoading}>
+              {method === 'username' ? <div className="field-group">
+                <label htmlFor="chess-username">Your Chess.com username</label>
+                <input id="chess-username" name="username" autoComplete="off" autoCapitalize="none" spellCheck={false} value={username} maxLength={100} onChange={e => setUsername(e.target.value)} placeholder="e.g. your_chess_username" disabled={isLoading} aria-describedby="source-help" aria-invalid={!!error} />
+                <p id="source-help" className="field-help">Your latest completed game. No Chess.com password needed.</p>
+              </div> : <>
+                <div className="field-group">
+                  <label htmlFor="game-pgn">Game moves (PGN)</label>
+                  <textarea id="game-pgn" rows={4} value={pgn} maxLength={100000} onChange={e => setPgn(e.target.value)} placeholder="1. e4 e5 2. Nf3 Nc6…" disabled={isLoading} aria-describedby="pgn-help" aria-invalid={!!error} />
+                  <p id="pgn-help" className="field-help">Open a finished game on Chess.com or Lichess, choose Share or Export, then copy the PGN.</p>
+                </div>
+                <fieldset className="side-choice" disabled={isLoading}><legend>Which side did you play?</legend>
+                  {(['white', 'black'] as const).map(side => <label key={side}><input type="radio" name="player-color" value={side} checked={color === side} onChange={() => setColor(side)} />{side === 'white' ? 'White' : 'Black'}</label>)}
+                </fieldset>
+              </>}
+              {error && <div className="form-error" role="alert"><p>{error}</p>{quotaReached && <Link href="/pricing">See plans or sign in <ArrowRight size={14} /></Link>}</div>}
+              <button className="primary-button" type="submit" disabled={isLoading}>{isLoading ? <><LoaderCircle size={17} className="spin" /> Opening your review…</> : <>Explain my game <ArrowRight size={17} /></>}</button>
+              <p className="form-reassurance"><Check size={14} /> 2 free reports every 7 days. No signup required.</p>
+            </form>
           </div>
-          <p className="t-body-strong text-[var(--w-ink1)]">Fast Explanation</p>
-          <p className="t-caption text-[var(--w-ink2)] mt-0.5 max-w-[200px]">
-            Engine-evaluated in ~15 seconds without waiting in long queues.
-          </p>
+          <Link className="text-link hero-sample-link" href="/report/demo" onClick={() => captureEvent('sample_game_clicked', { source: 'hero' })}>Take a look at a sample first <ArrowRight size={15} /></Link>
         </div>
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-[var(--w-surface-subtle)] flex items-center justify-center mb-2 text-[var(--w-accent)] border border-[var(--w-border)]">
-            <Compass className="w-4 h-4" />
-          </div>
-          <p className="t-body-strong text-[var(--w-ink1)]">Plain English</p>
-          <p className="t-caption text-[var(--w-ink2)] mt-0.5 max-w-[200px]">
-            No accuracy score. One clear habit to check next time.
-          </p>
-        </div>
-        <div className="flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-[var(--w-surface-subtle)] flex items-center justify-center mb-2 text-[var(--w-accent)] border border-[var(--w-border)]">
-            <ShieldCheck className="w-4 h-4" />
-          </div>
-          <p className="t-body-strong text-[var(--w-ink1)]">Free, No Account</p>
-          <p className="t-caption text-[var(--w-ink2)] mt-0.5 max-w-[200px]">
-            First 2 games free every week without signing up.
-          </p>
-        </div>
-      </div>
+        <aside className="sample-preview" aria-label="Preview of a sample review">
+          <div className="sample-masthead"><span>The game, in perspective</span><span>Sample review</span></div>
+          <div className="sample-board"><ChessboardView fen={showMove ? sample.fen_after : sample.fen_before} orientation="white" boardWidth={352} /></div>
+          <div className="sample-controls"><span>Move {sample.move_number} · {showMove ? 'White' : 'Black'} to play</span><button type="button" onClick={() => setShowMove(!showMove)}>{showMove ? 'Before the move' : 'See ' + sample.played} <ChevronRight size={15} /></button></div>
+          <div className="sample-annotation"><span className="annotation-mark"><MoveUpRight size={23} /></span><div><h2>A natural move.<br />An overlooked threat.</h2><p>{sample.what_actually_happens}</p></div></div>
+          <Link href="/report/demo" className="sample-read">Explore this review <ArrowRight size={16} /></Link>
+        </aside>
+      </section>
+      <section className="lesson-section page-width">
+        <div><h2>The point isn’t to review<br />every move. <em>It’s to learn.</em></h2><p>A useful review connects a decision to what happened next. Then it gives you something small enough to remember when you play again.</p></div>
+        <ol className="lesson-steps"><li><span>01</span><div><h3>Find the moments that matter</h3><p>Start with a completed game. We look for decisions worth a closer look.</p></div></li><li><span>02</span><div><h3>Follow the idea on the board</h3><p>Read the explanation alongside the position. Step through the move and its reply.</p></div></li><li><span>03</span><div><h3>Take one lesson with you</h3><p>A practical question to ask yourself in your next game, in plain English.</p></div></li></ol>
+      </section>
+      <section className="questions-section page-width"><h2>A few things to know.</h2><div className="questions-list">
+        <details><summary>Can I choose a different game?<span>+</span></summary><p>The username option imports your latest completed Chess.com game. To review a specific game from Chess.com or Lichess, paste its PGN and select your side.</p></details>
+        <details><summary>Do I need an account?<span>+</span></summary><p>You can get two free reports every seven days without signing up. Free usage is counted by network, so people on a shared connection may share the allowance.</p></details>
+        <details><summary>How are the explanations made?<span>+</span></summary><p>Stockfish examines positions and possible replies. AI turns that analysis into readable explanations. A suggested intention is an interpretation, and explanations can be wrong—use the board to check them.</p></details>
+        <details><summary>Who can see my report?<span>+</span></summary><p>Anyone with a report link can open it. Reports may include the player names and game you submit, so only submit games you are comfortable sharing.</p></details>
+      </div></section>
     </div>
   );
 }

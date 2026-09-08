@@ -47,11 +47,11 @@ export class UciClient {
 
     await this.sendCommand('uci', (line) => line === 'uciok');
 
-    if (hashMb) {
-      await this.sendRaw(`setoption name Hash value ${hashMb}`);
-    }
     if (threads) {
       await this.sendRaw(`setoption name Threads value ${threads}`);
+    }
+    if (hashMb) {
+      await this.sendRaw(`setoption name Hash value ${hashMb}`);
     }
     if (syzygyPath) {
       await this.sendRaw(`setoption name SyzygyPath value ${syzygyPath}`);

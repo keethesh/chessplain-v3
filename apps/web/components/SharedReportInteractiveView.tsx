@@ -1,220 +1,137 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Sparkles, ArrowRight, RotateCcw, Check, BookOpen } from 'lucide-react';
-import { ReportDetail, MomentReport } from '../lib/api';
-import { ChessboardView } from './ChessboardView';
-import { MomentCard } from './MomentCard';
-import { EvalSparkline } from './EvalSparkline';
+import { ArrowRight, ArrowLeft, RotateCcw, BookOpen } from 'lucide-react';
 import { Chess } from 'chess.js';
+import type { ReportDetail, MomentReport } from '../lib/api';
+import { ChessboardView } from './ChessboardView';
+import { MomentCard, MomentSkeleton } from './MomentCard';
 
 interface SharedReportInteractiveViewProps {
   report: ReportDetail;
-  shareId: string;
+  shareId?: string;
+  isOwner?: boolean;
+  actions?: ReactNode;
+  children?: ReactNode;
+  onSelectMoment?: (index: number) => void;
 }
 
-export function SharedReportInteractiveView({ report, shareId }: SharedReportInteractiveViewProps) {
-  const moments = report.moments || [];
-  const [activeMomentIndex, setActiveMomentIndex] = useState<number>(0);
-  const [orientation, setOrientation] = useState<'white' | 'black'>(
-    report.player_color || 'white'
-  );
-
-  const handleSelectMoment = useCallback((index: number) => {
-    setActiveMomentIndex(index);
-  }, []);
-
-  const toggleOrientation = useCallback(() => {
-    setOrientation((prev) => (prev === 'white' ? 'black' : 'white'));
-  }, []);
-
-  // Keyboard navigation shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      if (e.key === 'ArrowRight' || e.key === 'j') {
-        if (moments.length > 0) {
-          handleSelectMoment((activeMomentIndex + 1) % moments.length);
-        }
-      } else if (e.key === 'ArrowLeft' || e.key === 'k') {
-        if (moments.length > 0) {
-          handleSelectMoment((activeMomentIndex - 1 + moments.length) % moments.length);
-        }
-      } else if (e.key === 'f' || e.key === 'F') {
-        toggleOrientation();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeMomentIndex, moments.length, handleSelectMoment, toggleOrientation]);
-
-  const currentMoment = moments[activeMomentIndex] || moments[0];
-  const activeFen =
-    currentMoment?.fen_before || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-
-  const playedArrow = (() => {
-    if (!currentMoment) return undefined;
-    try {
-      const mv = new Chess(currentMoment.fen_before).move(currentMoment.played);
-      return mv ? { startSquare: mv.from, endSquare: mv.to, color: 'rgba(180, 83, 9, 0.85)' } : undefined;
-    } catch {
-      return undefined;
+function positionSteps(moment: MomentReport) {
+  const steps = [{ fen: moment.fen_before, label: 'Before your move' }];
+  try {
+    const game = new Chess(moment.fen_before);
+    const played = game.move(moment.played.replace(/^\d+\.+\s*/, ''));
+    if (!played) return steps;
+    steps.push({ fen: game.fen(), label: `You played ${played.san}` });
+    const moves = moment.refutation_line.replace(/\d+\.(?:\.\.)?/g, ' ').trim().split(/\s+/);
+    for (const san of moves) {
+      if (!san || ['1-0', '0-1', '1/2-1/2', '*'].includes(san)) continue;
+      const move = game.move(san);
+      if (!move) break;
+      steps.push({ fen: game.fen(), label: `${(move.color === 'w' ? 'white' : 'black') === moment.player_color ? 'Your continuation' : 'Opponent’s reply'}: ${move.san}` });
     }
-  })();
+  } catch {
+    // Only show positions successfully replayed from the actual board.
+  }
+  return steps;
+}
+
+export function SharedReportInteractiveView({ report, shareId, isOwner = false, actions, children, onSelectMoment }: SharedReportInteractiveViewProps) {
+  const moments = report.moments || [];
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [orientation, setOrientation] = useState<'white' | 'black'>(report.player_color || 'white');
+  const [step, setStep] = useState(0);
+  const [showAlternative, setShowAlternative] = useState(false);
+  useEffect(() => { if (report.player_color) setOrientation(report.player_color); }, [report.player_color]);
+  const current = moments[activeIndex] || moments[0];
+  const steps = useMemo(() => current ? positionSteps(current) : [], [current]);
+  const alternative = useMemo(() => {
+    if (!current?.best_move) return null;
+    try { const board = new Chess(current.fen_before); const move = board.move(current.best_move.replace(/^\d+\.+\s*/, '')); return move ? { fen: board.fen(), label: 'Alternative: ' + move.san } : null; } catch { return null; }
+  }, [current]);
+  const activeStep = showAlternative && alternative ? alternative : steps[Math.min(step, steps.length - 1)];
+  const isDemo = report.id === 'demo' || shareId === 'demo-sample';
+  const complete = report.status === 'completed';
+
+  const selectMoment = (index: number) => {
+    setActiveIndex(index);
+    setStep(0);
+    setShowAlternative(false);
+    onSelectMoment?.(index);
+  };
+  const playedArrow = useMemo(() => {
+    if (!current || step !== 0) return [];
+    try {
+      const move = new Chess(current.fen_before).move(current.played.replace(/^\d+\.+\s*/, ''));
+      return move ? [{ startSquare: move.from, endSquare: move.to, color: '#aa5939' }] : [];
+    } catch { return []; }
+  }, [current, step]);
+  const result = report.result === '1-0' ? 'White won' : report.result === '0-1' ? 'Black won' : report.result === '1/2-1/2' ? 'Draw' : null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-      {/* Banner Call to Action */}
-      <div className="mb-6 rounded-xl bg-[var(--w-surface-subtle)] p-4 border border-[var(--w-border-strong)] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[var(--w-accent-soft)] flex items-center justify-center text-[var(--w-accent)] shrink-0">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="t-body-strong text-[var(--w-ink1)]">Shared Chessplain Game Review</p>
-            <p className="t-caption text-[var(--w-ink2)]">
-              Turn your own lost games into clear, human explanations without engine jargon.
-            </p>
-          </div>
-        </div>
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--w-accent)] px-4 py-2.5 text-xs font-bold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] shadow-sm transition-all shrink-0 cursor-pointer"
-        >
-          <span>Explain your game free</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-
-      {/* Header Meta */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--w-border)] pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="badge-muted">
-              {report.result === '1-0' ? 'White won' : report.result === '0-1' ? 'Black won' : 'Game analysis'}
-            </span>
-            <span className="t-caption text-[var(--w-ink2)]">
-              {report.move_count ? `${report.move_count} moves` : ''} · {report.time_control || 'Rapid'}
-            </span>
-          </div>
-          <p className="t-small font-semibold text-[var(--w-ink1)] mt-1">
-            {report.player_name || 'Player'} vs {report.opponent_name || 'Opponent'}
-          </p>
-        </div>
-
-        {/* Flip button */}
-        <button
-          onClick={toggleOrientation}
-          title="Flip board perspective (F)"
-          className="flex items-center gap-1.5 rounded-lg border border-[var(--w-border)] bg-[var(--w-surface)] px-3 py-1.5 text-xs font-medium text-[var(--w-ink1)] hover:border-[var(--w-border-strong)] transition-all cursor-pointer"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-[var(--w-ink2)]" />
-          <span>Flip: {orientation === 'white' ? 'White' : 'Black'}</span>
-        </button>
-      </div>
-
-      {/* Main 2-Column Responsive Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Interactive Chessboard */}
-        <div className="lg:col-span-5 lg:sticky lg:top-6 flex flex-col gap-4">
-          <div className="w-full flex flex-col items-center">
-            <ChessboardView
-              fen={activeFen}
-              orientation={orientation}
-              boardWidth={360}
-              arrows={playedArrow ? [playedArrow] : []}
-            />
-
-            <div className="hidden lg:flex items-center gap-3 text-[var(--t-xs)] text-[var(--w-ink3)] mt-2">
-              <span className="inline-flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-[var(--w-surface-subtle)] border border-[var(--w-border)] font-mono text-[10px]">←</kbd>
-                <kbd className="px-1.5 py-0.5 rounded bg-[var(--w-surface-subtle)] border border-[var(--w-border)] font-mono text-[10px]">→</kbd>
-                <span>Navigate moments</span>
-              </span>
-              <span>·</span>
-              <span className="inline-flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 rounded bg-[var(--w-surface-subtle)] border border-[var(--w-border)] font-mono text-[10px]">F</kbd>
-                <span>Flip</span>
-              </span>
+    <div className="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10">
+      {(isDemo || !isOwner) && (
+        <div className="mb-9 flex flex-col justify-between gap-4 border-b border-[var(--w-border)] pb-6 sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3">
+            <BookOpen aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-[var(--w-accent)]" />
+            <div>
+              <p className="text-sm font-semibold">{isDemo ? 'An illustrative game review' : 'A shared game review'}</p>
+              <p className="mt-1 max-w-lg text-sm leading-relaxed text-[var(--w-ink2)]">{isDemo ? 'A short teaching example. Explore the move, its consequence, and one habit to take away.' : 'Follow the key moments, then try a review of your own game.'}</p>
             </div>
           </div>
-
-          {/* Eval Sparkline */}
-          <div className="card-box p-3.5 bg-[var(--w-surface)]">
-            <EvalSparkline
-              moments={moments}
-              activePly={currentMoment?.ply}
-              onSelectPly={(ply) => {
-                const idx = moments.findIndex((m) => m.ply === ply);
-                if (idx !== -1) handleSelectMoment(idx);
-              }}
-            />
-          </div>
+          <Link href="/#analyze" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--w-accent)] px-4 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)]">Review your game <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
         </div>
+      )}
 
-        {/* Right Column: Story & Moments */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          {/* Summary / Headline Block */}
-          {report.summary && (
-            <div className="card-box p-6 sm:p-7 bg-[var(--w-surface)] shadow-md border border-[var(--w-border-strong)]">
-              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--w-accent)] mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>The Story of the Game</span>
+      <header className="mb-9">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4 text-sm text-[var(--w-ink2)]">
+          <p>{report.player_name || 'Your game'}{report.opponent_name ? ` vs ${report.opponent_name}` : ''}{result ? ` · ${result}` : ''}{report.move_count ? ` · ${report.move_count} moves` : ''}{report.time_control ? ` · ${report.time_control}` : ''}</p>
+          {actions}
+        </div>
+        <h1 className="t-heading max-w-4xl text-4xl leading-[1.1] sm:text-5xl lg:text-[3.5rem]">{report.summary?.headline || (complete ? 'Your game, a little clearer.' : 'Finding the moments that matter.')}</h1>
+        {report.summary?.story && <p className="mt-5 max-w-3xl text-base leading-relaxed text-[var(--w-ink2)] sm:text-lg">{report.summary.story}</p>}
+      </header>
+
+      {moments.length > 0 ? (
+        <section aria-label="Explore the key moments" className="border-t border-[var(--w-border)] pt-6">
+          <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm text-[var(--w-ink2)]">{moments.length === 1 ? 'One moment to learn from' : `${moments.length} moments to learn from`}</p>
+            <div className="flex flex-wrap gap-2" aria-label="Choose a moment">
+              {moments.map((moment, index) => (
+                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded-lg border px-4 text-sm font-medium transition-colors ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played}</button>
+              ))}
+            </div>
+          </div>
+          <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
+            <div className="min-w-0 lg:sticky lg:top-8">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p aria-live="polite" className="text-sm font-medium">{activeStep?.label}</p>
+                <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)]" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
               </div>
-              <h1 className="t-heading text-2xl sm:text-3xl text-[var(--w-ink1)] mb-3 leading-snug">
-                {report.summary.headline}
-              </h1>
-              <p className="t-body text-[var(--w-ink1)] leading-relaxed">
-                {report.summary.story}
-              </p>
-              
-              {/* Focus Habit Callout */}
-              <div className="mt-5 pt-4 border-t border-[var(--w-border)]">
-                <div className="takeaway-box">
-                  <div className="w-5 h-5 rounded-full bg-[var(--w-accent-soft)] flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-3.5 h-3.5 text-[var(--w-accent)]" />
-                  </div>
-                  <div>
-                    <span className="t-caption font-bold text-[var(--w-accent)] uppercase tracking-wider">
-                      Single Focus Habit For Next Game
-                    </span>
-                    <p className="t-body-strong text-[var(--w-ink1)] mt-0.5">
-                      {report.summary.focus_habit}
-                    </p>
-                  </div>
-                </div>
+              {activeStep && <ChessboardView fen={activeStep.fen} orientation={orientation} boardWidth={520} arrows={showAlternative ? [] : playedArrow} />}
+              <div className="mt-3 flex items-center justify-between gap-3" aria-label="Step through the played line" onKeyDown={event => {
+                if (event.altKey || event.ctrlKey || event.metaKey) return;
+                setShowAlternative(false);
+                if (event.key === 'ArrowRight') { event.preventDefault(); setStep(prev => Math.min(steps.length - 1, prev + 1)); }
+                if (event.key === 'ArrowLeft') { event.preventDefault(); setStep(prev => Math.max(0, prev - 1)); }
+              }}>
+                <button disabled={step === 0} onClick={() => { setShowAlternative(false); setStep(prev => Math.max(0, prev - 1)); }} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--w-border)] px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
+                <span className="text-xs tabular-nums text-[var(--w-ink2)]">{showAlternative ? 'Alternative position' : 'Position ' + Math.min(step + 1, steps.length) + ' of ' + steps.length}</span>
+                <button disabled={step >= steps.length - 1} onClick={() => { setShowAlternative(false); setStep(prev => Math.min(steps.length - 1, prev + 1)); }} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--w-ink1)] px-3 text-sm text-[var(--w-canvas)] disabled:cursor-not-allowed disabled:opacity-40">{step === 0 ? 'Show move' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></button>
               </div>
+              {alternative && <button type="button" aria-pressed={showAlternative} onClick={() => setShowAlternative(value => !value)} className="text-link underline mt-3">{showAlternative ? 'Return to the played line' : 'Compare alternative: ' + current.best_move}</button>}
+              {current.refutation_line && <p className="mt-4 break-words text-sm leading-relaxed text-[var(--w-ink2)]"><span className="font-medium">The continuation:</span> <span className="t-notation">{current.refutation_line}</span></p>}
             </div>
-          )}
-
-          {/* Moment Cards List */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="t-section text-base font-bold text-[var(--w-ink1)]">
-                Decisive Moments ({moments.length})
-              </h2>
-              <span className="t-caption text-[var(--w-ink3)]">
-                Click any card to inspect on board
-              </span>
-            </div>
-
-            {moments.map((moment, idx) => (
-              <MomentCard
-                key={moment.ply}
-                moment={moment}
-                index={idx}
-                isActive={idx === activeMomentIndex}
-                onSelect={() => handleSelectMoment(idx)}
-              />
-            ))}
+            <div className="min-w-0 pt-1 lg:pt-3"><MomentCard moment={current} index={activeIndex} /></div>
           </div>
-        </div>
-      </div>
+        </section>
+      ) : complete ? (
+        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">No key moments were returned.</h2><p className="mt-2 text-[var(--w-ink2)]">This report has no individual lessons to explore. You can try another game.</p><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
+      ) : <MomentSkeleton />}
+
+      {complete && report.summary?.focus_habit && <section className="mt-12 border-y border-[var(--w-border)] py-8 sm:py-10"><h2 className="mb-3 text-sm font-semibold text-[var(--w-accent)]">One habit for your next game</h2><p className="t-heading max-w-3xl text-2xl leading-snug sm:text-3xl">{report.summary.focus_habit}</p></section>}
+      {children}
     </div>
   );
 }

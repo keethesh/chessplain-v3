@@ -16,9 +16,8 @@ export class EnginePool {
     for (let i = 0; i < this.size; i++) {
       const client = new UciClient({
         enginePath: config.enginePath,
-        coreId: i,
-        hashMb: 1024,
-        threads: 1,
+        hashMb: config.engineHashMb,
+        threads: config.engineThreads,
         syzygyPath: config.syzygyPath,
       });
 
@@ -26,6 +25,7 @@ export class EnginePool {
         await client.init();
         this.clients.push(client);
       } catch (err) {
+        await client.quit();
         console.warn(`[EnginePool] Worker ${i} initialization failed:`, err);
       }
     }

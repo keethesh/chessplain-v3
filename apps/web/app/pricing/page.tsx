@@ -1,225 +1,76 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { Check, BookOpen, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
-import { createCheckoutSession } from '../../lib/api';
+import { Check, ArrowRight, LoaderCircle } from 'lucide-react';
+import type { Session } from '@supabase/supabase-js';
+import { createCheckoutSession, createBillingPortal } from '../../lib/api';
 import { captureEvent } from '../../lib/posthog';
+import { supabase } from '../../lib/supabase';
 
 export default function PricingPage() {
   const [interval, setInterval] = useState<'month' | 'year'>('month');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState<'checkout' | 'portal' | 'email' | null>(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
-    captureEvent('paywall_viewed', {});
+    captureEvent('paywall_viewed');
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('checkout') === 'success') setNotice('You’ve returned from checkout. Subscription activation may take a moment. You can now try reviewing a game.');
+    if (query.get('checkout') === 'cancelled') setNotice('Checkout was cancelled. You can still use your free reports.');
+    let active = true;
+    supabase.auth.getSession().then(({ data, error }) => { if (active) { setSession(data.session); setAuthReady(true); if (error) setError('Please sign in again to continue.'); } }).catch(() => { if (active) { setAuthReady(true); setError('Couldn’t check your account. Refresh to try again.'); } });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => { if (active) { setSession(session); setAuthReady(true); } });
+    return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
 
-  const handleCheckout = async (chosenInterval: 'month' | 'year') => {
-    setIsLoading(true);
-    setError(null);
-    captureEvent('paywall_clicked', { interval: chosenInterval });
-
+  async function sendLink(event: FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy('email'); setError('');
     try {
-      const { url } = await createCheckoutSession({
-        interval: chosenInterval,
-        returnUrl: window.location.origin,
-      });
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error('Could not create checkout URL');
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Checkout failed';
-      setError(msg);
-      setIsLoading(false);
-    }
-  };
+      const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin + '/auth/callback?next=/pricing' } });
+      if (error) throw error;
+      setSent(true);
+    } catch (error) { setError(error instanceof Error ? error.message : 'Couldn’t send your sign-in link. Please try again.'); }
+    finally { setBusy(null); }
+  }
 
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-20">
-      {/* Header */}
-      <div className="text-center max-w-3xl mx-auto">
-        <span className="badge-accent mb-3 inline-flex text-xs font-semibold uppercase tracking-wider">
-          Simple, Transparent Membership
-        </span>
-        <h1 className="t-display sm:text-4xl text-3xl font-bold tracking-tight text-[var(--w-ink1)]">
-          Unlimited plain-English game breakdowns.
-        </h1>
-        <p className="t-body sm:text-lg text-base text-[var(--w-ink2)] mt-4 max-w-2xl mx-auto leading-relaxed">
-          Stop getting graded on accuracy numbers. Understand what you were thinking and build habits that stick.
-        </p>
+  async function billing(action: 'checkout' | 'portal') {
+    if (busy || !session) return;
+    setBusy(action); setError('');
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new Error('Your session expired. Sign in again to continue.');
+      const result = action === 'checkout' ? await createCheckoutSession({ interval, token: data.session.access_token }) : await createBillingPortal(data.session.access_token);
+      const url = new URL(result.url);
+      if (url.protocol !== 'https:' || !['checkout.stripe.com', 'billing.stripe.com'].includes(url.hostname)) throw new Error('We couldn’t open secure checkout. Please try again.');
+      captureEvent(action === 'checkout' ? 'paywall_clicked' : 'billing_portal_opened', { interval });
+      window.location.assign(url.href);
+    } catch (error) { setError(error instanceof Error ? error.message : 'Couldn’t open billing. Please try again.'); setBusy(null); }
+  }
 
-        {/* Interval toggle */}
-        <div className="mt-8 flex justify-center items-center gap-3">
-          <span className={`text-sm font-semibold ${interval === 'month' ? 'text-[var(--w-ink1)]' : 'text-[var(--w-ink3)]'}`}>
-            Monthly
-          </span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={interval === 'year'}
-            aria-label="Toggle annual billing with 2 months free"
-            onClick={() => setInterval(interval === 'month' ? 'year' : 'month')}
-            className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[var(--w-accent)] transition-colors duration-200 ease-in-out focus-ring"
-          >
-            <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                interval === 'year' ? 'translate-x-5' : 'translate-x-0'
-              }`}
-            />
-          </button>
-          <span className={`text-sm font-semibold ${interval === 'year' ? 'text-[var(--w-ink1)]' : 'text-[var(--w-ink3)]'}`}>
-            Yearly <span className="text-xs text-[var(--w-accent)] font-bold">(2 months free)</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Pricing Cards */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto items-stretch">
-        {/* Free Tier */}
-        <div className="card-box flex flex-col justify-between p-6 sm:p-8 bg-[var(--w-surface)] border border-[var(--w-border-strong)] shadow-sm">
-          <div>
-            <div className="flex items-center justify-between">
-              <h2 className="t-section text-xl font-bold text-[var(--w-ink1)]">Free Tier</h2>
-              <span className="badge-muted">No Account Needed</span>
-            </div>
-            <p className="t-caption text-[var(--w-ink2)] mt-1">Try Chessplain instantly after your games.</p>
-            <div className="mt-5 flex items-baseline">
-              <span className="t-display text-4xl font-extrabold text-[var(--w-ink1)]">$0</span>
-              <span className="text-sm text-[var(--w-ink2)] ml-1.5 font-medium">/ forever</span>
-            </div>
-
-            <ul className="mt-6 flex flex-col gap-3.5 text-sm text-[var(--w-ink1)]">
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span>2 free game reports every 7 days</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span>Full 3-stage engine evaluation</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span>Teachable concepts & checkable habits</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span>Public shareable links</span>
-              </li>
-            </ul>
-          </div>
-
-          <Link
-            href="/"
-            className="mt-8 block w-full text-center rounded-lg border border-[var(--w-border)] bg-[var(--w-canvas)] py-3 text-sm font-bold text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] hover:border-[var(--w-border-strong)] transition-all"
-          >
-            Analyze a game free
-          </Link>
-        </div>
-
-        {/* Premium Tier */}
-        <div className="card-box flex flex-col justify-between p-6 sm:p-8 border-2 border-[var(--w-accent)] relative shadow-lg bg-[var(--w-surface)]">
-          <div className="absolute -top-3 right-6 bg-[var(--w-accent)] text-[var(--w-on-accent)] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-            Unlimited
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between">
-              <h2 className="t-section text-xl font-bold text-[var(--w-ink1)]">Premium</h2>
-              <span className="badge-accent">Instant Queue</span>
-            </div>
-            <p className="t-caption text-[var(--w-ink2)] mt-1">For serious improvement across all your games.</p>
-            <div className="mt-5 flex items-baseline">
-              <span className="t-display text-4xl font-extrabold text-[var(--w-ink1)]">
-                {interval === 'month' ? '$9.99' : '$99.99'}
-              </span>
-              <span className="text-sm text-[var(--w-ink2)] ml-1.5 font-medium">
-                / {interval === 'month' ? 'month' : 'year'}
-              </span>
-            </div>
-
-            <ul className="mt-6 flex flex-col gap-3.5 text-sm text-[var(--w-ink1)]">
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span className="font-bold text-[var(--w-ink1)]">Unlimited game analyses</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span>Priority queue — instant results</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span>Permanent game history & save</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[var(--w-accent)] shrink-0" />
-                <span>14-day hassle-free refund guarantee</span>
-              </li>
-            </ul>
-          </div>
-
-          {error && (
-            <div className="mt-4 rounded-lg bg-[var(--w-error-soft)] p-3 text-xs text-[var(--w-error)] font-medium">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => handleCheckout(interval)}
-            className="mt-8 block w-full rounded-lg bg-[var(--w-accent)] py-3 text-center text-sm font-bold text-[var(--w-on-accent)] shadow-sm hover:bg-[var(--w-accent-hover)] transition-all disabled:opacity-50 cursor-pointer"
-          >
-            {isLoading ? 'Redirecting to secure Stripe...' : 'Get Unlimited Access'}
-          </button>
-        </div>
-      </div>
-
-      {/* Sample Link Banner */}
-      <div className="mt-10 text-center">
-        <Link
-          href="/report/demo"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--w-accent)] hover:underline"
-        >
-          <BookOpen className="w-4 h-4" />
-          <span>Want to test the full interactive experience first? View the sample report →</span>
-        </Link>
-      </div>
-
-      {/* FAQ & Guarantees */}
-      <div className="mt-16 border-t border-[var(--w-border)] pt-12 max-w-3xl mx-auto">
-        <h3 className="t-heading text-2xl text-center mb-8 text-[var(--w-ink1)]">
-          Frequently Asked Questions
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
-          <div className="card-box p-4 bg-[var(--w-surface-subtle)] border border-[var(--w-border)]">
-            <p className="t-body-strong text-[var(--w-ink1)]">How does the free tier work?</p>
-            <p className="t-caption text-[var(--w-ink2)] mt-1">
-              Anyone can analyze up to 2 games every 7 days with zero registration. No credit card required.
-            </p>
-          </div>
-          <div className="card-box p-4 bg-[var(--w-surface-subtle)] border border-[var(--w-border)]">
-            <p className="t-body-strong text-[var(--w-ink1)]">What makes Chessplain different?</p>
-            <p className="t-caption text-[var(--w-ink2)] mt-1">
-              We never give you accuracy grades or engine jargon. We explain why your plan made sense, why it failed, and what habit to check next time.
-            </p>
-          </div>
-          <div className="card-box p-4 bg-[var(--w-surface-subtle)] border border-[var(--w-border)]">
-            <p className="t-body-strong text-[var(--w-ink1)]">Can I cancel anytime?</p>
-            <p className="t-caption text-[var(--w-ink2)] mt-1">
-              Yes, cancel with one click from your account anytime. You keep access through the end of your paid billing period.
-            </p>
-          </div>
-          <div className="card-box p-4 bg-[var(--w-surface-subtle)] border border-[var(--w-border)]">
-            <p className="t-body-strong text-[var(--w-ink1)]">What is the refund policy?</p>
-            <p className="t-caption text-[var(--w-ink2)] mt-1">
-              If you are unsatisfied for any reason, reach out within 14 days for a full, unconditional refund.
-            </p>
-          </div>
-        </div>
-      </div>
+  return <div className="page-width py-12 sm:py-16">
+    <div className="pricing-heading"><h1>Make understanding<br />part of your game.</h1><p>Start with two free reviews. If the lessons help, make room for more.</p>
+      <div className="billing-choice" aria-label="Billing interval"><button aria-pressed={interval === 'month'} disabled={!!busy} onClick={() => setInterval('month')}>Monthly</button><button aria-pressed={interval === 'year'} disabled={!!busy} onClick={() => setInterval('year')}>Yearly</button></div>
     </div>
-  );
+    {notice && <div className="max-w-3xl mx-auto mb-6 p-5 rounded-xl bg-[var(--w-accent-soft)] text-sm leading-relaxed" role="status">{notice} <Link href="/#analyze" className="underline">Review a game</Link></div>}
+    <div className="pricing-grid">
+      <section className="price-plan"><h2>A place to start</h2><p>No account. No card.</p><div className="price-value">$0</div><p>2 reports every 7 days</p>
+        <ul>{['Plain-English explanations of key moments', 'An interactive board to check the ideas', 'One practical habit for your next game', 'A link you can revisit or share'].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
+        <Link className="secondary-button" href="/#analyze">Review a game free <ArrowRight size={16} /></Link>
+      </section>
+      <section className="price-plan paid"><h2>A regular habit</h2><p>For the games you want to understand.</p><div className="price-value">{interval === 'month' ? '$9.99' : '$99.99'} <small>/ {interval === 'month' ? 'month' : 'year'}</small></div><p>{interval === 'month' ? 'Billed monthly. Renews until cancelled.' : 'Billed $99.99 yearly. Renews until cancelled.'}</p>
+        <ul>{['Everything in the free review', 'No weekly report quota for personal use', 'The same careful, readable explanations', 'Manage or cancel through Stripe'].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
+        {!authReady ? <p role="status" className="text-sm">Checking your account…</p> : session ? <><p className="text-xs break-all text-[var(--w-ink2)] mb-3">Signed in as {session.user.email}</p><button className="primary-button" disabled={!!busy} onClick={() => billing('checkout')}>{busy === 'checkout' ? <><LoaderCircle className="spin" size={16} />Opening checkout…</> : 'Continue to secure checkout'}</button><button className="text-link justify-center mt-2" disabled={!!busy} onClick={() => billing('portal')}>{busy === 'portal' ? 'Opening billing…' : 'Already subscribed? Manage subscription'}</button></> : sent ? <div role="status" className="text-sm leading-relaxed"><p className="font-semibold mb-2">Check your inbox.</p><p>Open the sign-in link in this browser, then return here to subscribe. Sending a link does not start a subscription.</p><button className="text-link underline" onClick={() => setSent(false)}>Use a different email</button></div> : <form onSubmit={sendLink} className="grid gap-3"><label className="text-sm font-medium" htmlFor="billing-email">Sign in to connect your subscription</label><input id="billing-email" className="email-input" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={!!busy} /><button className="primary-button" disabled={!!busy}>{busy === 'email' ? 'Sending…' : 'Email me a sign-in link'}</button><p className="text-xs leading-relaxed text-[var(--w-ink2)]">New here? The link creates your account. You’ll choose and confirm payment on Stripe.</p></form>}
+        {error && <p className="form-error mt-4" role="alert">{error}</p>}
+      </section>
+    </div>
+    <div className="max-w-3xl mx-auto mt-10 text-center"><Link className="text-link" href="/report/demo">Read a sample before deciding <ArrowRight size={15} /></Link><p className="text-xs text-[var(--w-ink2)] mt-4 leading-relaxed">Free reports are counted by network. Reports are accessible to anyone with the link.<br />Paid reports still take time to process and are subject to fair use. <Link href="/terms" className="underline">Terms</Link></p></div>
+  </div>;
 }

@@ -1,6 +1,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+function positiveInteger(name: string, fallback: number): number {
+  const value = Number(process.env[name] || fallback);
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`);
+  return value;
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '8080', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -20,5 +26,9 @@ export const config = {
   syzygyPath: process.env.SYZYGY_PATH || '/var/chess/syzygy',
   webOrigin: process.env.WEB_ORIGIN || 'https://getchessplain.com',
   disableQuota: process.env.DISABLE_QUOTA === 'true',
-  enginePoolSize: parseInt(process.env.ENGINE_POOL_SIZE || '4', 10),
+  enginePoolSize: positiveInteger('ENGINE_POOL_SIZE', 4),
+  engineHashMb: positiveInteger('ENGINE_HASH_MB', 512),
+  engineThreads: positiveInteger('ENGINE_THREADS', 1),
+  // Trust forwarded IPs only from an explicitly configured reverse proxy.
+  trustProxy: process.env.TRUST_PROXY || false,
 };
