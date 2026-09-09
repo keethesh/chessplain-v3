@@ -6,6 +6,7 @@
   "main": "dist/http/server.js",
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "start": "node dist/http/server.js",
     "dev": "tsx watch src/http/server.ts",
     "worker": "tsx src/queue/worker.ts",

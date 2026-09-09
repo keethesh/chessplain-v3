@@ -4,7 +4,7 @@ The VPS memory is user-supplied information. CPU allocation, disk, operating sys
 
 ## Process model and initial sizing
 
-Run **one** Node HTTP application. It starts the queue worker itself. Do not also run the package's worker command, PM2 cluster mode, or multiple replicas: startup recovery requeues every in-progress job, and there is no per-worker lease ownership.
+Multiple replicas are safe: jobs are claimed by compare-and-swap, and only leases older than STALE_LEASE_MINUTES are reclaimed, so a replica that restarts does not steal work another replica is actively running. The remaining limit is CPU — ENGINE_POOL_SIZE × ENGINE_THREADS per replica must fit the host's cores.
 
 Start with:
 - ENGINE_POOL_SIZE=2 on a 2-vCPU VPS; 4 if at least 4 usable CPU cores are available.
@@ -134,4 +134,18 @@ Use a staging database and Stripe test mode:
 7. Exercise sign-in → checkout → webhook → premium submission; cancellation → webhook → free submission; failed payment and duplicate checkout.
 8. Benchmark cold and warm games with short and long move lists. Record queue wait, first lesson, completion p50/p95, failures, CPU, RSS and provider cost. Only set a speed promise after these measurements.
 
-Alert on old pending jobs, repeated failures, engine availability, database failures, and LLM fallback rate. /healthz alone is a shallow process check. Before multiple replicas, implement owner-specific leases, lease expiry/heartbeat, atomic claim/recovery, and bounded admission.
+Alert on old pending jobs, repeated failures, engine availability, database failures, and LLM fallback rate. /healthz alone is a shallow process check. Before scaling past a handful of replicas, add per-worker ownership (a locked_by column) and bounded admission — a time lease cannot tell a dead worker from a paused one.
+
+## Standing up a fresh database (staging)
+
+`supabase/migrations/` is self-sufficient as of `20260831000000_baseline_schema.sql`:
+a new Supabase project reaches the current schema with `supabase db push` (or
+`supabase db reset` locally). Two constraints to respect:
+
+- All four v3 tables have RLS enabled with **no policies**. The engine reaches
+  them with `SUPABASE_SERVICE_ROLE_KEY`; the browser must never query them
+  directly. If a table returns zero rows for an authenticated user, that is RLS
+  working as designed — route the read through the engine, do not add a policy.
+- `profiles` rows are expected to exist for every auth user. If your project has
+  no trigger creating them on signup, premium detection (`server.ts:136`) reads
+  a missing row and treats the user as free.

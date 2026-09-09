@@ -14,6 +14,7 @@ const posthog = new PostHog(config.posthogKey, {
 });
 
 let isRunning = false;
+let reclaimTimer: NodeJS.Timeout | undefined;
 
 interface GameAnalysisRow {
   id: string;
@@ -222,15 +223,21 @@ export async function processNextJob(): Promise<boolean> {
   }
 }
 
-// ponytail: blunt crash recovery — anything mid-flight when the process died
-// (deploy restarts, OOM) would sit in a non-pending state forever; requeue on boot
-async function requeueInterruptedJobs(): Promise<void> {
+// Reclaim leases whose owner died. Every claim stamps locked_at (see the
+// compare-and-swap above), so a mid-flight row whose lease is older than
+// STALE_LEASE_MINUTES has no live worker behind it. Filtering by lease age is
+// what makes running more than one replica safe: an unfiltered sweep would
+// requeue jobs another worker is actively running.
+export async function reclaimStaleLeases(): Promise<void> {
+  const cutoff = new Date(Date.now() - config.staleLeaseMinutes * 60_000).toISOString();
   const { error, count } = await supabase
     .from('game_analyses')
-    .update({ status: 'pending', locked_at: null })
-    .in('status', ['sweeping', 'verifying', 'explaining']);
-  if (error) console.error('[Worker] Failed to requeue interrupted jobs:', error.message);
-  else if (count) console.log(`[Worker] Requeued ${count} interrupted job(s) from a previous run`);
+    .update({ status: 'pending', locked_at: null }, { count: 'exact' })
+    .in('status', ['sweeping', 'verifying', 'explaining'])
+    .or(`locked_at.is.null,locked_at.lt.${cutoff}`)
+    .select('id');
+  if (error) console.error('[Worker] Failed to reclaim stale leases:', error.message);
+  else if (count) console.log(`[Worker] Reclaimed ${count} stale job lease(s)`);
 }
 
 export async function startWorker(): Promise<void> {
@@ -238,7 +245,9 @@ export async function startWorker(): Promise<void> {
   isRunning = true;
 
   await enginePool.init();
-  await requeueInterruptedJobs();
+  await reclaimStaleLeases();
+  reclaimTimer = setInterval(() => { void reclaimStaleLeases(); }, config.staleLeaseMinutes * 60_000);
+  reclaimTimer.unref();
   console.log(`[Worker] Background queue worker started with ${enginePool.totalCount} engine instances.`);
 
   while (isRunning) {
@@ -256,4 +265,5 @@ export async function startWorker(): Promise<void> {
 
 export function stopWorker(): void {
   isRunning = false;
+  if (reclaimTimer) { clearInterval(reclaimTimer); reclaimTimer = undefined; }
 }

@@ -6,7 +6,8 @@
   ],
   "scripts": {
     "build": "pnpm --filter ./apps/* build",
-    "lint": "pnpm --filter ./apps/* lint"
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test"
   },
   "packageManager": "pnpm@10.28.2"
 }
