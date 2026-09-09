@@ -67,6 +67,7 @@ async function main() {
   let successful = 0;
   let failed = 0;
   let usedSamples = 0;
+  let emptyReports = 0;
   const errors: string[] = [];
 
   for (let i = 0; i < 20; i++) {
@@ -101,8 +102,20 @@ async function main() {
       if (!report.summary?.headline) {
         throw new Error('Missing headline in summary');
       }
-      if (report.moments.length < 1 || report.moments.length > 5) {
-        throw new Error(`Invalid moments count: ${report.moments.length} (expected 1-5)`);
+      // 0 moments is a valid outcome, not a failure: selection requires a
+      // -1.5 pawn swing (or a missed win), and the quiet-drift fallback is
+      // floored at -0.75, so a steadily played game legitimately yields none.
+      // Strong players produce these regularly — the sample below is full of
+      // them. What must never happen is a report with no summary, or more
+      // moments than the report is designed to show.
+      if (report.moments.length > 5) {
+        throw new Error(`Invalid moments count: ${report.moments.length} (expected 0-5)`);
+      }
+      if (report.moments.length === 0) {
+        emptyReports++;
+        if (/move \d|\d\./i.test(report.summary.story)) {
+          throw new Error(`Zero-moment summary cites a move number: "${report.summary.story}"`);
+        }
       }
 
       for (const m of report.moments) {
@@ -148,6 +161,7 @@ async function main() {
   console.log(`Success rate: ${successful}/20 (${(successful / 20) * 100}%)`);
   console.log(`Median Latency: ${(medianLatency / 1000).toFixed(2)}s (Target <= 30s)`);
   console.log(`Sample fallbacks used: ${usedSamples}/20`);
+  console.log(`Zero-moment reports: ${emptyReports}/20 (valid outcome; high counts mean thresholds are too strict)`);
   if (errors.length > 0) {
     console.log('\nFailures:\n' + errors.map((e) => `  - ${e}`).join('\n'));
   }

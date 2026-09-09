@@ -1,0 +1,25 @@
+{
+  // The build config sets rootDir=src and excludes test/ and scripts/, so
+  // `tsc` never type-checks them. This config is noEmit-only and widens the
+  // net so a type error in a test or in scripts/verify-20-games.ts fails CI
+  // instead of surfacing at runtime.
+  //
+  // Two widenings are needed because test/reliability.test.ts imports
+  // apps/web/lib/demo-report.ts to prove the homepage's sample game is
+  // chess-legal:
+  //   - rootDir "../" so a file outside apps/engine is not a rootDir error
+  //   - "DOM" in lib because that web module reaches Response.json(), which
+  //     resolves to undici's `unknown` return without it
+  //
+  // Masking risk is covered: `pnpm build` still compiles src/ against the
+  // strict, DOM-free config, so browser APIs in engine source still fail.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "rootDir": "../",
+    "lib": ["ES2024", "DOM"]
+  },
+  "include": ["src/**/*", "test/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

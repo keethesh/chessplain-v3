@@ -59,9 +59,26 @@ async function createChatCompletion(
     reasoning_effort: 'none',
   } as unknown as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming;
 
-  return openai.chat.completions.create(body, {
-    signal: AbortSignal.timeout(30000),
-  });
+  // One retry on timeout, with a fresh budget. AbortSignal.timeout caps the
+  // whole request including the SDK's own maxRetries, so a single slow
+  // response otherwise becomes a hard failure and the reader gets generic
+  // fallback prose. Observed at ~4% of moments on a 20-game live run.
+  // Never retry a credit-exhaustion error: that fails every attempt and the
+  // caller records it as a terminal condition.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await openai.chat.completions.create(body, {
+        signal: AbortSignal.timeout(30000),
+      });
+    } catch (err) {
+      const e = err as { name?: string; type?: string };
+      const timedOut = e?.name === 'AbortError' || e?.type === 'aborted' || e?.name === 'TimeoutError';
+      if (!timedOut || attempt === 2 || isCreditExhaustionError(err)) throw err;
+      console.warn('[Explain] LLM request timed out after 30s — retrying once with a fresh budget');
+    }
+  }
+
+  throw new Error('LLM request retry loop exited without a result');
 }
 
 export function createFallbackMoment(moment: CandidateMoment): MomentReport {
@@ -255,6 +272,19 @@ export async function explainSummary(
   },
   analysisId?: string
 ): Promise<GameSummary> {
+  // No moments cleared the review thresholds. The summary prompt requires the
+  // story to cite at least two moments by move number, so sending an empty
+  // payload invites invented move numbers. Answer honestly instead, and skip
+  // the LLM call entirely.
+  if (moments.length === 0) {
+    return {
+      headline: 'No single moment decided this game.',
+      story:
+        'No position in this game swung far enough for us to single it out. That can mean you kept things steady, or that the game was decided gradually rather than at one turning point. It does not mean every move was the strongest available — only that nothing here stands out as the moment to study.',
+      focus_habit: 'Before choosing a move, check your opponent’s checks, captures, and threats.',
+    };
+  }
+
   const inputPayload = {
     result: meta.result || '*',
     player_color: meta.playerColor,

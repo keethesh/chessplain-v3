@@ -103,6 +103,18 @@ async function bootstrap() {
       }
 
       if (body.pgn) {
+        // Variants carry a shuffled start position and non-standard castling
+        // rights (Chess960 uses Shredder-FEN, e.g. "GAga"), which standard
+        // chess rules reject with an opaque "castling availability is invalid".
+        // Say what is actually wrong instead.
+        const variant = body.pgn.match(/^\[Variant\s+"([^"]+)"/m)?.[1];
+        if (variant && !/^(standard|chess)$/i.test(variant.trim())) {
+          return reply.status(400).send({
+            error: 'unsupported_variant',
+            message: `Chessplain reviews standard chess games. This game is ${variant}, which is not supported yet.`,
+          });
+        }
+
         try {
           const parsed = new Chess();
           parsed.loadPgn(body.pgn);

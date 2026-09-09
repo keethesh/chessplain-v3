@@ -5,10 +5,34 @@ import { Newsreader } from 'next/font/google';
 import './globals.css';
 
 const newsreader = Newsreader({ subsets: ['latin'], variable: '--font-newsreader', display: 'swap' });
+// Public marketing origin. Not a credential — it only affects how absolute
+// URLs are built for share cards, so a canonical default is safe here.
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://getchessplain.com';
+
+const TITLE = 'Chessplain — A little clarity. A better next game.';
+const DESCRIPTION = 'Understand the moments that changed your chess game, explore them on the board, and take one useful lesson into your next game.';
+
 export const metadata: Metadata = {
-  title: 'Chessplain — A little clarity. A better next game.',
-  description: 'Understand the moments that changed your chess game, explore them on the board, and take one useful lesson into your next game.',
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
   icons: { icon: '/icon.svg' },
+  applicationName: 'Chessplain',
+  keywords: ['chess', 'game review', 'chess analysis', 'chess improvement', 'blunder', 'chess coach'],
+  openGraph: {
+    type: 'website',
+    siteName: 'Chessplain',
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="en" className={newsreader.variable}>

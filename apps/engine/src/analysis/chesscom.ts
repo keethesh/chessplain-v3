@@ -21,6 +21,7 @@ interface ChessComGamePlayer {
 
 interface ChessComGameItem {
   pgn?: string;
+  rules?: string; // 'chess' for standard; 'chess960', 'bughouse', etc. for variants
   white: ChessComGamePlayer;
   black: ChessComGamePlayer;
 }
@@ -78,12 +79,20 @@ export async function fetchRecentChessComGame(username: string): Promise<ChessCo
     throw new Error(`No recent games found for Chess.com user '${username}'`);
   }
 
-  // Get the most recent game
-  const latestGame = games[games.length - 1];
-  const pgn = latestGame.pgn;
-  if (!pgn) {
-    throw new Error(`Latest game for '${username}' has no PGN`);
+  // Take the most recent *standard* game. Variants (Chess960 above all) carry a
+  // shuffled start position and Shredder-FEN castling rights like "GAga", which
+  // standard chess rules reject outright — reviewing one is not possible, and
+  // silently failing on someone whose last game happened to be Chess960 is a
+  // dead end. Skip back to their last standard game instead.
+  const standardGames = games.filter((g) => g.pgn && (g.rules ?? 'chess') === 'chess' && !/^\[Variant\s/m.test(g.pgn));
+  if (standardGames.length === 0) {
+    throw new Error(
+      `No standard chess games found for '${username}'. Chessplain reviews standard chess only — variants like Chess960 are not supported yet.`
+    );
   }
+
+  const latestGame = standardGames[standardGames.length - 1];
+  const pgn = latestGame.pgn as string;
 
   const isWhite = latestGame.white.username.toLowerCase() === cleanUsername;
   const playerColor = isWhite ? 'white' : 'black';
