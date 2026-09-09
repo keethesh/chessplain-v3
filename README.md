@@ -56,6 +56,7 @@ rather than silently connecting to production.
 
 Read [`docs/README.md`](docs/README.md) for the index. In short:
 
+- [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) — ordered pre-launch steps, env blocks, and what is verified vs still blocking
 - [`docs/PRODUCT_REVIEW.md`](docs/PRODUCT_REVIEW.md) — positioning, monetization, what to validate and in what order
 - [`docs/ENGINE_DEPLOYMENT.md`](docs/ENGINE_DEPLOYMENT.md) — how to deploy the engine to a VPS
 - [`apps/web/PRODUCT.md`](apps/web/PRODUCT.md) and [`apps/web/DESIGN.md`](apps/web/DESIGN.md) — product intent and the design system

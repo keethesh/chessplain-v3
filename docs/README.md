@@ -13,6 +13,7 @@ production operation.
 | [Product](../apps/web/PRODUCT.md) | Purpose, audience hypotheses, capabilities, pricing entitlement, constraints. **Wins when documents disagree about product intent.** |
 | [Design system](../apps/web/DESIGN.md) | Implemented colors, typography, layouts, controls, responsive behavior, accessibility. |
 | [Product and launch assessment](PRODUCT_REVIEW.md) | Positioning, competition, monetization rationale, validation sequence, remaining risks. |
+| [Launch checklist](LAUNCH_CHECKLIST.md) | Ordered pre-launch steps with the command that proves each one, the exact VPS and Vercel environment blocks, and the known limits. **Start here when deploying.** |
 | [Engine deployment](ENGINE_DEPLOYMENT.md) | VPS deployment recipe, resource sizing, environment, proxy, auth/billing prerequisites, staging acceptance checks. |
 | [Implementation plans](../plans/README.md) | Numbered plans with status and accepted deviations. |
 | [Moment prompt](MOMENT_PROMPT.md) | Generation guidance and examples. Runtime prompt code and board evidence determine actual behavior. |

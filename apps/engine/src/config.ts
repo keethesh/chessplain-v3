@@ -32,6 +32,10 @@ export const config = {
   syzygyPath: process.env.SYZYGY_PATH || '/var/chess/syzygy',
   webOrigin: process.env.WEB_ORIGIN || 'https://getchessplain.com',
   disableQuota: process.env.DISABLE_QUOTA === 'true',
+  // Opt out of queue processing. Defaults on: production must analyse. Set to
+  // false when running locally so a laptop does not compete with the deployed
+  // worker for real users' jobs on the shared database.
+  workerEnabled: process.env.WORKER_ENABLED !== 'false',
   enginePoolSize: positiveInteger('ENGINE_POOL_SIZE', 4),
   engineHashMb: positiveInteger('ENGINE_HASH_MB', 512),
   engineThreads: positiveInteger('ENGINE_THREADS', 1),

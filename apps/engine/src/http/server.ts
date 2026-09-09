@@ -550,11 +550,21 @@ async function bootstrap() {
     await fastify.listen({ port: config.port, host: '0.0.0.0' });
     console.log(`[HTTP] Server listening on http://0.0.0.0:${config.port}`);
 
-    // Start background queue worker in the same process
-    startWorker().catch((err) => {
-      console.error('[Worker] Fatal worker error:', err);
-      process.exit(1);
-    });
+    // Start background queue worker in the same process.
+    //
+    // WORKER_ENABLED=false runs an HTTP-only instance. This matters because
+    // there is no separate staging database: an engine started on a laptop
+    // polls the same queue as the deployed one and will race it for real
+    // users' jobs, producing reports from whichever code version won. Set it
+    // to false for local API work.
+    if (config.workerEnabled) {
+      startWorker().catch((err) => {
+        console.error('[Worker] Fatal worker error:', err);
+        process.exit(1);
+      });
+    } else {
+      console.warn('[Worker] Disabled via WORKER_ENABLED=false — this instance serves HTTP only and will not analyse queued games.');
+    }
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
