@@ -7,11 +7,15 @@ import { fetchRecentChessComGame } from '../analysis/chesscom.js';
 import { EloBand } from '../types.js';
 import { parsePgn } from '../analysis/pgn.js';
 
-const posthog = new PostHog(config.posthogKey, {
-  host: config.posthogHost,
-  flushAt: 1,
-  flushInterval: 0,
-});
+// Analytics is optional: with no key configured, posthog-node throws on
+// construction, so skip it rather than stop the worker from booting.
+const posthog = config.posthogKey
+  ? new PostHog(config.posthogKey, {
+      host: config.posthogHost,
+      flushAt: 1,
+      flushInterval: 0,
+    })
+  : null;
 
 let isRunning = false;
 let reclaimTimer: NodeJS.Timeout | undefined;
@@ -171,7 +175,7 @@ export async function processNextJob(): Promise<boolean> {
     console.log(`[Worker] Analysis ${analysis.id} completed successfully in ${result.durationMs}ms with ${result.momentsCount} moments`);
 
     // 4. Emit PostHog Event
-    posthog.capture({
+    posthog?.capture({
       distinctId: analysis.user_id || `anon_${analysis.id}`,
       event: 'analysis_completed',
       properties: {
@@ -208,7 +212,7 @@ export async function processNextJob(): Promise<boolean> {
       metadata: { attempts, shouldRetry },
     });
 
-    posthog.capture({
+    posthog?.capture({
       distinctId: analysis.user_id || `anon_${analysis.id}`,
       event: 'analysis_failed',
       properties: {

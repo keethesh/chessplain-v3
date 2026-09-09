@@ -3,6 +3,12 @@
 // would bind one env snapshot for the whole file).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// config.ts calls dotenv.config() at module load. A developer's local
+// apps/engine/.env would repopulate the very variables these tests delete,
+// making them pass vacuously. Stub dotenv so "missing" really means missing,
+// on every machine and in CI alike.
+vi.mock('dotenv', () => ({ default: { config: () => ({ parsed: {} }) } }));
+
 const REQUIRED = { SUPABASE_URL: 'https://test.supabase.co', SUPABASE_ANON_KEY: 'test-anon-key' };
 
 describe('config', () => {
