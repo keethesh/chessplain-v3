@@ -1,21 +1,31 @@
 # Chessplain documentation
 
-Start with the current implementation records below. Documentation describes intent and observed source behavior; it is not proof of production operation.
+Start at the [root README](../README.md) — it covers what this is, how to run
+it, and where things stand. This index is only for finding the deeper documents.
+
+Documentation describes intent and observed source behavior. It is not proof of
+production operation.
+
+## Live documents
 
 | Document | Purpose |
 | --- | --- |
-| [September 2026 change record](CHANGES_2026-09-06.md) | Complete account of the frontend, flows, engine, billing, analytics, configuration, and documentation changes. |
-| [Product](../apps/web/PRODUCT.md) | Current purpose, audience hypotheses, capabilities, pricing entitlement, and constraints. |
-| [Design system](../apps/web/DESIGN.md) | Implemented colors, typography, layouts, controls, responsive behavior, and accessibility practices. |
-| [Product and launch assessment](PRODUCT_REVIEW_2026-09-06.md) | Positioning, competition, monetization rationale, validation sequence, and remaining risks. |
-| [Engine deployment](ENGINE_DEPLOYMENT.md) | Single-worker deployment recipe for the reported 24GB VPS, resource sizing, environment, proxy, auth/billing prerequisites, and staging acceptance checks. |
-| [Verification record](VERIFICATION_2026-09-06.md) | What passed locally and what remains unverified. |
+| [Product](../apps/web/PRODUCT.md) | Purpose, audience hypotheses, capabilities, pricing entitlement, constraints. **Wins when documents disagree about product intent.** |
+| [Design system](../apps/web/DESIGN.md) | Implemented colors, typography, layouts, controls, responsive behavior, accessibility. |
+| [Product and launch assessment](PRODUCT_REVIEW.md) | Positioning, competition, monetization rationale, validation sequence, remaining risks. |
+| [Engine deployment](ENGINE_DEPLOYMENT.md) | VPS deployment recipe, resource sizing, environment, proxy, auth/billing prerequisites, staging acceptance checks. |
+| [Implementation plans](../plans/README.md) | Numbered plans with status and accepted deviations. |
+| [Moment prompt](MOMENT_PROMPT.md) | Generation guidance and examples. Runtime prompt code and board evidence determine actual behavior. |
 
-## Historical and specialist references
+## Archive
 
-- [Original rebuild execution plan](../CHESSPLAIN_V3_REBUILD_EXECUTION_PLAN.md): historical work plan, not a completed-work checklist. Do not execute destructive infrastructure or migration steps merely because this file lists them.
-- [August strategy](REBUILD_STRATEGY_31082026.md): historical strategy and reported metrics. Its production-data claims were not revalidated in the September work.
-- [Moment prompt](MOMENT_PROMPT.md): generation guidance and historical examples. Runtime prompt code and actual board evidence determine current behavior; prose guidance does not prove factual correctness.
-- [Historical report wireframe](../wireframes-report-page.html): a prior design reference; current UI is in `apps/web`.
+`archive/` holds finished-state records: the September change log, the local
+verification record, the original v3 rebuild execution plan, and the August
+strategy document. They are history, not instructions — do not execute
+infrastructure or migration steps because an archived plan lists them.
 
-When changing behavior, update the relevant product/design/deployment record and record verification separately. Keep hypotheses, source behavior, local checks, and production evidence distinct.
+## Convention
+
+When changing behavior, update the relevant product/design/deployment record and
+record verification separately. Keep hypotheses, source behavior, local checks,
+and production evidence distinct.
