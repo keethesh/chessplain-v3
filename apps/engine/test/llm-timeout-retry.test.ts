@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * A single slow LLM response must not cost the reader a real explanation.
@@ -61,6 +61,15 @@ const MOMENT = {
 describe('LLM timeout retry', () => {
   beforeEach(() => {
     create.mockReset();
+    // explain.ts imports config.ts, which requires these and has no defaults
+    // by design. Set them so the suite does not depend on a developer's local
+    // apps/engine/.env — without this it passes on a laptop and fails in CI.
+    vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
+    vi.stubEnv('SUPABASE_ANON_KEY', 'test-anon-key');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('retries once after a timeout and returns the real explanation', async () => {

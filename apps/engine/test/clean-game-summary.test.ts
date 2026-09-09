@@ -15,6 +15,24 @@ import { explainSummary } from '../src/analysis/explain.js';
 
 const { createChatCompletion } = vi.hoisted(() => ({ createChatCompletion: vi.fn() }));
 
+// explain.ts is imported statically here, so config.ts is evaluated during
+// collection — before any beforeEach could stub the environment. config.ts
+// requires SUPABASE_URL with no default (deliberately), so mock the module:
+// vi.mock is hoisted above the import and keeps this suite independent of a
+// developer's local apps/engine/.env.
+vi.mock('../src/config.js', () => ({
+  config: {
+    llmApiBase: 'https://llm.test.invalid/v1',
+    llmApiKey: 'test-llm-key',
+    llmModel: 'test-model',
+    supabaseUrl: 'https://test.supabase.co',
+    supabaseAnonKey: 'test-anon-key',
+    supabaseServiceRoleKey: '',
+    posthogKey: '',
+    posthogHost: 'https://posthog.test.invalid',
+  },
+}));
+
 vi.mock('openai', () => ({
   default: class {
     chat = { completions: { create: createChatCompletion } };

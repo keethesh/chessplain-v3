@@ -21,9 +21,13 @@ vi.mock('../src/db/supabase.js', () => ({
 
 describe('recordAnalysisError', () => {
   beforeEach(() => {
+    // Order matters: restoreAllMocks() clears implementations, so it has to run
+    // before the resolved value is set. Reversed, `insert` returned undefined
+    // and recordAnalysisError's catch swallowed a destructuring error — the
+    // assertions still passed, for the wrong reason.
+    vi.restoreAllMocks();
     insert.mockReset();
     insert.mockResolvedValue({ error: null });
-    vi.restoreAllMocks();
   });
 
   it('sends the columns the table actually requires', async () => {
