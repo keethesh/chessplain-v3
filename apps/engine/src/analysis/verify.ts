@@ -112,6 +112,12 @@ export async function verifyCandidates(
     }
 
     const bestUci = d20Before?.bestMove || c.bestMoveUci;
+
+    // The depth-20 search can name the played move as best even when the
+    // shallow sweep disagreed. Reporting it now would tell the player their
+    // best move was their mistake, so drop the candidate outright.
+    if (bestUci !== '' && bestUci === c.uci) continue;
+
     const { san: bestSan } = uciToSan(c.fenBefore, bestUci);
     const refutationSan = buildRefutationLine(c.fenAfter, d20After?.pv || '');
 

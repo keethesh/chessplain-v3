@@ -71,7 +71,12 @@ export function selectCandidateMoments(
     const isMissedWin = evalBefore >= 2.0 && evalAfter <= 0.5;
     const isLargeSwing = swing <= -1.5;
 
-    if (isMissedWin || isLargeSwing) {
+    // A move the engine itself would play is never a mistake. Compare on UCI:
+    // pos.san is move-numbered ("15.Bxd7+") while the best move renders bare
+    // ("Bxd7+"), so comparing the SAN strings silently never matches.
+    const engineAgrees = evalBeforeObj?.bestMove !== undefined && evalBeforeObj.bestMove !== '' && evalBeforeObj.bestMove === pos.uci;
+
+    if ((isMissedWin || isLargeSwing) && !engineAgrees) {
       let severityLabel: SeverityLabel = 'Turning point';
       if (isMissedWin) {
         severityLabel = 'Missed win';
@@ -87,6 +92,7 @@ export function selectCandidateMoments(
         ply: pos.ply,
         moveNumber: pos.moveNumber,
         san: pos.san,
+        uci: pos.uci,
         fenBefore: pos.fenBefore,
         fenAfter: pos.fenAfter,
         playerColor,
@@ -115,7 +121,12 @@ export function selectCandidateMoments(
     if (deduplicated.length >= 5) break;
   }
 
-  // If 0 candidates found, pick the single largest swing as "Quiet drift"
+  // If 0 candidates found, fall back to the player's worst move as "Quiet
+  // drift" — but only if it is genuinely their worst move and not merely
+  // engine noise. Below this floor there is nothing a human did wrong, and
+  // verify.ts exempts 'Quiet drift' from its swing filter, so an unfloored
+  // fallback reaches the report unchallenged.
+  const MIN_QUIET_DRIFT_SWING = -0.75;
   if (deduplicated.length === 0) {
     let worstPos: PositionInfo | null = null;
     let worstSwing = 0;
@@ -127,7 +138,8 @@ export function selectCandidateMoments(
       const eb = (evalMap.get(pos.fenBefore)?.evalPawns ?? 0) * playerPerspectiveMultiplier;
       const ea = (evalMap.get(pos.fenAfter)?.evalPawns ?? 0) * playerPerspectiveMultiplier;
       const s = ea - eb;
-      if (s < worstSwing) {
+      const engineAgrees = evalMap.get(pos.fenBefore)?.bestMove === pos.uci && pos.uci !== '';
+      if (s < worstSwing && s <= MIN_QUIET_DRIFT_SWING && !engineAgrees) {
         worstSwing = s;
         worstPos = pos;
         worstBefore = eb;
@@ -146,6 +158,7 @@ export function selectCandidateMoments(
         ply: worstPos.ply,
         moveNumber: worstPos.moveNumber,
         san: worstPos.san,
+        uci: worstPos.uci,
         fenBefore: worstPos.fenBefore,
         fenAfter: worstPos.fenAfter,
         playerColor,

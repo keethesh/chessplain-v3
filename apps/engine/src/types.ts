@@ -37,6 +37,7 @@ export interface CandidateMoment {
   ply: number;
   moveNumber: number;
   san: string; // e.g. "23.Bxf7+"
+  uci: string; // the played move in UCI, e.g. "b5d7" — compared against bestMoveUci
   fenBefore: string;
   fenAfter: string;
   playerColor: 'white' | 'black';
