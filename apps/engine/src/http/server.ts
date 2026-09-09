@@ -44,14 +44,19 @@ async function bootstrap() {
     timeWindow: '1 minute',
   });
 
-  // Stripe webhook raw body parser
+  // Raw body is retained for Stripe webhook signature verification. Replacing
+  // Fastify's built-in JSON parser also replaces its error handling, which
+  // tags parse failures as 400 — without that a malformed body becomes a 500
+  // and looks like the server broke.
   fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
     try {
       (req as RawBodyRequest).rawBody = body as Buffer;
       const json = JSON.parse(body.toString());
       done(null, json);
-    } catch (err) {
-      done(err instanceof Error ? err : new Error(String(err)), undefined);
+    } catch {
+      const err = new Error('Request body is not valid JSON.') as Error & { statusCode?: number };
+      err.statusCode = 400;
+      done(err, undefined);
     }
   });
 
@@ -72,7 +77,11 @@ async function bootstrap() {
     {
       config: {
         rateLimit: {
-          max: 10,
+          // Per-IP. Deliberately well above the free quota (2 per 7 days),
+          // because mobile traffic arrives through carrier-grade NAT where
+          // hundreds of real users share one address. Quota — not this — is
+          // what bounds analysis cost; this only stops hammering.
+          max: 30,
           timeWindow: '1 hour',
         },
       },
@@ -174,9 +183,16 @@ async function bootstrap() {
 
         if (countErr) return reply.status(503).send({ error: 'quota_unavailable', message: 'We could not check your report allowance. Please try again shortly.' });
         if (typeof count === 'number' && count >= 2) {
+          // Anonymous users are counted by IP, and mobile traffic shares
+          // carrier-grade NAT addresses — so a first-time visitor can land here
+          // having never run a report. Signing in moves them onto a per-account
+          // allowance, so lead with that rather than only offering to charge them.
           return reply.status(402).send({
             error: 'quota_exceeded',
-            message: 'Free quota reached (2 free reports per 7 days). Upgrade to Premium for unlimited reports.',
+            can_sign_in: !userId,
+            message: userId
+              ? 'You have used your 2 free reports for this week. Premium removes the limit.'
+              : 'That is 2 free reports from your network this week. Sign in to get your own free reports, or go Premium for no limit.',
           });
         }
       }
