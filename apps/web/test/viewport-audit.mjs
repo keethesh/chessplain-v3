@@ -23,7 +23,7 @@ const VIEWPORTS = [
   { label: '1440px desktop', width: 1440, height: 900, mobile: false },
 ];
 
-const PAGES = ['/', '/pricing', '/r/demo-sample'];
+const PAGES = ['/', '/pricing', '/r/demo-sample', '/privacy', '/terms', '/a-broken-shared-link'];
 
 // Anything below this is unreadable body copy on a phone.
 const MIN_BODY_FONT_PX = 12;

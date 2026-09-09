@@ -1,13 +1,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import type { Metadata } from 'next';
+import { SUPPORT_EMAIL } from '../layout';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy — Chessplain',
+  description: 'What Chessplain collects, how it is used, and how to have it deleted.',
+};
 
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--w-ink2)] hover:text-[var(--w-accent)] mb-6 transition-colors"
+        className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-[var(--w-ink2)] hover:text-[var(--w-accent)] mb-4 transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         <span>Back to Home</span>
@@ -46,7 +53,9 @@ export default function PrivacyPage() {
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
           <h2 className="t-section text-lg font-bold mb-2">4. Contact & Deletion</h2>
           <p className="text-sm text-[var(--w-ink2)]">
-            You may request complete deletion of your account and game history at any time by contacting support.
+            You may request complete deletion of your account and game history at any time by emailing{' '}
+            <a className="underline text-[var(--w-accent)]" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We
+            aim to reply within a few days, and deletion is permanent once actioned.
           </p>
         </div>
 

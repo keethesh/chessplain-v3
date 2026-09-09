@@ -1,13 +1,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import type { Metadata } from 'next';
+import { SUPPORT_EMAIL } from '../layout';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service — Chessplain',
+  description: 'What Chessplain provides, how subscriptions and refunds work, and fair use.',
+};
 
 export default function TermsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--w-ink2)] hover:text-[var(--w-accent)] mb-6 transition-colors"
+        className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-[var(--w-ink2)] hover:text-[var(--w-accent)] mb-4 transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         <span>Back to Home</span>
@@ -36,7 +43,9 @@ export default function TermsPage() {
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
           <h2 className="t-section text-lg font-bold mb-2">3. Refunds</h2>
           <p className="text-sm text-[var(--w-ink2)]">
-            We offer full refunds upon request within 14 days of any subscription charge. If you feel the product did not deliver on its promise, contact support for a prompt refund.
+            We offer full refunds upon request within 14 days of any subscription charge. If you feel the product did not deliver on its promise, email{' '}
+            <a className="underline text-[var(--w-accent)]" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> for a
+            prompt refund.
           </p>
         </div>
 

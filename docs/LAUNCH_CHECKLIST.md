@@ -21,6 +21,9 @@ Last verified against the repo at commit `048d1bd`, 2026-09-09.
 | Layout holds 320–1440px on 3 pages | `pnpm --filter @chessplain/web test:viewport <url>` → 15/15 clean |
 | Share cards render | `/opengraph-image` and `/r/<id>/opengraph-image` return 1200×630 PNGs from a production build |
 | CI passes with placeholder env | web build verified with `.env.local` removed and only the workflow's placeholders set |
+| Crawlers see the right thing | `/robots.txt` allows the site but disallows `/report/` and `/auth/`; `/sitemap.xml` lists the 5 public pages |
+| Broken and truncated links land somewhere useful | `/anything-wrong` returns 404 with a real page offering a sample and a submit link |
+| A client crash is recoverable | `app/error.tsx` boundary with a retry button, and the failure is reported to analytics |
 
 ---
 
@@ -171,6 +174,7 @@ URLs.
 - [ ] Open a shared report link in the Instagram or TikTok in-app browser — that is where most of the traffic will land.
 - [ ] `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com` → READY
 - [ ] Rotate the Supabase service-role key if it has ever been pasted into a chat, issue or screenshot, and update the VPS.
+- [ ] **Create the `support@getchessplain.com` mailbox** (or set `NEXT_PUBLIC_SUPPORT_EMAIL` to one that exists). The privacy page promises deletion on request and the terms page promises 14-day refunds — both now link to this address, and Stripe expects a working contact route.
 
 ## Known limits — accurate expectations, not bugs
 

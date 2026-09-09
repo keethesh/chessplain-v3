@@ -9,6 +9,10 @@ const newsreader = Newsreader({ subsets: ['latin'], variable: '--font-newsreader
 // URLs are built for share cards, so a canonical default is safe here.
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://getchessplain.com';
 
+// Shown on the privacy and terms pages, both of which promise a way to reach a
+// human (deletion requests, refunds). This mailbox must actually exist.
+export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@getchessplain.com';
+
 const TITLE = 'Chessplain — A little clarity. A better next game.';
 const DESCRIPTION = 'Understand the moments that changed your chess game, explore them on the board, and take one useful lesson into your next game.';
 
