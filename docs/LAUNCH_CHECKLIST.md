@@ -4,7 +4,7 @@ Ordered by dependency. Each step has a command or observation that proves it
 worked — do not advance on assumption. Everything above the line labelled
 BLOCKING must be true before the site is advertised anywhere.
 
-Last verified against the repo at commit `c76ba0a`, 2026-09-09.
+Last verified against the repo at commit `048d1bd`, 2026-09-09.
 
 ---
 
@@ -12,14 +12,15 @@ Last verified against the repo at commit `c76ba0a`, 2026-09-09.
 
 | Claim | Evidence |
 | --- | --- |
-| Engine analyses real games correctly | `pnpm --filter @chessplain/engine verify:20` → 20/20, p50 18.75s, 0 sample fallbacks |
-| 56 unit tests pass | `pnpm test` |
+| Engine analyses real games correctly | `pnpm --filter @chessplain/engine verify:20` → 20/20, p50 13.89s, 0 sample fallbacks (re-run after the summary prompt changes) |
+| 56 unit tests pass | `pnpm test` (14 files) |
 | Typecheck covers src, tests and scripts | `pnpm typecheck` |
 | Both apps build | `pnpm build` |
-| Migrations create the schema from empty | applied to a throwaway Postgres 18.4; column set matches production exactly |
+| Migrations create the schema from empty, and are re-runnable | all 9 applied twice to a throwaway Postgres 18.4; column set matches production exactly; signup trigger creates a profile |
 | API rejects malformed and abusive input | `node apps/engine/scripts/verify-deployment.mjs <url>` → 24/24 |
 | Layout holds 320–1440px on 3 pages | `pnpm --filter @chessplain/web test:viewport <url>` → 15/15 clean |
-| Share cards render | `/opengraph-image` and `/r/<id>/opengraph-image` return 1200×630 PNGs |
+| Share cards render | `/opengraph-image` and `/r/<id>/opengraph-image` return 1200×630 PNGs from a production build |
+| CI passes with placeholder env | web build verified with `.env.local` removed and only the workflow's placeholders set |
 
 ---
 
