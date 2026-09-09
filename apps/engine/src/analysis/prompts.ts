@@ -74,11 +74,11 @@ Example B (late middlegame, 1198 White, "Last chance"):
 {"played":"31.Rd3","probable_thought":"Lift the rook over to the kingside and I finally get an attack going.","what_actually_happens":"Your attack needs three moves to build. Their h-file break needs one. While the rook is crossing, mate arrives on h2. 31.Rd1 keeps the rook where it defends.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what he can do in one move — not two.","severity_label":"Last chance"}`;
 
 export const SUMMARY_SYSTEM_PROMPT = `You write the top of a Chessplain report: the first thing a player reads
-after a loss. Adult casual players (600–1200). No grades, no praise sandwich,
-no numbers.
+after their game. Adult casual players (600–1200). No grades, no praise
+sandwich, no numbers.
 
-INPUT (JSON): result, player_color, player_name, opponent_name, move_count,
-time_control, and the full moment JSONs in move order.
+INPUT (JSON): outcome, result, player_color, player_name, opponent_name,
+move_count, time_control, and the full moment JSONs in move order.
 
 OUTPUT — strict JSON, nothing else:
 {
@@ -87,13 +87,25 @@ OUTPUT — strict JSON, nothing else:
   "focus_habit": "…"    // the ONE habit for the next game
 }
 
+THE OUTCOME IS NOT NEGOTIABLE:
+- "outcome" states what happened to the player you are addressing. Obey it.
+  Never infer the winner from "result" yourself, and never contradict it.
+- outcome "won": they WON. Do not say the opponent converted, closed it out,
+  or built pressure they could not escape. Close on how they secured it, or on
+  the moment that nearly cost them the win ("You still won, but move 19 gave
+  them a way back in.").
+- outcome "lost": they LOST. Close in one calm clause on how it finished
+  ("After that, Carlos converted cleanly.").
+- outcome "drew": it ended in a DRAW. Do not declare either side a winner.
+- A won game still has moments worth studying. Reviewing a win is normal —
+  never apologise for it and never invent a defeat to explain.
+
 RULES:
 - headline names where the game was actually decided — ideally contradicting
-  the player's likely belief about where they lost ("You didn't lose this in
-  the endgame."). No move numbers in the headline.
-- story references at least two moments by move number, and closes in one
-  calm clause with how the game finished ("After that, Carlos converted
-  cleanly.").
+  the player's likely belief ("You didn't lose this in the endgame.", or for a
+  win, "This was closer than the result looks."). No move numbers in headline.
+- story references at least two moments by move number when two exist, and
+  closes in one calm clause consistent with "outcome".
 - focus_habit: if two moments share a root cause, name the shared cause and
   write the habit against it — that is the most valuable sentence you produce.
   Otherwise lift the strongest moment's takeaway.
@@ -101,8 +113,11 @@ RULES:
 - NEVER USE: blunder, mistake, inaccuracy, accuracy, centipawn, eval, engine,
   "better was", any number with + or −, any percentage.
 
-GOLD STANDARD:
-{"headline":"You didn't lose this in the endgame.","story":"Move 23 was the whole story. You traded your good bishop for a pawn, and the dark squares around your king stayed weak for the rest of the game. Move 31 was your last real chance — the rook lift was one tempo too slow. After that, Carlos converted cleanly.","focus_habit":"Before taking a free pawn, trace where the piece lands and how it comes back."}`;
+GOLD STANDARD (outcome "lost"):
+{"headline":"You didn't lose this in the endgame.","story":"Move 23 was the whole story. You traded your good bishop for a pawn, and the dark squares around your king stayed weak for the rest of the game. Move 31 was your last real chance — the rook lift was one tempo too slow. After that, Carlos converted cleanly.","focus_habit":"Before taking a free pawn, trace where the piece lands and how it comes back."}
+
+GOLD STANDARD (outcome "won"):
+{"headline":"This was closer than the result looks.","story":"Move 14 handed back most of your advantage — the knight left the centre and their bishop got the long diagonal for free. Move 22 was the moment you took it back, trading into a rook endgame a pawn up. You closed it out from there, but the same loose-centre habit is what nearly cost you.","focus_habit":"Before moving a centre knight, check which diagonal it stops covering."}`;
 
 const BANNED_PATTERNS = [
   /\b(blunder|inaccurac\w*|mistake|accuracy|centipawn|stockfish)\b/i,
@@ -182,7 +197,10 @@ export function validateMomentJson(data: unknown): { isValid: boolean; errors: s
   };
 }
 
-export function validateSummaryJson(data: unknown): { isValid: boolean; errors: string[]; parsed?: GameSummary } {
+export function validateSummaryJson(
+  data: unknown,
+  outcome?: 'won' | 'lost' | 'drew' | 'unknown'
+): { isValid: boolean; errors: string[]; parsed?: GameSummary } {
   const errors: string[] = [];
   if (!data || typeof data !== 'object') {
     return { isValid: false, errors: ['Output is not a valid JSON object'] };
@@ -213,6 +231,29 @@ export function validateSummaryJson(data: unknown): { isValid: boolean; errors: 
     }
   }
 
+  // Outcome contradiction guard. Observed failure: a player who won by mate on
+  // move 17 was told "After that, Duke Karl converted cleanly." The prompt used
+  // to open with "the first thing a player reads after a loss", so a won game
+  // was narrated as a defeat. Cheap deterministic check; a hit triggers the
+  // caller's existing retry rather than shipping the contradiction.
+  const story = typeof record['story'] === 'string' ? (record['story'] as string) : '';
+  const headlineText = typeof record['headline'] === 'string' ? (record['headline'] as string) : '';
+  const prose = `${headlineText} ${story}`;
+
+  if (outcome === 'won' && /\b(converted|closed it out|closed out the game|sealed it|ground you down|wore you down)\b/i.test(prose)) {
+    const claim = prose.match(/[^.]*\b(converted|closed it out|closed out the game|sealed it|ground you down|wore you down)\b[^.]*\./i)?.[0]?.trim();
+    if (claim && !/\byou (still )?(won|closed|converted|sealed)\b/i.test(claim)) {
+      errors.push(`Player WON but the summary credits the finish to the opponent: "${claim}"`);
+    }
+  }
+
+  if (outcome === 'won' && /\byou (lost|couldn't (climb|escape|recover)|never recovered)\b/i.test(prose)) {
+    errors.push(`Player WON but the summary says they lost: "${prose.slice(0, 160)}"`);
+  }
+
+  if (outcome === 'drew' && /\b(you won|you lost|converted cleanly)\b/i.test(prose)) {
+    errors.push(`Game was a DRAW but the summary declares a winner: "${prose.slice(0, 160)}"`);
+  }
   return {
     isValid: errors.length === 0,
     errors,

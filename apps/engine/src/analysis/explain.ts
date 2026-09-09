@@ -285,7 +285,25 @@ export async function explainSummary(
     };
   }
 
+  // Derive the outcome rather than leaving the model to reconcile "1-0" with
+  // player_color. It got that wrong in testing and told a player who had just
+  // won by mate that their opponent "converted cleanly".
+  const result = meta.result || '*';
+  const outcome =
+    result === '1/2-1/2'
+      ? 'drew'
+      : result === '1-0'
+        ? meta.playerColor === 'white'
+          ? 'won'
+          : 'lost'
+        : result === '0-1'
+          ? meta.playerColor === 'black'
+            ? 'won'
+            : 'lost'
+          : 'unknown';
+
   const inputPayload = {
+    outcome,
     result: meta.result || '*',
     player_color: meta.playerColor,
     player_name: meta.playerName,
@@ -325,7 +343,7 @@ export async function explainSummary(
     } catch {
       parsed = {};
     }
-    const validation = validateSummaryJson(parsed);
+    const validation = validateSummaryJson(parsed, outcome);
 
     if (validation.isValid && validation.parsed) {
       return validation.parsed;
@@ -353,7 +371,7 @@ export async function explainSummary(
     } catch {
       retryParsed = {};
     }
-    const retryValidation = validateSummaryJson(retryParsed);
+    const retryValidation = validateSummaryJson(retryParsed, outcome);
 
     if (retryValidation.isValid && retryValidation.parsed) {
       return retryValidation.parsed;
