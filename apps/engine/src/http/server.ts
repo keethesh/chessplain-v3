@@ -498,19 +498,37 @@ async function bootstrap() {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.client_reference_id || session.metadata?.user_id;
-        if (userId) {
-          const subscription = typeof session.subscription === 'string'
-            ? await stripe.subscriptions.retrieve(session.subscription) : null;
-          const premium = subscription?.status === 'active' || subscription?.status === 'trialing';
-          const { error } = await supabase
-            .from('profiles')
-            .update({
-              subscription_tier: premium ? 'premium' : 'free',
-              stripe_customer_id: session.customer as string,
-              stripe_subscription_id: session.subscription as string,
-            })
-            .eq('id', userId);
-          if (error) throw error;
+        if (!userId) {
+          // Money taken, nobody to credit. Checkout sets client_reference_id
+          // and two metadata copies, so this means the session came from
+          // somewhere else (a payment link, the dashboard) and needs manual
+          // reconciliation. Never fail silently here.
+          fastify.log.error(
+            { sessionId: session.id, customer: session.customer },
+            'Stripe checkout completed with no user id — subscription NOT granted, reconcile manually'
+          );
+          break;
+        }
+        const subscription = typeof session.subscription === 'string'
+          ? await stripe.subscriptions.retrieve(session.subscription) : null;
+        const premium = subscription?.status === 'active' || subscription?.status === 'trialing';
+        const { data: updated, error } = await supabase
+          .from('profiles')
+          .update({
+            subscription_tier: premium ? 'premium' : 'free',
+            stripe_customer_id: session.customer as string,
+            stripe_subscription_id: session.subscription as string,
+          })
+          .eq('id', userId)
+          .select('id');
+        if (error) throw error;
+        if (!updated || updated.length === 0) {
+          // No profiles row for this user: the signup trigger is missing (see
+          // migration 20260831000008). The customer has paid and has no access.
+          fastify.log.error(
+            { userId, sessionId: session.id },
+            'Stripe checkout completed but no profiles row matched — customer paid without being upgraded'
+          );
         }
         break;
       }
@@ -518,25 +536,36 @@ async function bootstrap() {
         const sub = event.data.object as Stripe.Subscription;
         // Stripe events can arrive out of order; apply current subscription state.
         const current = await stripe.subscriptions.retrieve(sub.id);
-        const status = current.status;
-        const customerId = sub.customer as string;
-        const tier = status === 'active' || status === 'trialing' ? 'premium' : 'free';
+        const tier = current.status === 'active' || current.status === 'trialing' ? 'premium' : 'free';
 
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from('profiles')
           .update({ subscription_tier: tier })
-          .eq('stripe_subscription_id', sub.id);
+          .eq('stripe_subscription_id', sub.id)
+          .select('id');
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+          fastify.log.error(
+            { subscriptionId: sub.id, customer: sub.customer, tier },
+            'Subscription updated but no profiles row carries this stripe_subscription_id'
+          );
+        }
         break;
       }
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription;
-        const customerId = sub.customer as string;
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from('profiles')
           .update({ subscription_tier: 'free' })
-          .eq('stripe_subscription_id', sub.id);
+          .eq('stripe_subscription_id', sub.id)
+          .select('id');
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+          fastify.log.error(
+            { subscriptionId: sub.id, customer: sub.customer },
+            'Subscription cancelled but no profiles row matched — a cancelled customer may retain premium'
+          );
+        }
         break;
       }
     }

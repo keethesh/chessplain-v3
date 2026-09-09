@@ -44,6 +44,11 @@ supabase db push
 - `20260831000000_baseline_schema.sql` — no-op on production (CREATE TABLE IF NOT EXISTS only); it exists so a fresh project can be built.
 - `20260831000006_add_missing_columns.sql` — no-op if the columns exist.
 - `20260831000007_repair_analysis_errors.sql` — **this one changes production.** It adds `analysis_errors.analysis_id` and relaxes the v2 CHECK constraints. Until it runs, every error the engine tries to record is silently rejected; the table held 0 rows on 2026-09-09.
+- `20260831000008_profile_on_signup.sql` — installs the `on_auth_user_created` trigger and backfills any auth user without a profiles row. Production already has 324 profiles from a v2-era trigger that was never in source control, so this is close to a no-op there — but without it a fresh project takes payments and upgrades nobody, because billing keys off `profiles.id`.
+
+All nine migrations were applied twice in a row to a throwaway Postgres 18.4:
+both passes succeeded and data survived, so re-running against a production
+database that already has migrations 1–5 is safe.
 
 **Verify:** after deploying the engine, force one failure (submit a
 Chess.com username that does not exist) and confirm a row appears:
