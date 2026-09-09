@@ -1,6 +1,7 @@
 import { PostHog } from 'posthog-node';
 import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
+import { recordAnalysisError } from '../db/errors.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { runAnalysisPipeline } from '../analysis/pipeline.js';
 import { fetchRecentChessComGame } from '../analysis/chesscom.js';
@@ -205,11 +206,12 @@ export async function processNextJob(): Promise<boolean> {
       })
       .eq('id', analysis.id);
 
-    await supabase.from('analysis_errors').insert({
-      analysis_id: analysis.id,
+    await recordAnalysisError({
+      analysisId: analysis.id,
       stage: 'engine',
       message: errorMsg,
       metadata: { attempts, shouldRetry },
+      severity: shouldRetry ? 'warning' : 'fatal',
     });
 
     posthog?.capture({

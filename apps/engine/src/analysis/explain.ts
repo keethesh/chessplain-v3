@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { config } from '../config.js';
-import { supabase } from '../db/supabase.js';
+import { recordAnalysisError } from '../db/errors.js';
 import { CandidateMoment, EloBand, GameSummary, MomentReport } from '../types.js';
 import {
   MOMENT_SYSTEM_PROMPT,
@@ -225,8 +225,8 @@ export async function explainMoment(
 
     console.error(`[Explain] Moment validation failed on retry: ${retryValidation.errors.join('; ')}`);
     if (analysisId) {
-      await supabase.from('analysis_errors').insert({
-        analysis_id: analysisId,
+      await recordAnalysisError({
+        analysisId,
         stage: 'explaining_moment',
         message: retryValidation.errors.join('; '),
         metadata: { moment, inputPayload, rawOutput: retryRawJson },
@@ -238,19 +238,19 @@ export async function explainMoment(
     if (isCreditExhaustionError(err)) {
       console.error('[Explain] Upstream gateway credit exhaustion (401). Aborting retries.');
       if (analysisId) {
-        await supabase.from('analysis_errors').insert({
-          analysis_id: analysisId,
-          stage: 'llm_credits_exhausted',
-          message: err instanceof Error ? err.message : String(err),
-          metadata: { moment, inputPayload },
-        });
+        await recordAnalysisError({
+        analysisId,
+        stage: 'llm_credits_exhausted',
+        message: err instanceof Error ? err.message : String(err),
+        metadata: { moment, inputPayload },
+      });
       }
       return createFallbackMoment(moment);
     }
     console.error('[Explain] LLM call failed for moment:', err);
     if (analysisId) {
-      await supabase.from('analysis_errors').insert({
-        analysis_id: analysisId,
+      await recordAnalysisError({
+        analysisId,
         stage: 'explaining_moment',
         message: err instanceof Error ? err.message : String(err),
         metadata: { moment, inputPayload },
@@ -378,8 +378,8 @@ export async function explainSummary(
     }
 
     if (analysisId) {
-      await supabase.from('analysis_errors').insert({
-        analysis_id: analysisId,
+      await recordAnalysisError({
+        analysisId,
         stage: 'explaining_summary',
         message: retryValidation.errors.join('; '),
         metadata: { inputPayload, rawOutput: retryRawJson },
@@ -391,19 +391,19 @@ export async function explainSummary(
     if (isCreditExhaustionError(err)) {
       console.error('[Explain] Upstream gateway credit exhaustion (401). Aborting retries.');
       if (analysisId) {
-        await supabase.from('analysis_errors').insert({
-          analysis_id: analysisId,
-          stage: 'llm_credits_exhausted',
-          message: err instanceof Error ? err.message : String(err),
-          metadata: { inputPayload },
-        });
+        await recordAnalysisError({
+        analysisId,
+        stage: 'llm_credits_exhausted',
+        message: err instanceof Error ? err.message : String(err),
+        metadata: { inputPayload },
+      });
       }
       return createFallbackSummary(moments, meta);
     }
     console.error('[Explain] LLM call failed for summary:', err);
     if (analysisId) {
-      await supabase.from('analysis_errors').insert({
-        analysis_id: analysisId,
+      await recordAnalysisError({
+        analysisId,
         stage: 'explaining_summary',
         message: err instanceof Error ? err.message : String(err),
         metadata: { inputPayload },
