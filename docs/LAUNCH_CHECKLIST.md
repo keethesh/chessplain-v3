@@ -1,184 +1,173 @@
 # Launch checklist
 
-Ordered by dependency. Each step has a command or observation that proves it
-worked — do not advance on assumption. Everything above the line labelled
-BLOCKING must be true before the site is advertised anywhere.
+**Status: NOT ready to advertise.** The production API is deployed and live
+checkout creation works. The public website still returns HTTP 402 because
+Vercel has blocked the account. A paid subscription lifecycle has not been tested.
 
-Last verified against the repo at commit `048d1bd`, 2026-09-09.
+Verified on 2026-09-09 against engine commit `d01c697`. Documentation-only commits
+may be newer. Do not confuse the API verifier's `READY` output with launch approval:
+it does not test the website, payment completion, premium access, or cancellation.
 
----
+## Current evidence
 
-## 0. What is already true (verified locally, no action needed)
+| Area | Evidence | Scope / remaining gap |
+|---|---|---|
+| Repository | Typecheck, 56/56 tests in 14 files, both production builds passed | Current local verification; not proof of every production flow |
+| GitHub CI | [Run 34393964367](https://github.com/keethesh/chessplain-v3/actions/runs/34393964367) succeeded at `d01c697` | Earlier run at `0163972` failed because tests depended on a local `.env`; fixed |
+| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, commit `d01c697`, active | VPS tests also passed 56/56 without a local `.env` |
+| API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
+| Black-side production report | `3067cfdc-ffa4-4947-af48-37bdfd471cc5` completed; all selected moments have Black perspective and even plies | Verifies the deployed perspective fix for this game, not universal narrative accuracy |
+| Database | `analysis_errors.analysis_id` exists; signup trigger installed once; no auth users without profiles; migrations 7 and 8 recorded | Production retains 71 older migration-history entries absent from this repo; see migration warning below |
+| Stripe live configuration | Existing Vercel live secret verified with Stripe and securely installed on VPS; both configured USD prices active; charges enabled | No secret values stored in this document or printed during transfer |
+| Live Checkout | Authenticated month/year sessions created at $9.99/$99.99, subscription mode, correct owner; duplicate calls returned the same session | No card charged; both unpaid sessions expired; temporary auth user/profile deleted |
+| Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not Stripe delivery or paid entitlement updates |
+| Webhook routing | New engine endpoint enabled; obsolete web endpoint disabled, not deleted | New: `we_1UDrkeFtgmZSE6kxl5rhwS0F`; old: `we_1SOsFmFtgmZSE6kx0QBpARJx` |
+| Portal configuration | Live default configuration active; cancellation enabled at period end | Customer portal journey and cancellation webhook still need a real subscription test |
+| HTTPS | Caddy validates and reloads; API sends `Strict-Transport-Security: max-age=31536000` | Scoped to API host, no `includeSubDomains` |
+| Website | HTTP 402; Vercel `FAIR_USE_LIMITS_EXCEEDED`, resource `fluidCpuDuration` | **BLOCKING**, account-owner action |
+| Quota | VPS still has `DISABLE_QUOTA=true` | **BLOCKING before advertising**; free usage remains unbounded by the report quota |
 
-| Claim | Evidence |
-| --- | --- |
-| Engine analyses real games correctly | `pnpm --filter @chessplain/engine verify:20` → 20/20, p50 13.89s, 0 sample fallbacks (re-run after the summary prompt changes) |
-| 56 unit tests pass | `pnpm test` (14 files) |
-| Typecheck covers src, tests and scripts | `pnpm typecheck` |
-| Both apps build | `pnpm build` |
-| Migrations create the schema from empty, and are re-runnable | all 9 applied twice to a throwaway Postgres 18.4; column set matches production exactly; signup trigger creates a profile |
-| API rejects malformed and abusive input | `node apps/engine/scripts/verify-deployment.mjs <url>` → 24/24 |
-| Layout holds 320–1440px on 3 pages | `pnpm --filter @chessplain/web test:viewport <url>` → 15/15 clean |
-| Share cards render | `/opengraph-image` and `/r/<id>/opengraph-image` return 1200×630 PNGs from a production build |
-| CI passes with placeholder env | web build verified with `.env.local` removed and only the workflow's placeholders set |
-| Crawlers see the right thing | `/robots.txt` allows the site but disallows `/report/` and `/auth/`; `/sitemap.xml` lists the 5 public pages |
-| Broken and truncated links land somewhere useful | `/anything-wrong` returns 404 with a real page offering a sample and a submit link |
-| A client crash is recoverable | `app/error.tsx` boundary with a retry button, and the failure is reported to analytics |
+Earlier same-day acceptance evidence: real Stockfish/LLM gate 20/20, p50 13.89s;
+local viewport audit 30/30 page/width combinations; site and sample share images
+rendered as 1200×630 PNGs. These are recorded local results, not fresh checks of the
+blocked production website or a load test. Rerun the relevant gates after changes.
 
----
+## 1. Resolve the Vercel account block — OWNER ACTION
 
-## BLOCKING — the site is currently dark and cannot take money
+Team: `keetheshs-projects`. Project: `chessplain`.
 
-### 1. Re-enable the Vercel deployment
+The Vercel API reports a fair-use CPU limit block. Resolve the limit/plan issue in
+the account dashboard or with Vercel support. No paid plan change has been made.
+Do not attempt to bypass the account restriction with duplicate accounts/projects.
 
-`https://getchessplain.com` returns `402 Payment Required` with
-`x-vercel-error: DEPLOYMENT_DISABLED`. This is a billing/spend state on the
-Vercel account, not a code fault. Nothing else on this list matters while the
-front door is closed.
+**The project currently has no Git connection.** It previously pointed to
+`keethesh/Chessplain`, branch `master`, with Vite-era build settings. During the
+reconnection attempt Vercel removed the old link, then rejected the new connection
+because of the account block. The current site was already disabled beforehand.
 
-**Verify:** `curl -o /dev/null -w '%{http_code}\n' https://getchessplain.com` → `200`
+These build settings were successfully saved:
 
-### 2. Apply the two new migrations to production
+- Root directory: `apps/web`
+- Framework: Next.js
+- Build command: `pnpm build`
+- Install command: `pnpm install --frozen-lockfile`
+
+After the account is unblocked, from this repository root:
 
 ```bash
-supabase link --project-ref <your-project-ref>
-supabase db push
+vercel link --yes --project chessplain --team keetheshs-projects
+vercel git connect https://github.com/keethesh/chessplain-v3.git
 ```
 
-- `20260831000000_baseline_schema.sql` — no-op on production (CREATE TABLE IF NOT EXISTS only); it exists so a fresh project can be built.
-- `20260831000006_add_missing_columns.sql` — no-op if the columns exist.
-- `20260831000007_repair_analysis_errors.sql` — **this one changes production.** It adds `analysis_errors.analysis_id` and relaxes the v2 CHECK constraints. Until it runs, every error the engine tries to record is silently rejected; the table held 0 rows on 2026-09-09.
-- `20260831000008_profile_on_signup.sql` — installs the `on_auth_user_created` trigger and backfills any auth user without a profiles row. Production already has 324 profiles from a v2-era trigger that was never in source control, so this is close to a no-op there — but without it a fresh project takes payments and upgrades nobody, because billing keys off `profiles.id`.
+Confirm the production branch is **main**, not the former **master**. Set the
+following **production build-time** variables in Vercel. Attempts to save the new
+URLs were blocked, so they must not be assumed present:
 
-All nine migrations were applied twice in a row to a throwaway Postgres 18.4:
-both passes succeeded and data survived, so re-running against a production
-database that already has migrations 1–5 is safe.
-
-**Verify:** after deploying the engine, force one failure (submit a
-Chess.com username that does not exist) and confirm a row appears:
-
-```sql
-select stage, source, severity, created_at from analysis_errors order by created_at desc limit 5;
-```
-
-### 3. Deploy the current engine to the VPS
-
-Production is running code from before `d8a3a65`. That build has four defects
-this repo has since fixed:
-
-- reports for players who chose **Black** analysed White's moves instead
-- a moment could be reported whose "best move" was the move played
-- the summary told winners they had lost
-- `/api/billing/checkout` was reachable **without authentication** and trusted a client-supplied user id
-
-**Verify:** `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`
-→ 24/24, in particular `checkout requires authentication` and
-`checkout does not reach Stripe unauthenticated`.
-
-### 4. Fix the Stripe mode mismatch
-
-Production currently pairs a **test-mode secret key** with **live-mode price
-IDs**, so checkout returns 500 for every visitor:
-
-```
-No such price: 'price_1SOs7y…'; a similar object exists in live mode,
-but a test mode key was used to make this request.
-```
-
-Set on the VPS:
-
-- `STRIPE_SECRET_KEY` → the `sk_live_…` key
-- `STRIPE_WEBHOOK_SECRET` → the **live-mode** signing secret (test-mode secrets fail signature verification silently, which means paid users never get upgraded)
-
-Register a live-mode webhook at `https://api.getchessplain.com/api/billing/webhook`
-for `checkout.session.completed`, `customer.subscription.updated`,
-`customer.subscription.deleted`.
-
-**Verify:** the deployment script's `webhook secret is configured` and
-`webhook rejects an unsigned payload` both pass, then complete step 5.
-
-### 5. Buy a subscription with a real card, once
-
-The webhook is the only thing that converts a payment into access. Nothing
-short of a real transaction proves it.
-
-1. Sign in, go to `/pricing`, subscribe.
-2. `select subscription_tier, stripe_customer_id from profiles where email = '<you>';` → `premium`
-3. Submit a 3rd report inside 7 days → must **not** be refused.
-4. Cancel through the customer portal → tier returns to `free`.
-
----
-
-## Engine environment (VPS `/etc/chessplain/engine.env`)
-
-Required — the process refuses to start without these:
-
-```
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_ANON_KEY=<anon key>
-SUPABASE_SERVICE_ROLE_KEY=<service role key>
-LLM_API_KEY=<crof.ai key>
-```
-
-Required for billing to function (no defaults any more — a missing price ID
-becomes an empty string and checkout fails):
-
-```
-STRIPE_SECRET_KEY=sk_live_…
-STRIPE_WEBHOOK_SECRET=whsec_…
-STRIPE_PRICE_MONTHLY=price_1SOs7yFtgmZSE6kx0wJ3wY3u
-STRIPE_PRICE_YEARLY=price_1SOs7yFtgmZSE6kxI9RoSTXR
-```
-
-Operational:
-
-```
-PORT=8080
-NODE_ENV=production          # quota is only enforced when this is 'production'
-WEB_ORIGIN=https://getchessplain.com
-ENGINE_PATH=/usr/local/bin/stockfish18_clang
-TRUST_PROXY=loopback         # only if nginx/Caddy terminates TLS on this host
-ENGINE_POOL_SIZE=4           # pool x threads must fit the usable cores
-ENGINE_HASH_MB=512           # MiB per Stockfish process
-ENGINE_THREADS=1
-STALE_LEASE_MINUTES=15       # must exceed worst-case single-game analysis time
-POSTHOG_KEY=<optional; unset = no telemetry, never a silent default>
-```
-
-`WORKER_ENABLED` must stay unset (or `true`) in production. Set it to `false`
-only when running the engine on a laptop — there is no separate staging
-database, so a local worker competes with the deployed one for real jobs.
-
-## Web environment (Vercel)
-
-```
+```text
 NEXT_PUBLIC_API_URL=https://api.getchessplain.com
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
 NEXT_PUBLIC_SITE_URL=https://getchessplain.com
-NEXT_PUBLIC_POSTHOG_KEY=<optional>
-NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+NEXT_PUBLIC_SUPABASE_URL=<the project's public Supabase URL>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<the project's publishable anon key>
+NEXT_PUBLIC_SUPPORT_EMAIL=<a real monitored mailbox>
 ```
 
-`NEXT_PUBLIC_*` values are inlined at build time, so changing one requires a
-redeploy, not a restart. `NEXT_PUBLIC_SITE_URL` only affects absolute share-card
-URLs.
+Existing Supabase variables should be verified rather than replaced blindly.
+PostHog is optional. Do not copy privileged engine keys into `NEXT_PUBLIC_*`.
 
----
+Deploy `main` through the restored Git integration, or use `vercel --prod` from
+the linked repo root. Verify the deployed commit and production branch in Vercel.
+Then check `/`, `/pricing`, `/r/demo-sample`, `/privacy`, `/terms`, `/robots.txt`,
+`/sitemap.xml`, the OG images, and a nonexistent route. Confirm sign-in returns to
+the intended report and a new game completes through the deployed web UI.
 
-## Before posting the first link
+## 2. Finish the live money path — OWNER CARD REQUIRED
 
-- [ ] `curl -sI https://getchessplain.com | head -1` → `200`
-- [ ] Paste `https://getchessplain.com` into X's post composer and confirm a card with an image appears. Also check a report link (`/r/<shareId>`) — it should show that report's own headline.
-- [ ] Run one game through the live site on a phone, on cellular (not Wi-Fi), end to end.
-- [ ] Open a shared report link in the Instagram or TikTok in-app browser — that is where most of the traffic will land.
-- [ ] `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com` → READY
-- [ ] Rotate the Supabase service-role key if it has ever been pasted into a chat, issue or screenshot, and update the VPS.
-- [ ] **Create the `support@getchessplain.com` mailbox** (or set `NEXT_PUBLIC_SUPPORT_EMAIL` to one that exists). The privacy page promises deletion on request and the terms page promises 14-day refunds — both now link to this address, and Stripe expects a working contact route.
+The VPS now has a working live key and its own live webhook signing secret.
+There is no need to paste another key into a chat. The active endpoint is:
 
-## Known limits — accurate expectations, not bugs
+```text
+https://api.getchessplain.com/api/billing/webhook
+```
 
-- **Free quota is 2 reports per 7 days, counted by IP for anonymous visitors.** Mobile users share carrier-grade NAT addresses, so a first-time visitor can occasionally be told the network's allowance is used up. The message leads with signing in, which moves them onto a per-account allowance. If this proves common in practice, the next step is requiring an email code before the second anonymous report.
-- **Chess variants are not supported.** Chess960 and friends are rejected by name at submission, and Chess.com imports skip back to the most recent standard game.
-- **A steadily played game can produce a report with no moments.** That is deliberate: a moment needs a 1.5-pawn swing, or 0.75 for the quiet-drift fallback. The report says so plainly instead of inventing a lesson. Two of the 20 games in the acceptance run came out this way.
-- **One VPS, one worker process.** Job claims are compare-and-swap safe and stale leases are reclaimed after `STALE_LEASE_MINUTES`, so a second replica is safe to add when CPU becomes the limit.
+Subscribed events: `checkout.session.completed`,
+`customer.subscription.updated`, `customer.subscription.deleted`.
+The obsolete `/api/stripe/webhook` endpoint on the web host is disabled to stop
+Stripe retrying deliveries to a retired route.
+
+Before advertising, using a consenting owner's account and payment method:
+
+1. Sign in through the deployed site and complete one real subscription checkout.
+2. Confirm Stripe delivered the event successfully and the corresponding profile
+   has `subscription_tier=premium` plus matching Stripe customer/subscription IDs.
+3. Confirm another checkout is rejected with 409 rather than creating a duplicate.
+4. Open **Manage subscription** and verify the portal loads for that customer.
+5. Cancel through the portal. At-period-end cancellation must retain premium until
+   the period ends; verify eventual cancellation/deletion downgrades the profile.
+6. If a refund is desired, explicitly authorize it and perform it through Stripe.
+
+No real payment, refund, or customer cancellation has been performed by the
+verification steps above. Synthetic signature tests are not a substitute for this
+sequence. Do not claim the paid lifecycle is verified until these observations exist.
+
+## 3. Enforce the advertised quota
+
+`DISABLE_QUOTA=true` remains on the VPS deliberately while the website is disabled;
+users cannot currently reach the sign-in or payment flow. This still leaves the
+public API exposed to free usage. Do not advertise with this bypass enabled.
+
+Once the web and payment paths work, set `DISABLE_QUOTA=false` in
+`/etc/chessplain/engine.env`, restart `chessplain-engine`, and verify:
+
+- An ordinary signed-in free account gets two reports per seven days and its third
+  submission is rejected with the quota explanation.
+- A verified premium account is not blocked by that quota.
+- Anonymous quota exhaustion offers a usable sign-in route.
+
+Keep the existing per-IP abuse limiter enabled. These quota assertions have not
+yet been exercised against production with the bypass disabled.
+
+## 4. Support and credential hygiene — OWNER ACTION
+
+- Create/verify the monitored support mailbox. The app defaults to
+  `support@getchessplain.com`; showing that address does not prove it exists.
+  Privacy/deletion and refund requests must actually reach someone.
+- Rotate the Supabase service-role and LLM credentials previously pasted into the
+  conversation. Coordinate replacements across the VPS and local tooling before
+  revocation; never print replacement secrets or commit them.
+- Live Stripe credentials transferred in this session were not printed. Privileged
+  keys must remain server-side. Do not indiscriminately rotate unrelated keys.
+
+## 5. Final deployed checks
+
+```bash
+corepack pnpm typecheck
+corepack pnpm test
+corepack pnpm build
+node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com
+```
+
+Use the existing viewport audit against the now-working production website, then
+manually test mobile submission, streaming completion, retry/reconnect, sharing,
+sign-in, checkout and portal navigation. Check the actual social preview URLs.
+Automated layout checks do not establish usability in every in-app browser.
+
+Only advertise after the website, real paid lifecycle, quota, support and
+credential gates above are resolved. The launch goal remains open until then.
+
+## Operational notes
+
+- No separate staging database currently exists. Local servers pointed at production
+  **must set `WORKER_ENABLED=false`** or they can consume real queued jobs.
+- Before deploying an engine update, ensure the target tree is clean, fetch and
+  fast-forward to the reviewed commit, install with the lockfile, build and test,
+  then restart. Do not use `git reset --hard` as a routine deployment command.
+- Engine env backups are retained under `/etc/chessplain/` with mode 0600. The
+  Caddy config was backed up before its validated HSTS change. Backups contain
+  secrets where applicable and must not be copied into this repository.
+- **Migration warning:** production has historical versions not represented by local
+  files. A blind `supabase db push` may refuse the mismatched history. Do not erase
+  history or mark unexecuted migrations applied to bypass it. Migrations 7 and 8
+  were explicitly executed via `supabase db query --linked --project-ref ... -f ...`
+  and verified. For future changes inspect history/schema first and reconcile
+  deliberately; fresh-database bootstrap and existing production upgrades are
+  distinct procedures.

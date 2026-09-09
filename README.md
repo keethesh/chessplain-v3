@@ -13,17 +13,23 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Working and verified locally:** typecheck, 25 unit tests, and production
-builds for both packages are green (`pnpm typecheck && pnpm test && pnpm build`).
-CI runs all three on every push.
+**Current code:** typecheck, 56 unit tests, and production builds for both packages
+pass. GitHub CI passed at `d01c697`. The engine is deployed to the production VPS.
 
-**Not yet proven:** the full pipeline has never been run end to end — real
-Stockfish, real LLM, real database — in any session. `apps/engine/scripts/verify-20-games.ts`
-is the gate that would prove it (20 real games, asserts ≥19 succeed, p50 ≤30s).
-It has not been run because it needs a Stockfish binary and secrets.
+**Live checks:** a Black-side report completed on the deployed engine; the API
+smoke suite passes 25 checks; authenticated live monthly/yearly Stripe Checkout
+sessions were created and expired without payment. The earlier real-game
+acceptance gate passed 20/20 (p50 13.89s). These checks do not prove every
+explanation correct or the full paid lifecycle.
 
-**That gate is the next milestone.** Until it passes, treat every claim about
-report quality and latency as untested.
+**Not ready to advertise:** Vercel has blocked the account for exceeded CPU usage,
+so the website returns HTTP 402. Restore hosting and the Git connection, finish
+the real subscription/portal test, enable production quotas, verify the support
+mailbox, and rotate previously exposed credentials.
+
+Start with [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) for current
+production evidence and the remaining steps. It distinguishes completed checks
+from account-owner actions; do not use old implementation plans as launch status.
 
 ## Run it locally
 
@@ -39,6 +45,11 @@ pnpm --filter @chessplain/engine dev   # API + worker on :8080
 pnpm --filter @chessplain/web dev      # site on :3000
 ```
 
+If the local engine uses the production Supabase project, set
+`WORKER_ENABLED=false` in `apps/engine/.env` **before starting it**. Otherwise it
+will compete with the deployed worker for real jobs. Use a separate database
+when testing queue processing locally.
+
 There are no default credentials on purpose — missing config fails at startup
 rather than silently connecting to production.
 
@@ -50,7 +61,7 @@ rather than silently connecting to production.
 | `pnpm test` | Engine unit tests (Vitest) |
 | `pnpm build` | Production build of both packages |
 | `pnpm --filter @chessplain/engine verify:20` | **The live acceptance gate.** Costs real LLM tokens. |
-| `supabase db push` | Apply migrations to a fresh or existing project |
+| `supabase db push` | Apply migrations only after checking target/history; production has legacy versions absent locally (see launch checklist) |
 
 ## Documentation
 
