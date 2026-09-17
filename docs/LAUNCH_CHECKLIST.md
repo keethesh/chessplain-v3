@@ -30,7 +30,8 @@ it does not test the website, payment completion, premium access, or cancellatio
 | Portal configuration | Live default configuration active; cancellation enabled at period end | Customer portal journey and cancellation webhook still need a real subscription test |
 | HTTPS | Caddy validates and reloads; API sends `Strict-Transport-Security: max-age=31536000` | Scoped to API host, no `includeSubDomains` |
 | Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; 11/11 routes verified HTTP 200 | Cutover `getchessplain.com` in Cloudflare dashboard |
-| Quota | VPS still has `DISABLE_QUOTA=true` | **BLOCKING before advertising**; free usage remains unbounded by the report quota |
+| Quota | **ENFORCED** and verified: free account `201, 201, 402`; premium never blocked (see section 3) | Was unbounded until 2026-09-17 |
+| Client IP | `TRUST_PROXY` was unset, so every request on earth reported `127.0.0.1`, making the anonymous quota and the rate limiter global. Now `127.0.0.1,::1`; a real submission records `77.98.146.19` | Trust only loopback; never `true` |
 
 Earlier same-day acceptance evidence: real Stockfish/LLM gate 20/20, p50 13.89s;
 local viewport audit 30/30 page/width combinations; site and sample share images
@@ -92,22 +93,30 @@ No real payment, refund, or customer cancellation has been performed by the
 verification steps above. Synthetic signature tests are not a substitute for this
 sequence. Do not claim the paid lifecycle is verified until these observations exist.
 
-## 3. Enforce the advertised quota
+## 3. Quota — DONE and verified
 
-`DISABLE_QUOTA=true` remains on the VPS deliberately while the website is disabled;
-users cannot currently reach the sign-in or payment flow. This still leaves the
-public API exposed to free usage. Do not advertise with this bypass enabled.
+`DISABLE_QUOTA=false` is set in `/etc/chessplain/engine.env`. Verified against
+production on 2026-09-17:
 
-Once the web and payment paths work, set `DISABLE_QUOTA=false` in
-`/etc/chessplain/engine.env`, restart `chessplain-engine`, and verify:
+- Free signed-in account: two submissions `201`, third `402 quota_exceeded`
+  with the sign-in/premium explanation. Temp account, its analyses and its
+  source rows were all deleted afterwards.
+- Premium account: three submissions, none blocked — paying customers are safe.
+- Anonymous visitor: keyed per real client IP, and the exhausted response
+  offers `can_sign_in: true` so a first-time visitor is not dead-ended.
 
-- An ordinary signed-in free account gets two reports per seven days and its third
-  submission is rejected with the quota explanation.
-- A verified premium account is not blocked by that quota.
-- Anonymous quota exhaustion offers a usable sign-in route.
+This required fixing `TRUST_PROXY` first. It was unset, so Fastify ignored
+`X-Forwarded-For` and `request.ip` was `127.0.0.1` for every request on earth —
+Caddy reaches the engine over loopback. The advertised "2 free reports" would
+have been consumed by the first two anonymous reports worldwide and every other
+visitor would have been blocked, while the per-IP rate limiter silently became
+one shared 100/min bucket for all traffic. Production now sets
+`TRUST_PROXY=127.0.0.1,::1` and a real submission records `77.98.146.19`.
 
-Keep the existing per-IP abuse limiter enabled. These quota assertions have not
-yet been exercised against production with the bypass disabled.
+Trusting only loopback is what makes this safe: clients never connect from
+loopback, so client-supplied `X-Forwarded-For` is still ignored. Do not set
+`TRUST_PROXY=true`. Note the per-IP abuse limiter is on the same key, so it is
+also now per visitor.
 
 ## 4. Support and credential hygiene — OWNER ACTION
 

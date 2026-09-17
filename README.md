@@ -13,20 +13,24 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Current code:** typecheck, 56 unit tests, and production builds for both packages
-pass. GitHub CI passed at `d01c697`. The engine is deployed to the production VPS.
+**Current code:** typecheck, 59 unit tests, and production builds for both
+packages pass. The engine is deployed to the production VPS.
 
-**Live checks:** a Black-side report completed on the deployed engine; the API
-smoke suite passes 25 checks; authenticated live monthly/yearly Stripe Checkout
-sessions were created and expired without payment. The earlier real-game
-acceptance gate passed 20/20 (p50 13.89s). These checks do not prove every
+**Live checks:** analysis works end-to-end on the deployed engine (Morphy Opera
+Game: completed, real chess-accurate prose, no fallback text); the API smoke
+suite passes 25/25; authenticated live monthly/yearly Stripe Checkout sessions
+were created and expired without payment. These checks do not prove every
 explanation correct or the full paid lifecycle.
 
-**Cloudflare migration:** The frontend has been migrated from Vercel to Cloudflare
-Workers (100,000 free requests/day, unlimited static bandwidth, zero CPU timeouts)
-and is live at `https://chessplain-web.oxide-website.workers.dev` (11/11 routes
-verified HTTP 200). Cloudflare dashboard cutover to `getchessplain.com` and real
-paid subscription verification remain before advertising.
+**Cloudflare migration:** The frontend runs on Cloudflare Workers (100,000 free
+requests/day, unlimited static bandwidth, no CPU-timeout billing) and is live on
+`getchessplain.com` with 11/11 routes returning HTTP 200. Deploy updates with
+`pnpm --filter @chessplain/web deploy:worker`.
+
+**Before advertising:** two things remain — verify the real subscription/portal
+lifecycle with a card, and create the support mailbox the legal pages promise.
+The LLM provider is currently a reseller gateway, so move to a first-party
+provider before spend scales.
 
 Start with [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) for current
 production evidence and the remaining steps. It distinguishes completed checks
