@@ -66,11 +66,73 @@ export default function PricingPage() {
         <Link className="secondary-button" href="/#analyze">Review a game free <ArrowRight size={16} /></Link>
       </section>
       <section className="price-plan paid"><h2>A regular habit</h2><p>For the games you want to understand.</p><div className="price-value">{interval === 'month' ? '$9.99' : '$99.99'} <small>/ {interval === 'month' ? 'month' : 'year'}</small></div><p>{interval === 'month' ? 'Billed monthly. Renews until cancelled.' : 'Billed $99.99 yearly. Renews until cancelled.'}</p>
-        <ul>{['Everything in the free review', 'No weekly report quota for personal use', 'The same careful, readable explanations', 'Manage or cancel through Stripe'].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
-        {!authReady ? <p role="status" className="text-sm">Checking your account…</p> : session ? <><p className="text-xs break-all text-[var(--w-ink2)] mb-3">Signed in as {session.user.email}</p><button className="primary-button" disabled={!!busy} onClick={() => billing('checkout')}>{busy === 'checkout' ? <><LoaderCircle className="spin" size={16} />Opening checkout…</> : 'Continue to secure checkout'}</button><button className="text-link justify-center mt-2" disabled={!!busy} onClick={() => billing('portal')}>{busy === 'portal' ? 'Opening billing…' : 'Already subscribed? Manage subscription'}</button></> : sent ? <div role="status" className="text-sm leading-relaxed"><p className="font-semibold mb-2">Check your inbox.</p><p>Open the sign-in link in this browser, then return here to subscribe. Sending a link does not start a subscription.</p><button className="text-link underline" onClick={() => setSent(false)}>Use a different email</button></div> : <form onSubmit={sendLink} className="grid gap-3"><label className="text-sm font-medium" htmlFor="billing-email">Sign in to connect your subscription</label><input id="billing-email" className="email-input" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={!!busy} /><button className="primary-button" disabled={!!busy}>{busy === 'email' ? 'Sending…' : 'Email me a sign-in link'}</button><p className="text-xs leading-relaxed text-[var(--w-ink2)]">New here? The link creates your account. You’ll choose and confirm payment on Stripe.</p></form>}
+        <ul>{['Everything in the free review', 'No weekly report quota for personal use', 'The same careful, readable explanations', 'Manage or cancel anytime through Stripe'].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
+        {!authReady ? (
+          <p role="status" className="text-sm text-[var(--w-ink2)]">Checking your account…</p>
+        ) : session ? (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-[var(--w-surface-subtle)] p-2.5 text-xs text-[var(--w-ink1)]">
+              <span className="font-semibold text-[var(--w-accent)]">✓ Signed in</span> as {session.user.email}
+            </div>
+            <button className="primary-button w-full justify-center" disabled={!!busy} onClick={() => billing('checkout')}>
+              {busy === 'checkout' ? <><LoaderCircle className="spin" size={16} />Opening Stripe checkout…</> : <>Continue to Stripe checkout <ArrowRight size={16} /></>}
+            </button>
+            <button className="text-link justify-center text-xs w-full" disabled={!!busy} onClick={() => billing('portal')}>
+              {busy === 'portal' ? 'Opening billing…' : 'Manage existing subscription'}
+            </button>
+          </div>
+        ) : sent ? (
+          <div role="status" className="rounded-lg bg-[var(--w-surface-subtle)] p-4 text-sm leading-relaxed text-left">
+            <p className="font-semibold text-[var(--w-accent)] mb-1">Check your inbox</p>
+            <p className="text-xs text-[var(--w-ink2)]">We sent a one-click sign-in link to <strong>{email}</strong>. Open it in this browser to finish subscribing.</p>
+          </div>
+        ) : (
+          <form onSubmit={sendLink} className="space-y-3 text-left">
+            <label className="block text-xs font-semibold text-[var(--w-ink2)]" htmlFor="auth-email">
+              Enter your email to continue to checkout
+            </label>
+            <input
+              id="auth-email"
+              className="email-input w-full"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              disabled={busy === 'email'}
+            />
+            <button className="primary-button w-full justify-center" disabled={busy === 'email'}>
+              {busy === 'email' ? <><LoaderCircle className="spin" size={16} />Sending link…</> : <>Continue to checkout <ArrowRight size={16} /></>}
+            </button>
+            <p className="text-xs text-[var(--w-ink3)] text-center">
+              Passwordless sign-in. Your subscription links securely to this email.
+            </p>
+          </form>
+        )}
         {error && <p className="form-error mt-4" role="alert">{error}</p>}
       </section>
     </div>
+
+    {/* Pricing FAQ */}
+    <div className="max-w-2xl mx-auto mt-14 pt-10 border-t border-[var(--w-border)]">
+      <h2 className="t-heading text-2xl mb-6 text-center">Common questions</h2>
+      <div className="space-y-4 text-left">
+        <div className="rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
+          <h3 className="font-semibold text-sm mb-1">Can I cancel at any time?</h3>
+          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Yes. You can cancel with one click in the Stripe customer portal whenever you want. You retain premium access until the end of your paid billing period.</p>
+        </div>
+        <div className="rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
+          <h3 className="font-semibold text-sm mb-1">Do I need an account for the free tier?</h3>
+          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">No account or credit card needed. You can review 2 games every 7 days directly on the homepage.</p>
+        </div>
+        <div className="rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
+          <h3 className="font-semibold text-sm mb-1">How does billing work?</h3>
+          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">All payments are handled securely through Stripe. Subscriptions renew automatically each month or year until cancelled.</p>
+        </div>
+      </div>
+    </div>
+
     <div className="max-w-3xl mx-auto mt-10 text-center"><Link className="text-link" href="/report/demo">Read a sample before deciding <ArrowRight size={15} /></Link><p className="text-xs text-[var(--w-ink2)] mt-4 leading-relaxed">Free reports are counted by network. Reports are accessible to anyone with the link.<br />Paid reports still take time to process and are subject to fair use. <Link href="/terms" className="underline">Terms</Link></p></div>
   </div>;
 }

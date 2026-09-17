@@ -2,12 +2,14 @@
 
 import { use, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, LoaderCircle, Share2 } from 'lucide-react';
+import { ArrowRight, Check, Download, LoaderCircle, Share2 } from 'lucide-react';
 import { API_BASE_URL, getReportById, normalizeReport, type ReportDetail } from '../../../lib/api';
 import { DEMO_REPORT } from '../../../lib/demo-report';
 import { captureEvent } from '../../../lib/posthog';
 import { supabase } from '../../../lib/supabase';
 import { SharedReportInteractiveView } from '../../../components/SharedReportInteractiveView';
+import { AnalysisWaitState } from '../../../components/AnalysisWaitState';
+import { saveRecentReview } from '../../../lib/recent-reviews';
 
 const terminal = (status: string) => status === 'completed' || status === 'failed';
 const stages: Record<string, string> = {
@@ -59,8 +61,21 @@ function ReportSession({ id }: { id: string }) {
       if (!active) return;
       setReport(data);
       setLoadError(null);
-      if (terminal(data.status)) { stop(); setStalled(false); }
-      else activity();
+      if (terminal(data.status)) {
+        stop();
+        setStalled(false);
+        if (data.status === 'completed' && !isDemo) {
+          saveRecentReview({
+            id: data.id,
+            shareId: data.share_id,
+            headline: data.summary?.headline,
+            players: [data.player_name, data.opponent_name].filter(Boolean).join(' vs '),
+            createdAt: data.created_at || new Date().toISOString(),
+          });
+        }
+      } else {
+        activity();
+      }
     };
     // Periodic snapshots recover missed terminal events and blocked SSE connections.
     const poll = async () => {
@@ -86,8 +101,18 @@ function ReportSession({ id }: { id: string }) {
             } else if (update.type === 'moment' && update.moment) {
               setReport(prev => prev ? { ...prev, moments: [...prev.moments.filter(m => m.ply !== update.moment.ply), update.moment].sort((a, b) => a.ply - b.ply) } : prev);
             } else if (update.type === 'done' && update.report) {
-              setReport(prev => normalizeReport({ ...prev, ...update.report, status: 'completed', moments: update.report.moments ?? prev?.moments ?? [] }));
+              const normalized = normalizeReport({ ...update.report, status: 'completed', moments: update.report.moments ?? [] });
+              setReport(prev => normalizeReport({ ...prev, ...normalized }));
               stop(); setStalled(false);
+              if (!isDemo) {
+                saveRecentReview({
+                  id: normalized.id || id,
+                  shareId: normalized.share_id,
+                  headline: normalized.summary?.headline,
+                  players: [normalized.player_name, normalized.opponent_name].filter(Boolean).join(' vs '),
+                  createdAt: normalized.created_at || new Date().toISOString(),
+                });
+              }
             } else if (update.type === 'failed') {
               setReport(prev => prev ? { ...prev, status: 'failed' } : prev);
               stop(); setStalled(false);
@@ -117,13 +142,47 @@ function ReportSession({ id }: { id: string }) {
     return () => clearTimeout(timer);
   }, [report?.status, id, isDemo]);
 
+  async function downloadImageCard() {
+    if (!report?.share_id && !isDemo) return;
+    const imgUrl = isDemo ? '/opengraph-image' : `/r/${report?.share_id}/opengraph-image`;
+    try {
+      const res = await fetch(imgUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `chessplain-review-${report?.share_id || 'demo'}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      captureEvent('report_image_downloaded', { report_id: id });
+    } catch {
+      window.open(imgUrl, '_blank');
+    }
+  }
+
   async function share() {
     const url = window.location.origin + (isDemo ? '/report/demo' : '/r/' + report?.share_id);
+    const title = report?.summary?.headline || 'My Chessplain Game Review';
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text: report?.summary?.headline ? `"${report.summary.headline}"` : 'Check out my game review on Chessplain',
+          url,
+        });
+        captureEvent('report_shared', { report_id: id, is_demo: isDemo, method: 'web_share' });
+        return;
+      } catch {
+        // User dismissed share dialog
+      }
+    }
     setShareMessage('');
     try {
       await navigator.clipboard.writeText(url);
-      setShareMessage('Link copied');
-      captureEvent('report_shared', { report_id: id, is_demo: isDemo });
+      setShareMessage('Review link copied to clipboard.');
+      captureEvent('report_shared', { report_id: id, is_demo: isDemo, method: 'clipboard' });
     } catch {
       setShareUrl(url);
       setShareMessage('Copy the link below to share this review.');
@@ -154,9 +213,34 @@ function ReportSession({ id }: { id: string }) {
   </div>;
 
   const complete = report?.status === 'completed';
+  const hasMoments = (report?.moments?.length || 0) > 0;
+
+  if (!complete && !hasMoments) {
+    return (
+      <AnalysisWaitState
+        status={report?.status || 'pending'}
+        stalled={stalled}
+        onRetry={() => setRetry(n => n + 1)}
+        playerNames={[report?.player_name, report?.opponent_name].filter(Boolean).join(' vs ')}
+      />
+    );
+  }
+
   return <>
-    {!complete && <div className="page-width pt-9" role="status" aria-live="polite"><div className="flex items-center gap-3 text-sm"><LoaderCircle className="spin text-[var(--w-accent)]" size={18} /><p>{stages[report?.status || 'pending']}</p></div><p className="mt-2 text-sm text-[var(--w-ink2)]">Your lessons will appear here as they are ready. You can return to this link later.</p>{stalled && <p className="mt-4 text-sm text-[var(--w-error)]">The connection is taking longer than expected. We’re checking for updates. <button className="underline" onClick={() => setRetry(n => n + 1)}>Reconnect</button></p>}</div>}
-    {report ? <SharedReportInteractiveView report={report} isOwner actions={complete && <button className="text-link" onClick={share}><Share2 size={15} />Share review</button>} onSelectMoment={index => {
+    {!complete && hasMoments && (
+      <div className="page-width pt-9" role="status" aria-live="polite">
+        <div className="flex items-center gap-3 text-sm">
+          <LoaderCircle className="spin text-[var(--w-accent)]" size={18} />
+          <p>{stages[report?.status || 'pending']} Early moments are ready below.</p>
+        </div>
+      </div>
+    )}
+    {report ? <SharedReportInteractiveView report={report} isOwner actions={complete && (
+      <div className="flex items-center gap-3">
+        <button className="text-link" onClick={downloadImageCard}><Download size={15} />Save card</button>
+        <button className="text-link" onClick={share}><Share2 size={15} />Share review</button>
+      </div>
+    )} onSelectMoment={index => {
       selected.current.add(index);
       captureEvent('moment_expanded', { report_id: id, moment_index: index, is_demo: isDemo });
       if (selected.current.size >= 2 && !engaged.current) { engaged.current = true; captureEvent('report_engaged', { report_id: id, reason: 'moments_selected_2', is_demo: isDemo }); }
@@ -169,6 +253,6 @@ function ReportSession({ id }: { id: string }) {
           {emailError && <p className="form-error mt-3" role="alert">{emailError}</p>}
         </div><Link href="/#analyze" className="text-link self-start">Review another game <ArrowRight size={16} /></Link>
       </section>}
-    </SharedReportInteractiveView> : <div className="page-width py-12"><div className="skeleton h-12 max-w-xl mb-4" /><div className="skeleton h-5 max-w-2xl" /></div>}
+    </SharedReportInteractiveView> : <AnalysisWaitState status="pending" stalled={stalled} onRetry={() => setRetry(n => n + 1)} />}
   </>;
 }

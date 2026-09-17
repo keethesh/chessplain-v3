@@ -67,6 +67,34 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
       return move ? [{ startSquare: move.from, endSquare: move.to, color: '#aa5939' }] : [];
     } catch { return []; }
   }, [current, step]);
+
+  const alternativeArrow = useMemo(() => {
+    if (!showAlternative || !current?.best_move) return [];
+    try {
+      const board = new Chess(current.fen_before);
+      const m = board.move(current.best_move.replace(/^\d+\.+\s*/, ''));
+      return m ? [{ startSquare: m.from, endSquare: m.to, color: '#3f744c' }] : [];
+    } catch { return []; }
+  }, [showAlternative, current]);
+
+  const highlightedSquares = useMemo(() => {
+    if (!current) return [];
+    try {
+      if (showAlternative && alternative && current.best_move) {
+        const board = new Chess(current.fen_before);
+        const m = board.move(current.best_move.replace(/^\d+\.+\s*/, ''));
+        return m ? [m.from, m.to] : [];
+      }
+      if (step === 0) {
+        const board = new Chess(current.fen_before);
+        const m = board.move(current.played.replace(/^\d+\.+\s*/, ''));
+        return m ? [m.from, m.to] : [];
+      }
+    } catch { return []; }
+    return [];
+  }, [current, step, showAlternative, alternative]);
+
+  const activeArrows = showAlternative ? alternativeArrow : playedArrow;
   const result = report.result === '1-0' ? 'White won' : report.result === '0-1' ? 'Black won' : report.result === '1/2-1/2' ? 'Draw' : null;
 
   return (
@@ -104,12 +132,20 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
             </div>
           </div>
           <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
-            <div className="min-w-0 lg:sticky lg:top-8">
+            <div id="board-view" className="min-w-0 lg:sticky lg:top-8 scroll-mt-6">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p aria-live="polite" className="text-sm font-medium">{activeStep?.label}</p>
                 <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)]" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
               </div>
-              {activeStep && <ChessboardView fen={activeStep.fen} orientation={orientation} boardWidth={520} arrows={showAlternative ? [] : playedArrow} />}
+              {activeStep && (
+                <ChessboardView
+                  fen={activeStep.fen}
+                  orientation={orientation}
+                  boardWidth={520}
+                  arrows={activeArrows}
+                  highlightSquares={highlightedSquares}
+                />
+              )}
               <div className="mt-3 flex items-center justify-between gap-3" aria-label="Step through the played line" onKeyDown={event => {
                 if (event.altKey || event.ctrlKey || event.metaKey) return;
                 setShowAlternative(false);
@@ -122,8 +158,12 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
               </div>
               {alternative && <button type="button" aria-pressed={showAlternative} onClick={() => setShowAlternative(value => !value)} className="text-link underline mt-3">{showAlternative ? 'Return to the played line' : 'Compare alternative: ' + current.best_move}</button>}
               {current.refutation_line && <p className="mt-4 break-words text-sm leading-relaxed text-[var(--w-ink2)]"><span className="font-medium">The continuation:</span> <span className="t-notation">{current.refutation_line}</span></p>}
+              <a href="#lesson-explanation" className="lg:hidden mt-3 inline-flex items-center gap-1 text-xs text-[var(--w-accent)] font-medium underline">Read lesson explanation ↓</a>
             </div>
-            <div className="min-w-0 pt-1 lg:pt-3"><MomentCard moment={current} index={activeIndex} /></div>
+            <div id="lesson-explanation" className="min-w-0 pt-1 lg:pt-3 scroll-mt-6">
+              <MomentCard moment={current} index={activeIndex} />
+              <a href="#board-view" className="lg:hidden mt-6 inline-flex items-center gap-1 text-xs text-[var(--w-accent)] font-medium underline">↑ Back to chessboard</a>
+            </div>
           </div>
         </section>
       ) : complete ? (

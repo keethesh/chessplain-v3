@@ -9,6 +9,7 @@ import { captureEvent } from '../lib/posthog';
 import { supabase } from '../lib/supabase';
 import { ChessboardView } from '../components/ChessboardView';
 import { DEMO_REPORT } from '../lib/demo-report';
+import { getRecentReviews, clearRecentReviews, type RecentReview } from '../lib/recent-reviews';
 
 export default function HomePage() {
   const router = useRouter();
@@ -20,10 +21,14 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [quotaReached, setQuotaReached] = useState(false);
   const [showMove, setShowMove] = useState(false);
+  const [recentReviews, setRecentReviews] = useState<RecentReview[]>([]);
   const submitting = useRef(false);
   const sample = DEMO_REPORT.moments[0];
 
-  useEffect(() => { captureEvent('landing_viewed', { hero_variant: 'editorial_v1' }); }, []);
+  useEffect(() => {
+    captureEvent('landing_viewed', { hero_variant: 'editorial_v1' });
+    setRecentReviews(getRecentReviews());
+  }, []);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -83,6 +88,39 @@ export default function HomePage() {
               <p className="form-reassurance"><Check size={14} /> 2 free reports every 7 days. No signup required.</p>
             </form>
           </div>
+          {recentReviews.length > 0 && (
+            <div className="recent-reviews-panel mt-6 rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4 text-left">
+              <div className="flex items-center justify-between mb-2.5 text-xs text-[var(--w-ink2)]">
+                <span className="font-semibold uppercase tracking-wider">Your recent reviews</span>
+                <button
+                  type="button"
+                  onClick={() => { clearRecentReviews(); setRecentReviews([]); }}
+                  className="text-[var(--w-ink3)] hover:text-[var(--w-ink1)] underline"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {recentReviews.map((rev) => (
+                  <Link
+                    key={rev.id}
+                    href={`/report/${rev.id}`}
+                    className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[var(--w-surface-subtle)] text-sm transition-colors"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="font-medium truncate text-[var(--w-ink1)] leading-snug">
+                        {rev.headline || rev.players || 'Game review'}
+                      </p>
+                      {rev.players && rev.headline && (
+                        <p className="text-xs text-[var(--w-ink3)] truncate mt-0.5">{rev.players}</p>
+                      )}
+                    </div>
+                    <ArrowRight size={14} className="shrink-0 text-[var(--w-ink3)]" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           <Link className="text-link hero-sample-link" href="/report/demo" onClick={() => captureEvent('sample_game_clicked', { source: 'hero' })}>Take a look at a sample first <ArrowRight size={15} /></Link>
         </div>
         <aside className="sample-preview" aria-label="Preview of a sample review">
