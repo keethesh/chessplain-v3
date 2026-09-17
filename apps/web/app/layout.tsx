@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PostHogProvider } from '../components/PostHogProvider';
-import { Newsreader } from 'next/font/google';
 import './globals.css';
-
-const newsreader = Newsreader({ subsets: ['latin'], variable: '--font-newsreader', display: 'swap' });
 // Public marketing origin. Not a credential — it only affects how absolute
 // URLs are built for share cards, so a canonical default is safe here.
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://getchessplain.com';
@@ -39,7 +36,12 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className={newsreader.variable}>
+  return <html lang="en">
+    <head>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap" rel="stylesheet" />
+    </head>
     <body className="min-h-screen flex flex-col">
       <a href="#main-content" className="skip-link">Skip to content</a>
       <header className="site-header"><div className="site-nav page-width">

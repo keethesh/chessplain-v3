@@ -1,8 +1,8 @@
 # Launch checklist
 
 **Status: NOT ready to advertise.** The production API is deployed and live
-checkout creation works. The public website still returns HTTP 402 because
-Vercel has blocked the account. A paid subscription lifecycle has not been tested.
+checkout creation works. The frontend has been migrated to Cloudflare Workers (replaces Vercel)
+and is live on workers.dev; DNS cutover to `getchessplain.com` and a real subscription lifecycle remain.
 
 Verified on 2026-09-09 against engine commit `d01c697`. Documentation-only commits
 may be newer. Do not confuse the API verifier's `READY` output with launch approval:
@@ -24,7 +24,7 @@ it does not test the website, payment completion, premium access, or cancellatio
 | Webhook routing | New engine endpoint enabled; obsolete web endpoint disabled, not deleted | New: `we_1UDrkeFtgmZSE6kxl5rhwS0F`; old: `we_1SOsFmFtgmZSE6kx0QBpARJx` |
 | Portal configuration | Live default configuration active; cancellation enabled at period end | Customer portal journey and cancellation webhook still need a real subscription test |
 | HTTPS | Caddy validates and reloads; API sends `Strict-Transport-Security: max-age=31536000` | Scoped to API host, no `includeSubDomains` |
-| Website | HTTP 402; Vercel `FAIR_USE_LIMITS_EXCEEDED`, resource `fluidCpuDuration` | **BLOCKING**, account-owner action |
+| Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; 11/11 routes verified HTTP 200 | Cutover `getchessplain.com` in Cloudflare dashboard |
 | Quota | VPS still has `DISABLE_QUOTA=true` | **BLOCKING before advertising**; free usage remains unbounded by the report quota |
 
 Earlier same-day acceptance evidence: real Stockfish/LLM gate 20/20, p50 13.89s;
@@ -32,54 +32,32 @@ local viewport audit 30/30 page/width combinations; site and sample share images
 rendered as 1200×630 PNGs. These are recorded local results, not fresh checks of the
 blocked production website or a load test. Rerun the relevant gates after changes.
 
-## 1. Resolve the Vercel account block — OWNER ACTION
+## 1. Cloudflare Custom Domain Cutover (`getchessplain.com`)
 
-Team: `keetheshs-projects`. Project: `chessplain`.
+The frontend has been completely moved from Vercel to **Cloudflare Workers** using
+`@opennextjs/cloudflare`. It is live and verified on Cloudflare's global edge network:
 
-The Vercel API reports a fair-use CPU limit block. Resolve the limit/plan issue in
-the account dashboard or with Vercel support. No paid plan change has been made.
-Do not attempt to bypass the account restriction with duplicate accounts/projects.
+- Live URL: `https://chessplain-web.oxide-website.workers.dev`
+- 11/11 routes returning HTTP 200 (including dynamic `/r/[shareId]` and dynamic OG images)
+- Unlimited static asset bandwidth; 100,000 free edge requests/day; zero Vercel CPU limits
 
-**The project currently has no Git connection.** It previously pointed to
-`keethesh/Chessplain`, branch `master`, with Vite-era build settings. During the
-reconnection attempt Vercel removed the old link, then rejected the new connection
-because of the account block. The current site was already disabled beforehand.
+### Cutover steps in Cloudflare Dashboard:
 
-These build settings were successfully saved:
+Because `getchessplain.com` is already an active zone in this Cloudflare account,
+switch the domain from the old Vercel IP to the Worker:
 
-- Root directory: `apps/web`
-- Framework: Next.js
-- Build command: `pnpm build`
-- Install command: `pnpm install --frozen-lockfile`
+1. Open [Cloudflare Dashboard](https://dash.cloudflare.com)
+2. Go to **Workers & Pages** -> **chessplain-web**
+3. Select **Settings** -> **Domains & Routes**
+4. Click **Add** -> **Custom Domain**
+5. Enter `getchessplain.com` -> Click **Add Custom Domain** (if prompted about existing DNS records, select **Overwrite**)
+6. Repeat for `www.getchessplain.com`
+7. Once attached, verify `curl -I https://getchessplain.com` returns HTTP 200 from Cloudflare.
 
-After the account is unblocked, from this repository root:
-
+To deploy code updates in the future, run from the monorepo root:
 ```bash
-vercel link --yes --project chessplain --team keetheshs-projects
-vercel git connect https://github.com/keethesh/chessplain-v3.git
+pnpm --filter @chessplain/web deploy:worker
 ```
-
-Confirm the production branch is **main**, not the former **master**. Set the
-following **production build-time** variables in Vercel. Attempts to save the new
-URLs were blocked, so they must not be assumed present:
-
-```text
-NEXT_PUBLIC_API_URL=https://api.getchessplain.com
-NEXT_PUBLIC_SITE_URL=https://getchessplain.com
-NEXT_PUBLIC_SUPABASE_URL=<the project's public Supabase URL>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<the project's publishable anon key>
-NEXT_PUBLIC_SUPPORT_EMAIL=<a real monitored mailbox>
-```
-
-Existing Supabase variables should be verified rather than replaced blindly.
-PostHog is optional. Do not copy privileged engine keys into `NEXT_PUBLIC_*`.
-
-Deploy `main` through the restored Git integration, or use `vercel --prod` from
-the linked repo root. Verify the deployed commit and production branch in Vercel.
-Then check `/`, `/pricing`, `/r/demo-sample`, `/privacy`, `/terms`, `/robots.txt`,
-`/sitemap.xml`, the OG images, and a nonexistent route. Confirm sign-in returns to
-the intended report and a new game completes through the deployed web UI.
-
 ## 2. Finish the live money path — OWNER CARD REQUIRED
 
 The VPS now has a working live key and its own live webhook signing secret.

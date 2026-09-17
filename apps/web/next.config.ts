@@ -3,6 +3,10 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  images: {
+    unoptimized: true,
+  },
+  serverExternalPackages: ['sharp'],
   transpilePackages: ['react-chessboard'],
   // A stray package-lock.json above this repo in the user profile makes Next
   // infer the wrong workspace root, which silently changes which files are

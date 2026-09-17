@@ -1,6 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap');
 @import "tailwindcss";
 
-@theme { --font-serif: var(--font-newsreader), Georgia, Cambria, serif; }
+@theme { --font-serif: Newsreader, Georgia, Cambria, serif; }
 
 :root {
   --w-canvas: #f8f6f0;
@@ -19,7 +20,7 @@
   --w-error-soft: #f5e5df;
   --w-success: #3f744c;
   --w-success-soft: #e4f0e5;
-  --serif: var(--font-newsreader), Georgia, serif;
+  --serif: Newsreader, Georgia, serif;
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
   --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
   --t-xs: 12px; --t-xs-lh: 18px; --t-sm: 14px; --t-sm-lh: 21px;

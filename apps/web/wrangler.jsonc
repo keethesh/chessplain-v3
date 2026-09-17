@@ -1,0 +1,28 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "chessplain-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-08",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+    "run_worker_first": false
+  },
+  "observability": {
+    "enabled": true
+  },
+  "workers_dev": true,
+  "vars": {
+    "NEXT_PUBLIC_API_URL": "https://api.getchessplain.com",
+    "NEXT_PUBLIC_SITE_URL": "https://getchessplain.com",
+    "NEXT_PUBLIC_SUPPORT_EMAIL": "support@getchessplain.com",
+    "NEXT_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com",
+    "NEXT_PUBLIC_POSTHOG_KEY": "phc_UKy5oAuRvZ0zofoUDe1hWPGchLU1IkcpjOP2P3aCUa5",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://jgtxprfulkbtzkcvinph.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpndHhwcmZ1bGtidHprY3ZpbnBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyODk0ODIsImV4cCI6MjA3Njg2NTQ4Mn0.E8eXXrpiAiA_T0wz5yh_u6m2USL7QMs7IfSDc80bIKI"
+  },
+}

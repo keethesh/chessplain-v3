@@ -37,3 +37,9 @@ jobs:
 
       - name: Build engine
         run: pnpm --filter @chessplain/engine build
+      - name: Build Cloudflare Worker
+        run: pnpm --filter @chessplain/web build:worker
+        env:
+          NEXT_PUBLIC_API_URL: https://api.example.invalid
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-not-a-real-key

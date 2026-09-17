@@ -1,0 +1,13 @@
+diff --git a/dist/server/next-server.js b/dist/server/next-server.js
+index f7e7ff0c8b2929d29561f474ad196487a2b5377e..f5fbc03ebc09690e421f4281bd5a6c4cb182f235 100644
+--- a/dist/server/next-server.js
++++ b/dist/server/next-server.js
+@@ -998,7 +998,7 @@ class NextNodeServer extends _baseserver.default {
+         if (this.minimalMode) {
+             return null;
+         } else {
+-            const manifest = require(this.middlewareManifestPath);
++            const manifest = (0, _loadmanifestexternal.loadManifest)(this.middlewareManifestPath);
+             return manifest;
+         }
+     }

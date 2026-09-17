@@ -22,10 +22,11 @@ sessions were created and expired without payment. The earlier real-game
 acceptance gate passed 20/20 (p50 13.89s). These checks do not prove every
 explanation correct or the full paid lifecycle.
 
-**Not ready to advertise:** Vercel has blocked the account for exceeded CPU usage,
-so the website returns HTTP 402. Restore hosting and the Git connection, finish
-the real subscription/portal test, enable production quotas, verify the support
-mailbox, and rotate previously exposed credentials.
+**Cloudflare migration:** The frontend has been migrated from Vercel to Cloudflare
+Workers (100,000 free requests/day, unlimited static bandwidth, zero CPU timeouts)
+and is live at `https://chessplain-web.oxide-website.workers.dev` (11/11 routes
+verified HTTP 200). Cloudflare dashboard cutover to `getchessplain.com` and real
+paid subscription verification remain before advertising.
 
 Start with [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) for current
 production evidence and the remaining steps. It distinguishes completed checks

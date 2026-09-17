@@ -1,0 +1,12 @@
+diff --git a/dist/cli/build/bundle-server.js b/dist/cli/build/bundle-server.js
+index f59e677181f1d0007993e36e05901f1f012689f9..bcc445fa59cf18ed1df91b81076f14b0f356a31f 100644
+--- a/dist/cli/build/bundle-server.js
++++ b/dist/cli/build/bundle-server.js
+@@ -124,6 +124,7 @@ export async function bundleServer(buildOpts, projectOpts) {
+             // `@next/env` is used by Next to load environment variables from files.
+             // OpenNext inlines the values at build time so this is not needed.
+             "@next/env": path.join(buildOpts.outputDir, "cloudflare-templates/shims/env.js"),
++            "sharp": path.join(buildOpts.outputDir, "cloudflare-templates/shims/empty.js"),
+         },
+         define: {
+             // config file used by Next.js, see: https://github.com/vercel/next.js/blob/68a7128/packages/next/src/build/utils.ts#L2137-L2139

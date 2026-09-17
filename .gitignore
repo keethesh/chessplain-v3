@@ -7,5 +7,6 @@ data/*.db*
 .DS_Store
 .impeccable/
 .omp/
-
 .vercel
+.wrangler/
+.open-next/

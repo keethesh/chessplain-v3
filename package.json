@@ -5,9 +5,21 @@
     "apps/*"
   ],
   "scripts": {
+    "prepare": "node scripts/ensure-og-font.mjs",
     "build": "pnpm --filter ./apps/* build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test"
   },
-  "packageManager": "pnpm@10.28.2"
+  "packageManager": "pnpm@10.28.2",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd",
+      "sharp"
+    ],
+    "patchedDependencies": {
+      "@opennextjs/cloudflare@1.20.6": "patches/@opennextjs__cloudflare@1.20.6.patch",
+      "next@16.3.5": "patches/next@16.3.5.patch"
+    }
+  }
 }
