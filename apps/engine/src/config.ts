@@ -7,6 +7,21 @@ function positiveInteger(name: string, fallback: number): number {
   return value;
 }
 
+// Fastify's trustProxy decides whether request.ip comes from X-Forwarded-For.
+// It must list the reverse proxy itself, not `true`: Caddy terminates TLS and
+// reaches the engine over loopback, so with the default of `false` every
+// request in the world reported ip 127.0.0.1 — which made the anonymous quota
+// a single global bucket (the first two anonymous reports anywhere consumed
+// the whole site's allowance) and collapsed the per-IP rate limiter into one
+// shared 100/min bucket. Trusting only loopback keeps XFF usable while
+// ignoring headers set by clients, who never connect from 127.0.0.1.
+function parseTrustProxy(raw: string | undefined): boolean | string[] {
+  const value = (raw ?? '').trim();
+  if (!value || value === 'false') return false;
+  if (value === 'true') return true;
+  return value.split(',').map((entry) => entry.trim()).filter(Boolean);
+}
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required. Copy .env.example and fill it in — there is no default, on purpose: a fallback here would silently point this process at production.`);
@@ -40,6 +55,8 @@ export const config = {
   engineHashMb: positiveInteger('ENGINE_HASH_MB', 512),
   engineThreads: positiveInteger('ENGINE_THREADS', 1),
   staleLeaseMinutes: positiveInteger('STALE_LEASE_MINUTES', 15),
-  // Trust forwarded IPs only from an explicitly configured reverse proxy.
-  trustProxy: process.env.TRUST_PROXY || false,
+  // Trust forwarded IPs only from an explicitly configured reverse proxy
+  // (comma-separated, e.g. "127.0.0.1,::1"). Unset means the socket address,
+  // which behind Caddy is loopback for every visitor — see parseTrustProxy.
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 };

@@ -37,4 +37,30 @@ describe('config', () => {
     expect(config.stripePriceMonthly).toBe('');
     expect(config.supabaseUrl).toBe('https://test.supabase.co');
   });
+
+  // Behind Caddy every request arrives over loopback. If trustProxy stays
+  // false, request.ip is 127.0.0.1 for the entire internet: the anonymous
+  // quota becomes one global bucket and the per-IP rate limiter becomes one
+  // shared bucket. Trusting only the proxy keeps the real client IP while
+  // still ignoring X-Forwarded-For sent by clients themselves.
+  it('defaults trustProxy off so a bare socket address is never mistaken for a client', async () => {
+    process.env = { ...saved, ...REQUIRED };
+    delete process.env.TRUST_PROXY;
+    const { config } = await import('../src/config.js');
+    expect(config.trustProxy).toBe(false);
+  });
+
+  it('parses a comma-separated proxy allowlist into an array', async () => {
+    process.env = { ...saved, ...REQUIRED, TRUST_PROXY: '127.0.0.1, ::1' };
+    const { config } = await import('../src/config.js');
+    expect(config.trustProxy).toEqual(['127.0.0.1', '::1']);
+  });
+
+  it('treats an explicit "true" or "false" string as the boolean it spells', async () => {
+    process.env = { ...saved, ...REQUIRED, TRUST_PROXY: 'true' };
+    expect((await import('../src/config.js')).config.trustProxy).toBe(true);
+    vi.resetModules();
+    process.env = { ...saved, ...REQUIRED, TRUST_PROXY: 'false' };
+    expect((await import('../src/config.js')).config.trustProxy).toBe(false);
+  });
 });
