@@ -8,6 +8,9 @@ patchedDependencies:
   '@opennextjs/cloudflare@1.20.6':
     hash: ffd79c9e22c37f50d1d6dcbe86d3726824ac790b71d59bae1ffceaba411afab7
     path: patches/@opennextjs__cloudflare@1.20.6.patch
+  next@16.3.5:
+    hash: 05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c
+    path: patches/next@16.3.5.patch
 
 importers:
 
@@ -81,7 +84,7 @@ importers:
         version: 0.475.0(react@19.2.8)
       next:
         specifier: 16.3.5
-        version: 16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       postcss:
         specifier: ^8.5.3
         version: 8.5.26
@@ -106,7 +109,7 @@ importers:
     devDependencies:
       '@opennextjs/cloudflare':
         specifier: ^1.20.6
-        version: 1.20.6(patch_hash=ffd79c9e22c37f50d1d6dcbe86d3726824ac790b71d59bae1ffceaba411afab7)(next@16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.134.0(@types/node@22.20.1))
+        version: 1.20.6(patch_hash=ffd79c9e22c37f50d1d6dcbe86d3726824ac790b71d59bae1ffceaba411afab7)(next@16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.134.0(@types/node@22.20.1))
       '@types/node':
         specifier: ^22.13.10
         version: 22.20.1
@@ -4224,7 +4227,7 @@ snapshots:
     dependencies:
       gzip-size: 6.0.0
 
-  '@opennextjs/aws@4.1.4(next@16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))':
+  '@opennextjs/aws@4.1.4(next@16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@aws-sdk/client-cloudfront': 3.984.0
@@ -4240,24 +4243,24 @@ snapshots:
       cookie: 1.1.1
       esbuild: 0.25.4
       express: 5.2.1
-      next: 16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      next: 16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       path-to-regexp: 6.3.0
       urlpattern-polyfill: 10.1.0
       yaml: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.20.6(patch_hash=ffd79c9e22c37f50d1d6dcbe86d3726824ac790b71d59bae1ffceaba411afab7)(next@16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.134.0(@types/node@22.20.1))':
+  '@opennextjs/cloudflare@1.20.6(patch_hash=ffd79c9e22c37f50d1d6dcbe86d3726824ac790b71d59bae1ffceaba411afab7)(next@16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.134.0(@types/node@22.20.1))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0
-      '@opennextjs/aws': 4.1.4(next@16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
+      '@opennextjs/aws': 4.1.4(next@16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
       ci-info: 4.4.0
       cloudflare: 4.5.0
       comment-json: 4.6.2
       enquirer: 2.4.1
       glob: 12.0.0
-      next: 16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      next: 16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       ts-tqdm: 0.8.6
       wrangler: 4.134.0(@types/node@22.20.1)
       yargs: 18.1.0
@@ -5505,7 +5508,7 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  next@16.3.5(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+  next@16.3.5(patch_hash=05555c24acde2a09ec286b5d5a81d7ae4d11e915e4c0e9f6032e08a750e0061c)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       '@next/env': 16.3.5
       '@swc/helpers': 0.5.23
