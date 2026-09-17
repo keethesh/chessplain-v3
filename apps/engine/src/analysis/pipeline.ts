@@ -3,7 +3,12 @@ import { parsePgn } from './pgn.js';
 import { sweepPositions } from './sweep.js';
 import { selectCandidateMoments } from './select.js';
 import { verifyCandidates } from './verify.js';
-import { explainMoment, explainSummary } from './explain.js';
+import {
+  explainMoment,
+  explainSummary,
+  LlmUnavailableError,
+  type ExplainRunStats,
+} from './explain.js';
 
 export interface PipelineOptions {
   pgn: string;
@@ -61,13 +66,25 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   const completedMoments: MomentReport[] = [];
   let publication = Promise.resolve();
 
+  // One moment failing is tolerable — the reader still gets real explanations
+  // for the rest. A run where the model explained nothing is not a report at
+  // all, which is what these totals track (see the abort below).
+  const stats: ExplainRunStats = { unexplainedMoments: 0, creditsExhausted: false };
+
   const explainPromises = verifiedCandidates.map(async (candidate) => {
-    const explained = await explainMoment(
-      candidate,
-      eloBand,
-      parsedGame.opponentName || 'opponent',
-      analysisId
-    );
+    let explained: MomentReport | undefined;
+    try {
+      explained = await explainMoment(
+        candidate,
+        eloBand,
+        parsedGame.opponentName || 'opponent',
+        analysisId,
+        stats
+      );
+    } catch (err) {
+      console.error(`[Pipeline] Explanation threw for ply ${candidate.ply}:`, err);
+      stats.unexplainedMoments++;
+    }
     if (explained) {
       completedMoments.push(explained);
       // Sort in ply order
@@ -85,7 +102,29 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   // Ensure moments are sorted chronologically
   completedMoments.sort((a, b) => a.ply - b.ply);
 
+  // Every candidate fell back to generic text (or the gateway refused the
+  // account entirely). Publishing that would spend one of the player's analyses
+  // on a report that says "the written explanation is unavailable" N times, so
+  // throw instead: worker.ts retries the row, then marks it failed, and quota
+  // checks ignore failed rows.
+  if (
+    verifiedCandidates.length > 0 &&
+    (stats.creditsExhausted || stats.unexplainedMoments >= verifiedCandidates.length)
+  ) {
+    throw new LlmUnavailableError(
+      'LLM explanation failed for all moments; aborting to prevent degraded completed report'
+    );
+  }
+  if (stats.unexplainedMoments > 0) {
+    console.warn(
+      `[Pipeline] ${stats.unexplainedMoments}/${verifiedCandidates.length} moments fell back to generic text (analysis ${analysisId})`
+    );
+  }
+
   // Generate game summary
+  // The summary may still degrade to fallback prose on its own: by this point
+  // every published moment carries real explanations, so a generic headline is a
+  // smaller loss than discarding them.
   const summary = await explainSummary(
     completedMoments,
     {

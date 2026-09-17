@@ -51,6 +51,34 @@ export function isCreditExhaustionError(err: unknown): boolean {
   return /not enough credits|credits exhausted|insufficient credits/i.test(msg);
 }
 
+/**
+ * The model explained nothing for a whole report: gateway outage, credit
+ * exhaustion, or every moment failing validation twice on top of the SDK's own
+ * retries. Such a report is a page of "the written explanation is unavailable"
+ * prose, so the pipeline aborts instead of persisting it as `completed` and
+ * spending one of the player's analyses on it. `worker.ts` turns the throw into
+ * a retry, then a `failed` row that quota checks ignore.
+ */
+export class LlmUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LlmUnavailableError';
+  }
+}
+
+/**
+ * Per-run counters the pipeline threads through `explainMoment`. A single
+ * moment keeps degrading quietly to fallback prose, so no return value can
+ * carry that judgement — only the run-level totals can say whether the model
+ * explained anything at all.
+ */
+export interface ExplainRunStats {
+  /** Moments the model never explained, so fallback prose was returned. */
+  unexplainedMoments: number;
+  /** Gateway refused the account (401 / out of credits). Nothing recovers this run. */
+  creditsExhausted: boolean;
+}
+
 async function createChatCompletion(
   params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
@@ -121,8 +149,16 @@ export async function explainMoment(
   moment: CandidateMoment,
   eloBand: EloBand,
   opponentName: string,
-  analysisId?: string
+  analysisId?: string,
+  stats?: ExplainRunStats
 ): Promise<MomentReport> {
+  // Every unexplained moment goes through here, so the run-level count cannot
+  // drift from the number of fallback moments actually returned.
+  const fallback = (): MomentReport => {
+    if (stats) stats.unexplainedMoments++;
+    return createFallbackMoment(moment);
+  };
+
   const tacticalContext = buildTacticalContext(
     moment.fenBefore,
     moment.san,
@@ -233,19 +269,22 @@ export async function explainMoment(
       });
     }
 
-    return createFallbackMoment(moment);
+    return fallback();
   } catch (err) {
     if (isCreditExhaustionError(err)) {
       console.error('[Explain] Upstream gateway credit exhaustion (401). Aborting retries.');
+      // Terminal for the whole run, not just this moment: the pipeline uses
+      // this to abort instead of publishing a report nobody will see explained.
+      if (stats) stats.creditsExhausted = true;
       if (analysisId) {
         await recordAnalysisError({
-        analysisId,
-        stage: 'llm_credits_exhausted',
-        message: err instanceof Error ? err.message : String(err),
-        metadata: { moment, inputPayload },
-      });
+          analysisId,
+          stage: 'llm_credits_exhausted',
+          message: err instanceof Error ? err.message : String(err),
+          metadata: { moment, inputPayload },
+        });
       }
-      return createFallbackMoment(moment);
+      return fallback();
     }
     console.error('[Explain] LLM call failed for moment:', err);
     if (analysisId) {
@@ -256,7 +295,7 @@ export async function explainMoment(
         metadata: { moment, inputPayload },
       });
     }
-    return createFallbackMoment(moment);
+    return fallback();
   }
 }
 
