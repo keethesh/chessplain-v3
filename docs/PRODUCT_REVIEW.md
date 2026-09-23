@@ -23,7 +23,7 @@ points, see [README.md](README.md).
 
 Make the promise: **understand one important decision, check its consequence on the board, and carry one useful question into the next game.**
 
-The first audience to test is adult casual rapid players who already review some games but struggle to turn engine output into action. The documented 600–1200 rating band is a starting hypothesis, not a verified audience boundary. A player's intention is not observable from moves alone; use "the idea may have been," never mind-reading claims.
+The first audience to test is adult casual rapid players who already review some games but struggle to turn engine output into action. The documented 600–1200 rating band is a starting hypothesis, not a verified audience boundary. A player's intention is not observable from moves alone; reports describe what the move was going for from the board, never the player's thoughts (shipped 2026-09-23, prompt `2026-09-23.3`).
 
 Five questions remain open:
 - Problem: do players struggle to understand reviews often enough to return? Interview players after actual completed reports.

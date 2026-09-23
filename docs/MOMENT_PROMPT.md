@@ -12,7 +12,7 @@ wins; re-sync this document rather than trusting it. Remaining prompt work
 decision) is tracked in
 [`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md).
 
-- **`PROMPT_VERSION` constant: `2026-09-23.2`** (`prompts.ts`). Bump on every
+- **`PROMPT_VERSION` constant: `2026-09-23.3`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**
   anywhere — no `game_analyses` write includes it, despite an earlier version
   of this document claiming it is stored per-row. Wire it into
@@ -52,6 +52,10 @@ INPUT (JSON):
   * best_line_moves: the engine's line starting with best_move, annotated the same way
   * best_line_outcome: what each side has lost by the end of the better line
   * threat_summary: summary of immediate threats and tactics
+- standing_before, standing_after_played: the player's position in words before
+  and after the played move ("winning" | "better" | "roughly equal" | "worse" |
+  "losing"). best_move keeps standing_before; the played move leads to
+  standing_after_played.
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
 - material_note, phase ("opening"|"middlegame"|"endgame"), opponent_name
@@ -60,10 +64,13 @@ THINK IN THIS ORDER, SILENTLY:
 1. Read tactical_context carefully: notice exactly which piece moved (e.g. "Black knight from b6 to d7"),
    what was attacking it before, and what the opponent's refutation targets.
    NEVER guess piece coordinates or piece identities — use the exact facts from tactical_context.
-2. List 2–3 plausible intentions behind played_move at this rating. Pick the
-   most charitable one a real player here would actually hold. If none is
-   plausible (rare): the thought is "I saw the threat too late."
-3. Work out why the plan fails, using tactical_context, best_move, and refutation_line,
+2. From tactical_context.played_move, name what the move concretely does or
+   sets up: what it captures, attacks, defends, checks, or where the piece
+   heads. Pick the purpose that best fits those facts. This is a description
+   of the MOVE, not a claim about what the player was thinking — you cannot
+   know that. If the facts show nothing beyond a routine move, say that
+   plainly ("The knight comes back to d7 to cover the c5 square").
+3. Work out why the move's aim fails, using tactical_context, best_move, and refutation_line,
    translated fully into words. For every quiet move in refutation_moves (no
    capture, no check), say what it does from its own facts — a quiet move is
    the one a player cannot see the point of. If after_refutation is present, the
@@ -77,11 +84,15 @@ THINK IN THIS ORDER, SILENTLY:
    attacks the queen" is not enough when the line shows the queen is won.
    For "Missed win" moments the played move is not punished — the loss is what
    best_line_moves would have won; tell that story, not the refutation line.
+   Only when standing_before is "losing" does the better move merely limit
+   the damage: then say what it saves compared with the played line, never
+   present it as a rescue. An even trade in best_line_outcome is not a loss;
+   explain what the move achieves, not the material count.
 
 OUTPUT — strict JSON, nothing else:
 {
   "played": "23.Bxf7+",            // move number + SAN exactly as given
-  "probable_thought": "…",         // the player's inner monologue, first person
+  "probable_thought": "…",         // what the played move is going for, third person
   "what_actually_happens": "…",    // why the plan breaks, in prose
   "concept_name": "…",             // 1–3 words, the teachable pattern
   "concept_definition": "…",       // ≤8 words, for someone who never heard it
@@ -94,11 +105,16 @@ severity_label — one of: "Turning point", "Last chance", "Missed win",
 the size of the swing: you may not say or imply "this cost you 4 pawns."
 
 VOICE RULES:
-- Refer to the opponent by name or "they/their" — never guess gender from a username.
-- probable_thought: the player's own words, present tense, at their rating's
-  horizon ("If I grab the pawn, my fork wins it straight back"). ≤2 sentences.
-  Never sarcastic, never stupid-sounding. The idea was usually reasonable.
-- what_actually_happens: ≤4 sentences (≤5 when after_refutation is present). Name pieces by square ("your bishop on
+- Refer to the opponent by name or “they/their” — never guess gender from a username.
+- probable_thought: what the played move aims to do, in the third person,
+  present tense, from played_move's facts ("The bishop takes the f7 pawn with
+  check, aiming to keep the extra pawn"). ≤2 sentences. NEVER write "I", never
+  quote the player, never claim to know what they thought or saw. Describe the
+  reasonable idea the move pursues; never sarcastic.
+- what_actually_happens: ≤4 sentences (≤5 when after_refutation is present).
+  OPEN with the one fact the move overlooked or left undone, stated as the
+  reason ("The pawn on b5 is not defended.", "The knight on e3 can also take
+  your queen."), then tell the refutation. Name pieces by square ("your bishop on
   c4", "the knight landing on f6"). Tell the refutation as a story in words;
   at most one move pair in notation. Name the alternative in prose with why it
   works, using best_line_moves ("31.Rd1 keeps the rook where it defends";
@@ -128,10 +144,10 @@ VOICE RULES:
 GOLD STANDARD — match this register exactly:
 
 Example A (middlegame, 1198 White, "Turning point"):
-{"played":"23.Bxf7+","probable_thought":"If I grab the pawn, my fork wins it straight back — I stay up material.","what_actually_happens":"The bishop gets kicked to h5, and from there it has no square where it is safe. You gave up a bishop for one pawn, and the piece you took the pawn with is now stuck on the edge of the board.","concept_name":"Trapped piece","concept_definition":"a piece with no safe squares left","takeaway":"Next game, before taking a pawn: where does my piece land, and how does it come back?","severity_label":"Turning point"}
+{"played":"23.Bxf7+","probable_thought":"The bishop takes the f7 pawn with check, aiming to win it and keep the extra material.","what_actually_happens":"The bishop gets kicked to h5, and from there it has no square where it is safe. You gave up a bishop for one pawn, and the piece you took the pawn with is now stuck on the edge of the board.","concept_name":"Trapped piece","concept_definition":"a piece with no safe squares left","takeaway":"Next game, before taking a pawn: where does my piece land, and how does it come back?","severity_label":"Turning point"}
 
 Example B (late middlegame, 1198 White, "Last chance"):
-{"played":"31.Rd3","probable_thought":"Lift the rook over to the kingside and I finally get an attack going.","what_actually_happens":"Your attack needs three moves to build. Their h-file break needs one. While the rook is crossing, the refutation lands first on the h-file and your king is left without a defender there. 31.Rd1 keeps the rook where it defends.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what they can do in one move — not two.","severity_label":"Last chance"}
+{"played":"31.Rd3","probable_thought":"The rook lifts to d3 to swing over to the kingside and join an attack.","what_actually_happens":"Your attack needs three moves to build. Their h-file break needs one. While the rook is crossing, the refutation lands first on the h-file and your king is left without a defender there. 31.Rd1 keeps the rook where it defends.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what they can do in one move — not two.","severity_label":"Last chance"}
 ```
 
 `tactical_context` is built by `buildTacticalContext()` in
@@ -257,8 +273,8 @@ check on every attempt.
 
 Not automated. Sample recent reports and check:
 
-1. **Intention named?** `probable_thought` is plausible for *this* position,
-   not generic filler.
+1. **Aim grounded?** `probable_thought` describes what the move actually does
+   in the third person, matching the board, not generic filler.
 2. **Concept defined?** `concept_definition` ≤8 words, survives the
    read-aloud test.
 3. **Would a 900 understand every sentence?**

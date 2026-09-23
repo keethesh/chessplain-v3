@@ -14,7 +14,7 @@ The historical audience hypothesis is adult club-level Chess.com players, roughl
 
 Help a player understand a few consequential decisions and leave with one habit to check next game. Submit a Chess.com username for the latest completed game, or paste a specific game's PGN and select the played side. Read a summary, explore selected moments on the board, compare an available alternative, and take away a practical lesson.
 
-The original explanation structure (possible intention, consequence, teachable concept, and takeaway) remains useful product intent. A suggested intention is an interpretation, not knowledge of the player's thoughts. Explanations can be wrong; board exploration lets the player inspect the idea.
+The explanation structure (what the move was going for, consequence, teachable concept, and takeaway) remains the product's core. The first part describes the move's aim from the board in the third person; it never claims to know the player's thoughts (validation rejects "I/me/my"). Asking the player what they intended is a possible later step. Explanations can be wrong; board exploration lets the player inspect the idea.
 
 ## Positioning
 

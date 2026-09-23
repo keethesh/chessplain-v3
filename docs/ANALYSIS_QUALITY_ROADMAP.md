@@ -71,9 +71,11 @@ Plan, two steps:
     explain step (~2–3× the text for moments) or on-demand after the
     player answers.
 
-**Decision: ship v1 first** (prompt-only change, no new inputs). Build v2
-once the benchmark (below) exists, so we can measure whether naming the
-player's own reasoning beats a neutral aim-description.
+**v1 shipped 2026-09-23 (prompt `2026-09-23.3`).** `probable_thought` is now a
+third-person description of what the move does or sets up, grounded in
+`played_move`'s facts; `validateMomentJson` rejects "I/me/my", and the report
+labels it "What the move was going for" instead of a quoted thought. Stored
+reports from before the change still hold first-person text. v2 remains open.
 
 ## Input gaps (what we don't send the model today)
 
@@ -201,6 +203,26 @@ comments are occasionally wrong on chess details, so treat ±0.2 as noise.
 *Explains why* is still ~3/5; the remaining gaps are lines cut at 3–4 plies and
 non-mate threats.
 
+Round 3, Luna only, prompt `2026-09-23.3` vs `2026-09-23.2`, same 49 fixtures,
+2 runs each (reports `benchmark/results/2026-09-23T20-24-05-969Z.md` and
+`2026-09-23-ab-baseline-prompt-2026-09-23.2.md`). The judge's *Thought* criterion
+now scores whether the aim matches the board in the third person, so first
+person is penalised:
+
+| Prompt | Valid | Accuracy | Explains why | Thought | Takeaway | Phantom pieces |
+|---|---|---|---|---|---|---|
+| `2026-09-23.2` | 98/98 | 3.98 | 3.00 | 3.82 | 3.72 | 7 |
+| `2026-09-23.3` | 98/98 | 3.98 | 3.20 | 4.22 | 3.84 | 5 |
+
+Changes in `.3`: the move's aim replaces the mind-read; `what_actually_happens`
+opens with the one fact the move overlooked (removing the intention framing
+alone cost ~0.2 on *explains why* until this was added); lines no longer stop
+mid-exchange (report `d93a5f01` had told the player the better move loses the
+queen when the next move recaptured it); the payload states the player's
+standing in words, and alternatives in lost positions are framed as limiting
+the damage. Remaining visible errors: occasional wrong "your" on the
+opponent's pieces, and dubious claims about lines of attack.
+
 Still open: a summary-prompt benchmark (the per-game summary may justify a
 stronger model — spotting a shared root cause across moments is reasoning,
 not narration).
@@ -224,8 +246,7 @@ production turns into a retry, then fallback prose). The `config.ts` default
 
 1. ~~Lock the output-ownership contract~~ — benchmarked current contract; the
    model narrates facts while code owns board truth.
-2. **Ship `probable_thought` v1** — still open. Stop first-person mind-reading;
-   describe the move's objective aim instead.
+2. ~~Ship `probable_thought` v1~~ — done in prompt `2026-09-23.3`.
 3. **Add missing inputs** — still open: last 3–4 plies, clock times, real rating
    from pasted PGN headers, and an only-move signal. The better-move continuation
    and per-move/forced-defence facts are now shipped.

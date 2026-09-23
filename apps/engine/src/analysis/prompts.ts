@@ -86,7 +86,7 @@ THINK IN THIS ORDER, SILENTLY:
    of the MOVE, not a claim about what the player was thinking — you cannot
    know that. If the facts show nothing beyond a routine move, say that
    plainly ("The knight comes back to d7 to cover the c5 square").
-3. Work out why the plan fails, using tactical_context, best_move, and refutation_line,
+3. Work out why the move's aim fails, using tactical_context, best_move, and refutation_line,
    translated fully into words. For every quiet move in refutation_moves (no
    capture, no check), say what it does from its own facts — a quiet move is
    the one a player cannot see the point of. If after_refutation is present, the
@@ -100,9 +100,10 @@ THINK IN THIS ORDER, SILENTLY:
    attacks the queen" is not enough when the line shows the queen is won.
    For "Missed win" moments the played move is not punished — the loss is what
    best_line_moves would have won; tell that story, not the refutation line.
-   If standing_before is "losing", or best_line_outcome shows you still losing
-   material, the better move limits the damage — say what it saves compared
-   with the played line, never present it as a rescue.
+   Only when standing_before is "losing" does the better move merely limit
+   the damage: then say what it saves compared with the played line, never
+   present it as a rescue. An even trade in best_line_outcome is not a loss;
+   explain what the move achieves, not the material count.
 
 OUTPUT — strict JSON, nothing else:
 {
@@ -126,7 +127,10 @@ VOICE RULES:
   check, aiming to keep the extra pawn"). ≤2 sentences. NEVER write "I", never
   quote the player, never claim to know what they thought or saw. Describe the
   reasonable idea the move pursues; never sarcastic.
-- what_actually_happens: ≤4 sentences (≤5 when after_refutation is present). Name pieces by square ("your bishop on
+- what_actually_happens: ≤4 sentences (≤5 when after_refutation is present).
+  OPEN with the one fact the move overlooked or left undone, stated as the
+  reason ("The pawn on b5 is not defended.", "The knight on e3 can also take
+  your queen."), then tell the refutation. Name pieces by square ("your bishop on
   c4", "the knight landing on f6"). Tell the refutation as a story in words;
   at most one move pair in notation. Name the alternative in prose with why it
   works, using best_line_moves ("31.Rd1 keeps the rook where it defends";

@@ -61,7 +61,7 @@ defence fails) and the EXPLANATION a model wrote from them.
 Score each criterion 1-5 (5 best) and list concrete problems:
 - accuracy: every claim matches the facts — right piece on the right square at the right moment, no invented moves.
 - explains_why: says WHY the refutation works — the point of each quiet move, and why the obvious defence fails when the facts give that reason. 1 = restates moves without reasons.
-- plausible_thought: probable_thought is a reasonable idea a player at this rating could hold in this position.
+- plausible_thought: probable_thought describes what the played move actually does or sets up, matching played_move's facts, in the third person without claiming to know the player's thoughts. 1 = first person or contradicts the facts.
 - useful_takeaway: one habit a player can actually check mid-game, tied to this mistake.
 - errors: each factual error or missing key reason, one short sentence each (empty if none).`;
 
