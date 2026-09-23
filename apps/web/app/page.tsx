@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Chess } from 'chess.js';
 import { ArrowRight, Check, ChevronRight, LoaderCircle, MoveUpRight } from 'lucide-react';
 import { ApiError, submitReport } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
@@ -24,6 +25,10 @@ export default function HomePage() {
   const [recentReviews, setRecentReviews] = useState<RecentReview[]>([]);
   const submitting = useRef(false);
   const sample = DEMO_REPORT.moments[0];
+  const sampleBoard = new Chess(sample.fen_before);
+  const samplePlayed = sampleBoard.move(sample.played);
+  const sampleArrows = samplePlayed ? [{ startSquare: samplePlayed.from, endSquare: samplePlayed.to, color: 'var(--w-error)' }] : [];
+  const sampleHighlights = samplePlayed ? [samplePlayed.from, samplePlayed.to] : [];
 
   useEffect(() => {
     captureEvent('landing_viewed', { hero_variant: 'editorial_v1' });
@@ -64,8 +69,9 @@ export default function HomePage() {
     <div className="home-page">
       <section className="home-hero page-width">
         <div className="hero-copy">
-          <h1>A little clarity.<br />A better <em>next game.</em></h1>
-          <p className="hero-lede">Understand the moments that turned your game, explore them on the board, and take one practical lesson forward.</p>
+          <p className="hero-kicker">Chess review for the rest of us</p>
+          <h1>Find the move that <span className="hero-mark">looked right</span> but <em>changed everything.</em></h1>
+          <p className="hero-lede">See what your move allowed, why it mattered, and what to notice next time. No engine report card. Just the turning point.</p>
           <div className="submit-panel" id="analyze">
             <div className="method-tabs" aria-label="Choose how to add your game">
               <button
@@ -206,18 +212,25 @@ export default function HomePage() {
             Take a look at a sample first <ArrowRight size={15} />
           </Link>
         </div>
-        <aside className="sample-preview" aria-label="Preview of a sample review">
+        <aside className="sample-preview" aria-label="Preview of an illustrative turning-point analysis">
           <div className="sample-masthead">
-            <span>The game, in perspective</span>
-            <span>Sample review</span>
+            <span>ILLUSTRATIVE ANALYSIS</span>
+            <span>3… Nf6? / 4. Qxf7#</span>
           </div>
           <div className="sample-board">
-            <ChessboardView fen={showMove ? sample.fen_after : sample.fen_before} orientation="white" boardWidth={352} />
+            <ChessboardView
+              key={showMove ? 'sample-after' : 'sample-before'}
+              fen={showMove ? sample.fen_after : sample.fen_before}
+              orientation="white"
+              boardWidth={352}
+              arrows={showMove ? [] : sampleArrows}
+              highlightSquares={showMove ? [] : sampleHighlights}
+            />
           </div>
           <div className="sample-controls">
-            <span>Move {sample.move_number} · {showMove ? 'White' : 'Black'} to play</span>
-            <button type="button" onClick={() => setShowMove(!showMove)}>
-              {showMove ? 'Before the move' : 'See ' + sample.played} <ChevronRight size={15} />
+            <span>Move {sample.move_number} · {showMove ? 'White to move' : 'Black to move'}</span>
+            <button type="button" aria-pressed={showMove} onClick={() => setShowMove(!showMove)}>
+              {showMove ? 'Reset position' : 'Show the move'} <ChevronRight size={15} />
             </button>
           </div>
           <div className="sample-annotation">
@@ -235,25 +248,15 @@ export default function HomePage() {
 
       <section className="lesson-section page-width">
         <div className="lesson-header">
-          <h2>The point is not to review every move. <em>It is to learn.</em></h2>
-          <p>Most analysis tools drown casual players in decimal numbers and engine lines. Chessplain isolates the pivotal swings and explains them in plain English.</p>
+          <h2>One game. One turning point. <em>One useful habit.</em></h2>
+          <p>Start with the position, follow the consequence, then keep one question for your next game.</p>
         </div>
         <div className="lesson-grid">
-          <article className="lesson-card">
-            <h3>Find the pivotal turns</h3>
-            <p>We skip harmless opening moves and pinpoint the exact decisions where the advantage changed hands.</p>
-          </article>
-          <article className="lesson-card">
-            <h3>Walk through the board</h3>
-            <p>Step move by move through the consequence, or toggle to the engine recommendation to see what worked better.</p>
-          </article>
-          <article className="lesson-card">
-            <h3>Take one lesson forward</h3>
-            <p>Leave with a single memorable question to ask yourself the next time you sit down to play your next game.</p>
-          </article>
+          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">?</span><h3>Before your move</h3><p>What were you trying to do? What could your opponent force next?</p></article>
+          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">!</span><h3>See what changed</h3><p>Replay the move and inspect the threat or continuation it allowed.</p></article>
+          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">→</span><h3>Carry one question</h3><p>Leave with a practical check to use before a similar move next time.</p></article>
         </div>
       </section>
-
       <section className="questions-section page-width">
         <div className="questions-header">
           <h2>A few things to know.</h2>

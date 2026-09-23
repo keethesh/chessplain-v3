@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Chessboard } from 'react-chessboard';
+import { Chess } from 'chess.js';
 
 interface ChessboardViewProps {
   fen: string;
@@ -22,8 +23,9 @@ export function ChessboardView({
 
   for (const sq of highlightSquares) {
     customSquareStyles[sq] = {
-      backgroundColor: 'color-mix(in srgb, var(--w-accent) 35%, transparent)',
-      borderRadius: '2px',
+      backgroundColor: 'color-mix(in srgb, var(--w-error) 45%, transparent)',
+      borderRadius: '0',
+      boxShadow: 'inset 0 0 0 3px var(--w-error)',
     };
   }
 
@@ -32,10 +34,21 @@ export function ChessboardView({
     endSquare: a.endSquare,
     color: a.color || 'var(--w-accent)',
   }));
+  const turn = fen.split(' ')[1] === 'w' ? 'White' : 'Black';
+  let positionLabel = `${turn} to move`;
+  try {
+    const game = new Chess(fen);
+    if (game.isCheckmate()) positionLabel = `${turn} is checkmated`;
+    else if (game.isCheck()) positionLabel += ', in check';
+    else if (game.isDraw()) positionLabel = 'Drawn position';
+  } catch {
+    // Keep the side-to-move label if a partial analysis FEN is not parseable.
+  }
+
 
   return (
     <div className="w-full select-none overflow-hidden rounded-xl bg-[var(--w-surface)]" style={{ maxWidth: boardWidth }}>
-      <div className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${fen.split(' ')[1] === 'w' ? 'White' : 'Black'} to move.`}>
+      <div className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${positionLabel}.`}>
         <Chessboard
           options={{
             position: fen,
@@ -43,8 +56,8 @@ export function ChessboardView({
             allowDragging: false,
             squareStyles: customSquareStyles,
             arrows: customArrows,
-            darkSquareStyle: { backgroundColor: '#8b9b83' },
-            lightSquareStyle: { backgroundColor: '#ede8dc' },
+            darkSquareStyle: { backgroundColor: '#566956' },
+            lightSquareStyle: { backgroundColor: '#d9dfca' },
           }}
         />
       </div>

@@ -1,16 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Newsreader } from 'next/font/google';
+import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import { PostHogProvider } from '../components/PostHogProvider';
 import './globals.css';
-
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-newsreader',
-  weight: ['400', '500', '600', '700'],
-  style: ['normal', 'italic'],
-});
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-plex-sans', weight: ['400', '500', '600', '700'] });
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], display: 'swap', variable: '--font-plex-mono', weight: ['400', '500'] });
 
 // Public marketing origin. Not a credential: it only affects how absolute
 // URLs are built for share cards, so a canonical default is safe here.
@@ -48,7 +42,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={newsreader.variable}>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
       <body className="min-h-screen flex flex-col font-sans">
         <a href="#main-content" className="skip-link">Skip to content</a>
         <header className="site-header">

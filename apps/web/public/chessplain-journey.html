@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chessplain / UX journey</title>
+<style>
+:root {
+  --bg: #fafafc; --surface: #ffffff; --fg: #18182b; --fg-muted: #65657a;
+  --border: #d8d8e4; --accent: #4338ca;
+  --sans: "Hanken Grotesk", Inter, system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+  --s5: 20px; --s6: 24px; --s7: 32px; --s8: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #18182b; --surface: #1f1f36; --fg: #f0f0f8; --fg-muted: #8888a8;
+    --border: #2a2a44; --accent: #7c6ff0;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  font-family: var(--sans); background: var(--bg); color: var(--fg);
+  padding: var(--s7); line-height: 1.5; margin: 0;
+}
+.visual-diagram {
+  margin: 0; padding: var(--s5);
+  background: var(--surface); border-radius: 8px;
+  border: 1px solid var(--border); overflow-x: auto;
+}
+.visual-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  color: var(--fg-muted); letter-spacing: 0.06em;
+  margin-bottom: var(--s4); text-transform: uppercase;
+}
+.flow-grid {
+  display: grid;
+  grid-template-columns: auto 16px 1fr 16px 1fr 16px 1fr 16px 1fr 16px 1fr;
+  align-items: center; padding: var(--s3) 0; row-gap: var(--s2);
+}
+.flow-node {
+  padding: var(--s2); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px;
+  text-align: center; min-width: 0;
+}
+.flow-node-step { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--accent); margin-bottom: 1px; }
+.flow-node-label { font-size: 11px; font-weight: 600; color: var(--fg); }
+.flow-node-detail { font-size: 10px; color: var(--fg-muted); margin-top: 1px; }
+.flow-node-icon { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--accent); }
+.flow-start { border-color: var(--accent); border-width: 2px; padding: var(--s2) var(--s3); }
+.flow-end { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+.flow-arrow { height: 1px; background: var(--border); position: relative; }
+.flow-arrow::after {
+  content: ''; position: absolute; right: 0; top: -3px;
+  border-left: 4px solid var(--border);
+  border-top: 3px solid transparent; border-bottom: 3px solid transparent;
+}
+.flow-gate { text-align: center; padding-top: var(--s1); }
+.flow-gate-connector { width: 1px; height: 10px; background: var(--border); margin: 0 auto; }
+.flow-gate-diamond {
+  width: 10px; height: 10px; background: var(--surface);
+  border: 1px solid var(--border);
+  transform: rotate(45deg); margin: 0 auto 4px;
+}
+.flow-gate-label { font-size: 10px; font-weight: 600; color: var(--fg-muted); }
+.flow-gate-action { font-size: 10px; color: var(--fg-muted); opacity: 0.6; }
+.flow-metric { margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--border); font-size: 11px; }
+.flow-metric-value { font-weight: 600; color: var(--accent); }
+.flow-metric-label { color: var(--fg-muted); }
+</style>
+<style>
+:root{--bg:#111310;--surface:#191d19;--fg:#f0f1e9;--fg-muted:#aab1a3;--border:#343b32;--accent:#c9f36d;--coral:#ff725c;--cream:#e9e8dc;--sans:Arial,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+body{max-width:1260px;margin:0 auto;padding:32px 24px 72px;background:var(--bg);color:var(--fg)}
+.page-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:32px}.brand{font-weight:700;letter-spacing:-.03em;font-size:20px}.brand span{color:var(--accent)}.eyebrow{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}.page-head h1{font-size:clamp(36px,5vw,68px);line-height:.98;letter-spacing:-.04em;max-width:760px;margin:0}.page-head h1 em{color:var(--accent);font-style:normal}.lede{max-width:480px;color:var(--fg-muted);font-size:16px;margin:18px 0 0}.section{margin-top:32px}.section-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-family:var(--mono);color:var(--fg-muted);margin:0 0 12px}.intent-grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border)}.intent-cell{background:var(--surface);padding:20px;min-height:142px}.intent-cell b{display:block;font-size:19px;line-height:1.1;margin-bottom:9px}.intent-cell p{margin:0;color:var(--fg-muted);font-size:14px}.intent-cell:first-child b{color:var(--coral)}.flow-node,.flow-start,.flow-end{background:#151815;border-color:var(--border)}.flow-start{border-color:var(--accent)}.flow-end{background:#1e2819;border-color:var(--accent)}.flow-node-label{font-size:13px}.flow-node-detail{font-size:11px;color:var(--fg-muted)}.flow-arrow{background:#586054}.flow-arrow::after{border-left-color:#586054}.flow-gate-label{color:var(--coral)}.flow-gate-action{color:var(--fg-muted);opacity:1}.flow-metric{border-color:var(--border)}.flow-metric-value{color:var(--accent)}.flow-metric-label{color:var(--fg-muted)}.state-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.state{border:1px solid var(--border);background:var(--surface);padding:20px;border-radius:6px}.state h3{font-size:20px;line-height:1.05;margin:0 0 10px}.state p{font-size:13px;color:var(--fg-muted);margin:0 0 14px}.state dl{margin:0;display:grid;gap:8px}.state dt{font:500 10px var(--mono);color:var(--accent);text-transform:uppercase;letter-spacing:.06em}.state dd{margin:0;font-size:13px}.state.error{border-color:color-mix(in srgb,var(--coral) 60%,var(--border))}.state.error dt{color:var(--coral)}.state.success{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}.journey-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);font-size:13px}.journey-table th,.journey-table td{text-align:left;vertical-align:top;padding:13px 14px;border-bottom:1px solid var(--border)}.journey-table th{font:500 10px var(--mono);color:var(--fg-muted);text-transform:uppercase;letter-spacing:.06em}.journey-table td:first-child{color:var(--accent);font-family:var(--mono);white-space:nowrap}.journey-table tr:last-child td{border-bottom:0}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}.metric{background:var(--surface);padding:18px}.metric strong{display:block;font-size:24px;color:var(--accent)}.metric span{font-size:12px;color:var(--fg-muted)}.note{border-left:1px solid var(--coral);padding:14px 18px;background:#26201e;color:var(--cream);font-size:14px}.note b{color:var(--coral)}.footer{margin-top:44px;border-top:1px solid var(--border);padding-top:20px;color:var(--fg-muted);font:11px var(--mono);display:flex;justify-content:space-between;gap:16px}
+@media(max-width:800px){body{padding:22px 16px 52px}.page-head{display:block}.intent-grid,.state-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)}.journey-table{display:block;overflow-x:auto;white-space:normal}.footer{display:block}.footer span{display:block;margin-top:8px}}
+</style>
+</head>
+<body>
+<header class="page-head"><div><div class="brand"><span>♞</span> chessplain / UX journey</div><div class="eyebrow" style="margin-top:36px">The forensic match report</div><h1>From “what did I miss?” to <em>“I’ll see that next time.”</em></h1><p class="lede">A first-time player submits one finished game, finds the turning point, understands the consequence, and leaves with one question worth carrying into the next game.</p></div><div class="note"><b>Intent decision</b><br>Do not optimize for calmness. Optimize for credible clarity after uncertainty.</div></header>
+<section class="section"><h2 class="section-title">Journey intent</h2><div class="intent-grid"><div class="intent-cell"><b>User goal</b><p>Understand the one moment that changed the game without reading an engine report.</p></div><div class="intent-cell"><b>Product promise</b><p>One turning point, one explanation, one practical question for the next game.</p></div><div class="intent-cell"><b>Trust proof</b><p>The board, notation, arrows, and explanation must describe the same position.</p></div></div></section>
+<section class="section"><h2 class="section-title">Flow: first review</h2><div class="visual-diagram"><div class="flow-grid"><div class="flow-node flow-start"><div class="flow-node-icon">♞</div><div class="flow-node-label">Arrives curious</div><div class="flow-node-detail">finished a game</div></div><div class="flow-arrow"></div><div class="flow-node"><div class="flow-node-step">1</div><div class="flow-node-label">Choose a source</div><div class="flow-node-detail">username or PGN</div></div><div class="flow-arrow"></div><div class="flow-node"><div class="flow-node-step">2</div><div class="flow-node-label">Submit one game</div><div class="flow-node-detail">no signup required</div></div><div class="flow-arrow"></div><div class="flow-node"><div class="flow-node-step">3</div><div class="flow-node-label">Analysis opens</div><div class="flow-node-detail">truthful progress</div></div><div class="flow-arrow"></div><div class="flow-node"><div class="flow-node-step">4</div><div class="flow-node-label">See the turn</div><div class="flow-node-detail">board + notation</div></div><div class="flow-arrow"></div><div class="flow-node flow-end"><div class="flow-node-step">5</div><div class="flow-node-label">Keep the question</div><div class="flow-node-detail">next-game habit</div></div><div class="flow-gate" style="grid-column:5;grid-row:2"><div class="flow-gate-connector"></div><div class="flow-gate-diamond"></div><div class="flow-gate-label">game found?</div><div class="flow-gate-action">preserve input and retry</div></div><div class="flow-gate" style="grid-column:7;grid-row:2"><div class="flow-gate-connector"></div><div class="flow-gate-diamond"></div><div class="flow-gate-label">meaningful turn?</div><div class="flow-gate-action">explain a steady game</div></div></div><div class="flow-metric"><span class="flow-metric-value">1 primary action · 4 essential states · 1 guided explanation</span> <span class="flow-metric-label">The user should understand the value before submitting.</span></div></div></section>
+<section class="section"><h2 class="section-title">Critical states</h2><div class="state-grid"><article class="state"><h3>Ready to submit</h3><p>The user has enough context to choose a source without learning the product first.</p><dl><dt>Primary action</dt><dd>Explain my game</dd><dt>Reassurance</dt><dd>Public username only. No Chess.com password.</dd><dt>Success signal</dt><dd>Button changes to Opening your review…</dd></dl></article><article class="state"><h3>Analysis in progress</h3><p>Waiting is truthful and oriented around the user’s game, not a decorative spinner.</p><dl><dt>Show</dt><dd>Game name or source, current step, and what is being checked.</dd><dt>Preserve</dt><dd>Submitted source and route on refresh or interruption.</dd><dt>Recovery</dt><dd>Retry without re-entering the game.</dd></dl></article><article class="state success"><h3>Turning point found</h3><p>The report opens on the most useful moment, not a dashboard overview.</p><dl><dt>First view</dt><dd>Before your move, with the relevant square and threat visible.</dd><dt>Next action</dt><dd>Show move, then Continue.</dd><dt>Completion</dt><dd>One habit for your next game.</dd></dl></article><article class="state error"><h3>Username not found</h3><p>The problem is specific and recoverable. The user does not lose their input.</p><dl><dt>Message</dt><dd>We could not find a completed game for that username.</dd><dt>Action</dt><dd>Check spelling, try again, or paste a PGN instead.</dd><dt>Do not</dt><dd>Reset the form or say Something went wrong.</dd></dl></article><article class="state error"><h3>No meaningful turn</h3><p>A steady game is a useful result, not a failure state.</p><dl><dt>Explain</dt><dd>Nothing swung far enough to single out one moment.</dd><dt>Action</dt><dd>Review another game or try a PGN.</dd><dt>Tone</dt><dd>Do not imply the player did something wrong.</dd></dl></article><article class="state error"><h3>Quota reached</h3><p>The limit appears at the point of action with a clear alternative.</p><dl><dt>Message</dt><dd>You have used your two free reviews this week.</dd><dt>Action</dt><dd>See plans or sign in.</dd><dt>Trust</dt><dd>Never hide the limit until after analysis begins.</dd></dl></article></div></section>
+<section class="section"><h2 class="section-title">Screen responsibilities</h2><table class="journey-table"><thead><tr><th>Surface</th><th>Must answer</th><th>Primary interaction</th><th>Failure that must not happen</th></tr></thead><tbody><tr><td>Homepage</td><td>What is this, and why should I trust it?</td><td>Submit username or PGN</td><td>Decorative sample disagrees with the explanation.</td></tr><tr><td>Waiting state</td><td>Did my game arrive, and what is happening?</td><td>Wait, leave, or retry</td><td>Spinner with no context or recoverable route.</td></tr><tr><td>Report first view</td><td>Where did the game turn?</td><td>Choose a moment</td><td>Report opens as an undifferentiated wall of text.</td></tr><tr><td>Board step</td><td>What did I play, and what changed?</td><td>Show move / Continue / Compare alternative</td><td>Board, notation, arrow, and prose describe different positions.</td></tr><tr><td>Takeaway</td><td>What do I do differently next time?</td><td>Read and retain one question</td><td>Ending on evaluation numbers instead of a usable habit.</td></tr></tbody></table></section>
+<section class="section"><h2 class="section-title">Success criteria</h2><div class="metric-grid"><div class="metric"><strong>&lt; 5s</strong><span>First-time visitor understands the product and first action.</span></div><div class="metric"><strong>1 flow</strong><span>No account creation before the first useful report.</span></div><div class="metric"><strong>0 resets</strong><span>Errors preserve source, context, and recovery path.</span></div><div class="metric"><strong>1 lesson</strong><span>Completed reports end with one memorable next-game question.</span></div></div></section>
+<footer class="footer"><span>Intent map / assumptions made explicit</span><span>Prototype flow only · production behavior still needs implementation</span></footer>
+</body></html>
