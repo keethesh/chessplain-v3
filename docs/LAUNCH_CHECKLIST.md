@@ -2,8 +2,9 @@
 
 **Status: NOT ready to advertise.** The production API is deployed and live
 checkout creation works. The frontend runs on Cloudflare Workers and both
-custom domains are cut over. A real subscription lifecycle test and the
-support mailbox remain (sections 2 and 4).
+custom domains are cut over. Passwordless sign-in works end to end for
+non-team addresses since 2026-09-24. A real subscription lifecycle test, an
+inbound support-mail test and credential rotation remain (sections 2 and 4).
 
 The current engine deployment was verified on 2026-09-23:
 engine commit `20830d6`, prompt `2026-09-24.1`, `openai/gpt-6-luna` through
@@ -28,7 +29,10 @@ limit. Replace it before that date.
 | Database | `analysis_errors.analysis_id` exists; signup trigger installed once; no auth users without profiles; migrations 7 and 8 recorded | Production retains 71 older migration-history entries absent from this repo; see migration warning below |
 | LLM provider | **Current:** `openai/gpt-6-luna` via `https://openrouter.ai/api/v1`, `reasoning_effort: none` | Credential expires 2026-10-23; replace before expiry |
 | Error telemetry | Migration 9 (`analysis_errors_stage_check` accepts `explaining_moment`, `explaining_summary`, `llm_credits_exhausted`) | Reverify after future schema changes |
-| Silent-failure gap | **OPEN.** A total LLM outage still yields a `completed` report with generic fallback prose rather than a visible failure | Fix before claiming outage transparency |
+| Silent-failure gap | **CLOSED** in `2dfe75b` (deployed): when every moment falls back or credits are exhausted, `pipeline.ts` throws `LlmUnavailableError`; the worker retries, then marks the row failed, and quota ignores failed rows | A partial outage still publishes the explained moments with a generic summary, by design |
+| Auth email | Custom SMTP via Resend (`smtp.resend.com:465`, sender `no-reply@mail.getchessplain.com`, domain verified, DKIM/SPF on `mail.` subdomain); email rate limit 100/h. Delivered to a non-team address and sign-in completed on `www.` on 2026-09-24 | Before this, Supabase's built-in sender only mailed team members: real visitors could not sign in. Templates live in `supabase/templates/` and must be pasted into the dashboard after edits; the auth server keeps sending the previous template for roughly 10 minutes after a save |
+| Auth redirects | Site URL `https://getchessplain.com`; allow list includes `https://getchessplain.com/**` and `https://www.getchessplain.com/**` (added 2026-09-24) | Obsolete `*-keetheshs-projects.vercel.app` entries remain; remove when convenient |
+| Sign-in callback | `detectSessionInUrl: false` (`1915e69`, web `8316e1b9`): the client no longer exchanges `?code=` itself, so `/auth/callback` no longer shows "Let's try that link again" to a user it just signed in | Links still only complete in the requesting browser (PKCE); an email code fallback is not built |
 | Stripe live configuration | Existing live Stripe secret is installed on VPS; configured USD prices active | No secret values stored in this document |
 | Live Checkout | Authenticated month/year sessions created at $9.99/$99.99; unpaid sessions expired | No card charged; paid entitlement still needs a real card |
 | Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not paid entitlement updates |
@@ -128,9 +132,10 @@ also now per visitor.
 
 ## 4. Support and credential hygiene — OWNER ACTION
 
-- Create/verify the monitored support mailbox. The app defaults to
-  `support@getchessplain.com`; showing that address does not prove it exists.
-  Privacy/deletion and refund requests must actually reach someone.
+- `support@getchessplain.com` is forwarded to the owner's inbox by Cloudflare Email
+  Routing (MX `route{1,2,3}.mx.cloudflare.net`). Send a test from an outside
+  address and confirm it arrives before relying on it. Cloudflare routing is
+  inbound only; replying as support@ needs "Send mail as" through Resend SMTP.
 - Rotate the Supabase service-role and LLM credentials previously pasted into the
   conversation. Coordinate replacements across the VPS and local tooling before
   revocation; never print replacement secrets or commit them.
