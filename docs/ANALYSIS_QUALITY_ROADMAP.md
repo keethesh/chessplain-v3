@@ -228,8 +228,8 @@ stronger model — spotting a shared root cause across moments is reasoning,
 not narration).
 
 **Production LLM since 2026-09-23 16:00 UTC: `openai/gpt-6-luna` via OpenRouter**
-(`LLM_API_BASE=https://openrouter.ai/api/v1`, engine commit `1d8d0df`, prompt
-`2026-09-23.2`). Verified with the deployment verifier (25/25) and the Ne3
+(`LLM_API_BASE=https://openrouter.ai/api/v1`). Current: engine commit `06711c8`,
+prompt `2026-09-23.3` (deployed 2026-09-23 ~20:30 UTC). Verified with the deployment verifier (25/25) and the Ne3
 production game run through `runAnalysisPipeline` on the VPS: no fallback prose,
 and the explanation names the Qxg7 mate threat and why the f1 knight cannot
 escape. The OpenRouter key expires 2026-10-23 with a $10 limit — replace it
