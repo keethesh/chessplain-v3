@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import { PostHogProvider } from '../components/PostHogProvider';
 import './globals.css';
-const plexSans = IBM_Plex_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-plex-sans', weight: ['400', '500', '600', '700'] });
-const plexMono = IBM_Plex_Mono({ subsets: ['latin'], display: 'swap', variable: '--font-plex-mono', weight: ['400', '500'] });
 
 // Public marketing origin. Not a credential: it only affects how absolute
 // URLs are built for share cards, so a canonical default is safe here.
@@ -42,7 +39,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+      </head>
       <body className="min-h-screen flex flex-col font-sans">
         <a href="#main-content" className="skip-link">Skip to content</a>
         <header className="site-header">
