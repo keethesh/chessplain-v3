@@ -22,7 +22,7 @@ Prioritize explanations of ideas and consequences over move grades. The historic
 
 ## Operating Context
 
-- First value must be accessible without an account. The landing page provides both submission and an illustrative sample at `/report/demo`.
+- First value must be accessible without an account. The landing page provides both submission and an illustrative sample at `/report/demo`. Accounts are optional and passwordless (`/login`, email magic link; the same link signs up a new user); a signed-in user's free allowance is counted per account instead of per network.
 - Submission opens `/report/[id]`; analysis is asynchronous. The engine queue processes games serially. Completion time and concurrent-user capacity have not been measured on the reported 24GB VPS, so no sub-20-second or paid-speed guarantee is justified.
 - Reports and share views are accessible to anyone with their links. Do not call them private, owner-only, or confidential. Submitted game and player names can appear in the report.
 - Source includes PostHog event hooks, including `landing_viewed`, `game_submitted`, and sample/billing actions. The homepage uses a single `editorial_v1` identifier. A/B/E experiments and a measured production funnel are not established by this code; production analytics delivery and results have not been verified.

@@ -74,7 +74,7 @@ Plan, two steps:
 **v1 shipped 2026-09-23 (prompt `2026-09-23.3`).** `probable_thought` is now a
 third-person description of what the move does or sets up, grounded in
 `played_move`'s facts; `validateMomentJson` rejects "I/me/my", and the report
-labels it "What the move was going for" instead of a quoted thought. Stored
+labels it "The idea" (originally "What the move was going for") instead of a quoted thought. Stored
 reports from before the change still hold first-person text. v2 remains open.
 
 ## Input gaps (what we don't send the model today)
@@ -227,9 +227,20 @@ Still open: a summary-prompt benchmark (the per-game summary may justify a
 stronger model — spotting a shared root cause across moments is reasoning,
 not narration).
 
+Round 4, Luna only, prompt `2026-09-24.1`, 1 run (report
+`benchmark/results/2026-09-23T21-07-27-121Z.md`): 49/49 valid, accuracy 3.86,
+explains why 3.00, thought 4.10, takeaway 3.86, 2 phantom pieces. The better
+move moved out of `what_actually_happens` into its own `why_better` field so
+each debrief stage shows its own short text; the report page had been showing
+the same ~66-word paragraph on three of four stages. Median length is now 34
+words for `what_actually_happens` and 24 for `why_better` (validated at 60 and
+45). Judge scores are within single-run noise of round 3; readability per stage
+was the goal. Reports saved before this lack `why_better`; the page falls back
+to `what_actually_happens`.
+
 **Production LLM since 2026-09-23 16:00 UTC: `openai/gpt-6-luna` via OpenRouter**
-(`LLM_API_BASE=https://openrouter.ai/api/v1`). Current: engine commit `06711c8`,
-prompt `2026-09-23.3` (deployed 2026-09-23 ~20:30 UTC). Verified with the deployment verifier (25/25) and the Ne3
+(`LLM_API_BASE=https://openrouter.ai/api/v1`). Current: engine commit `20830d6`,
+prompt `2026-09-24.1` (deployed 2026-09-23 ~21:25 UTC). Verified with the deployment verifier (25/25) and the Ne3
 production game run through `runAnalysisPipeline` on the VPS: no fallback prose,
 and the explanation names the Qxg7 mate threat and why the f1 knight cannot
 escape. The OpenRouter key expires 2026-10-23 with a $10 limit — replace it

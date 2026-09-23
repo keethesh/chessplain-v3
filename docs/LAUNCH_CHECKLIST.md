@@ -6,7 +6,7 @@ custom domains are cut over. A real subscription lifecycle test and the
 support mailbox remain (sections 2 and 4).
 
 The current engine deployment was verified on 2026-09-23:
-engine commit `06711c8`, prompt `2026-09-23.3`, `openai/gpt-6-luna` through
+engine commit `20830d6`, prompt `2026-09-24.1`, `openai/gpt-6-luna` through
 OpenRouter. Earlier rows retain dated evidence where it is still useful; do
 not treat old commit IDs or old provider settings below as current state.
 Do not confuse the API verifier's `READY` output with launch approval: it does
@@ -19,12 +19,12 @@ limit. Replace it before that date.
 
 | Area | Evidence | Scope / remaining gap |
 |---|---|---|
-| Repository | Typecheck, 72/72 tests in 16 files, both production builds passed (reverified 2026-09-23) | Current local/VPS verification; not proof of every production flow |
+| Repository | Typecheck, 73/73 tests in 16 files, both production builds passed (reverified 2026-09-23) | Current local/VPS verification; not proof of every production flow |
 | GitHub CI | Earlier CI run succeeded at `d01c697` | Historical CI evidence; rerun after the current engine changes |
-| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, deployed engine commit `06711c8`, active | VPS tests 72/72; current model is OpenRouter/Luna |
+| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, deployed engine commit `20830d6`, active | VPS tests 73/73; current model is OpenRouter/Luna |
 | API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
 | Analysis works end-to-end | Deployed `runAnalysisPipeline` run on the Ne3 production game completed with 1 moment and **0 fallback phrases** | Direct pipeline verification bypassed HTTP quota; OpenRouter usage increased as expected |
-| Analysis quality | 49-position benchmark; prompt `2026-09-23.3` (A/B vs `.2`, 2 runs each); current choice `openai/gpt-6-luna` | Benchmark judge scores are directional, not a guarantee |
+| Analysis quality | 49-position benchmark; prompt `2026-09-24.1`; current choice `openai/gpt-6-luna` | Benchmark judge scores are directional, not a guarantee |
 | Database | `analysis_errors.analysis_id` exists; signup trigger installed once; no auth users without profiles; migrations 7 and 8 recorded | Production retains 71 older migration-history entries absent from this repo; see migration warning below |
 | LLM provider | **Current:** `openai/gpt-6-luna` via `https://openrouter.ai/api/v1`, `reasoning_effort: none` | Credential expires 2026-10-23; replace before expiry |
 | Error telemetry | Migration 9 (`analysis_errors_stage_check` accepts `explaining_moment`, `explaining_summary`, `llm_credits_exhausted`) | Reverify after future schema changes |

@@ -140,6 +140,11 @@ Controls use compact 4px corners. Analysis panels use 6px corners. Board squares
 - **Structure:** board, coordinates, move notation, played move, alternative, and explanation form one evidence chain.
 - **State:** the same position source drives board, notation, arrows, side-to-move, and explanation.
 - **Annotation:** coral marks played mistake; lime marks useful continuation; highlight the referenced square.
+- **Square chips:** every square named in explanation text renders as a small mono chip in one of five mark colours (sky `#7cc4ff`, amber `#ffc15e`, violet `#c6a0ff`, teal `#5fdcc4`, pink `#ff9ad5`), assigned in order of first mention. The board outlines the same squares in the same colour; hovering or tapping a chip fills its square. Mark colours never replace lime or coral meanings.
+- **Stage text:** each debrief stage shows only its own text (idea and what it missed; why the alternative works; the habit). The full explanation stays behind "Read the full explanation".
+
+### Analysis Wait State
+- A 300px board replays Morphy's Opera Game (Paris 1858) on a loop with short captions, beside the stage stepper and one rotating habit. Motion is piece movement only; reduced motion disables piece animation and caption fades.
 
 ## Do's and Don'ts
 

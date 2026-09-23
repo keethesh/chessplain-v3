@@ -13,9 +13,9 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Current code:** typecheck, **72 tests across 16 files**, and production builds
+**Current code:** typecheck, **73 tests across 16 files**, and production builds
 for both packages pass. The engine is deployed to the production VPS at
-engine commit `06711c8` (prompt `2026-09-23.3`); the deployed service is active.
+engine commit `20830d6` (prompt `2026-09-24.1`); the deployed service is active.
 
 **Live checks:** the deployment verifier passes 25/25 checks. The deployed
 pipeline was run against the Ne3 production game with no fallback prose, and
