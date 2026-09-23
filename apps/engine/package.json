@@ -12,7 +12,9 @@
     "worker": "tsx src/queue/worker.ts",
     "test": "vitest run",
     "verify:20": "tsx scripts/verify-20-games.ts",
-    "verify:representative": "tsx scripts/verify-representative-games.ts"
+    "verify:representative": "tsx scripts/verify-representative-games.ts",
+    "benchmark:fixtures": "tsx scripts/export-benchmark-fixtures.ts",
+    "benchmark:models": "tsx scripts/benchmark-models.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

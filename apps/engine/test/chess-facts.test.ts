@@ -3,6 +3,7 @@ import {
   extractMoveFacts,
   buildTacticalContext,
   getAttacksFromSquare,
+  findMateThreats,
 } from '../src/analysis/chess-facts.js';
 
 describe('Chess Facts Extraction', () => {
@@ -90,5 +91,25 @@ describe('Chess Facts Extraction', () => {
     expect(attacks.length).toBe(uniqueAttacks.size);
     expect(attacks).toContain('Black rook on a8');
     expect(attacks).toContain('Black bishop on c8');
+  });
+
+  it('explains the quiet mating threat that makes the obvious escape fail', () => {
+    // Production report 6992cfc4: 18...Ne3 19.Qxc5 Nxf1 20.Qc3. The explanation
+    // never said why Black cannot just save the f1 knight: Qc3 lines up with the
+    // a1 bishop and Qxg7 is mate. Only Qxc5 used to be annotated.
+    const fenBefore = '2rq1rk1/p4ppp/2p1p3/2nn4/8/3P1BP1/P1Q3PP/BR3RK1 b - - 2 18';
+    const ctx = buildTacticalContext(fenBefore, '18...Ne3', 'Nd7', 'Qxc5 Nxf1 Qc3');
+
+    expect(ctx.refutation_moves.map((m) => m.san)).toEqual(['Qxc5', 'Nxf1', 'Qc3']);
+    expect(ctx.refutation_moves[1].captured).toBe('White rook on f1');
+    expect(ctx.refutation_moves[2].threatens_checkmate).toContain('Qxg7#');
+    expect(ctx.after_refutation).toContain('Black knight on f1');
+    expect(ctx.after_refutation).toMatch(/after N\w+, Qxg7# is checkmate/);
+    expect(ctx.threat_summary).toContain('Qc3 threatens Qxg7#');
+  });
+
+  it('does not invent threats when the side to move is in check', () => {
+    // White is in check from the e7 queen; a null move would be illegal.
+    expect(findMateThreats('4k3/4q3/8/8/8/8/8/4K3 w - - 0 1', 'b')).toEqual([]);
   });
 });

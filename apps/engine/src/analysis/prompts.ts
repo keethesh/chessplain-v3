@@ -1,6 +1,36 @@
-import { MomentExplanation, GameSummary } from '../types.js';
+import { CandidateMoment, EloBand, MomentExplanation, GameSummary } from '../types.js';
+import { buildTacticalContext } from './chess-facts.js';
 
-export const PROMPT_VERSION = '2026-09-17.1';
+/** The exact user message production sends for one moment; the benchmark reuses it. */
+export function buildMomentPayload(moment: CandidateMoment, eloBand: EloBand, opponentName: string) {
+  return {
+    position_before_fen: moment.fenBefore,
+    played_move: moment.san,
+    player_color: moment.playerColor,
+    player_elo_band: eloBand,
+    tactical_context: buildTacticalContext(moment.fenBefore, moment.san, moment.bestMoveSan, moment.refutationLineSan),
+    eval_before_pawns: parseFloat(moment.evalBefore.toFixed(2)),
+    eval_after_pawns: parseFloat(moment.evalAfter.toFixed(2)),
+    best_move: moment.bestMoveSan,
+    refutation_line: moment.refutationLineSan,
+    material_note: moment.materialNote,
+    phase: moment.phase,
+    opponent_name: opponentName,
+  };
+}
+
+/** Strip code fences and surrounding prose from a model reply, leaving the JSON object. */
+export function cleanJsonString(str: string): string {
+  const unquoted = str
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  const match = unquoted.match(/\{[\s\S]*\}/);
+  return match ? match[0] : unquoted;
+}
+
+export const PROMPT_VERSION = '2026-09-23.1';
 
 export const MOMENT_SYSTEM_PROMPT = `You are the explanation engine for Chessplain, a game-review product for adult
 casual players (roughly 600–1200) who want to understand their losses, not be
@@ -14,6 +44,11 @@ INPUT (JSON):
   * played_move: piece, from/to squares, what attacked it before, what it attacks after
   * best_move: piece, from/to squares, what it attacks or defends
   * opponent_refutation: the opponent's reply, what it attacks or captures
+  * refutation_moves: EVERY move of refutation_line, in order, each with its piece,
+    squares, capture, what it attacks, and threatens_checkmate (the mate it would
+    deliver if the mover got another move)
+  * after_refutation: when present, why the obvious defence at the end of the line
+    fails (e.g. the attacked piece cannot just move away because of a mate threat)
   * threat_summary: summary of immediate threats and tactics
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
@@ -27,8 +62,11 @@ THINK IN THIS ORDER, SILENTLY:
    most charitable one a real player here would actually hold. If none is
    plausible (rare): the thought is "I saw the threat too late."
 3. Work out why the plan fails, using tactical_context, best_move, and refutation_line,
-   translated fully into words.
-4. Only then write the output.
+   translated fully into words. For every quiet move in refutation_moves (no
+   capture, no check), say what it does from its own facts — a quiet move is
+   the one a player cannot see the point of. If after_refutation is present, the
+   player will ask "why can't I just move the piece away?": answer it in words
+   (name the mating square and the pieces that make the threat).
 
 OUTPUT — strict JSON, nothing else:
 {
@@ -50,7 +88,7 @@ VOICE RULES:
 - probable_thought: the player's own words, present tense, at their rating's
   horizon ("If I grab the pawn, my fork wins it straight back"). ≤2 sentences.
   Never sarcastic, never stupid-sounding. The idea was usually reasonable.
-- what_actually_happens: ≤4 sentences. Name pieces by square ("your bishop on
+- what_actually_happens: ≤4 sentences (≤5 when after_refutation is present). Name pieces by square ("your bishop on
   c4", "the knight landing on f6"). Tell the refutation as a story in words;
   at most one move pair in notation. Name the alternative in prose with why it
   holds ("31.Rd1 keeps the rook where it defends"). If refutation_line shows a
@@ -59,11 +97,12 @@ VOICE RULES:
   bishop has no square left to go to").
 - Explain the failure of the PLAN, not the quality of the MOVE.
 - STRICT FACTUAL GROUNDING: Describe ONLY the pieces, squares, captures, and
-  threats explicitly present in tactical_context and refutation_line. NEVER
-  guess, extrapolate, or invent future moves (such as queen trades, piece
-  recaptures, or checkmates) not present in the provided refutation_line. If
-  refutation_line ends, stop there and explain the immediate positional or
-  material consequence.
+  threats explicitly present in tactical_context and refutation_line. Take each
+  move's piece and squares from its own entry in refutation_moves — a piece that
+  has moved is no longer on its old square. NEVER guess, extrapolate, or invent
+  future moves (such as queen trades, piece recaptures, or checkmates) not
+  present in refutation_moves or after_refutation. If the line ends, stop there
+  and explain the immediate positional or material consequence.
 - Distinguish a possible calculated continuation ("The computer's alternative
   starts with 14...Qe6") from what actually happened in the player's game.
 - takeaway: one action, checkable at the board mid-game ("before taking a

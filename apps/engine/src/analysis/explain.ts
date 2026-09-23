@@ -5,10 +5,11 @@ import { CandidateMoment, EloBand, GameSummary, MomentReport } from '../types.js
 import {
   MOMENT_SYSTEM_PROMPT,
   SUMMARY_SYSTEM_PROMPT,
+  buildMomentPayload,
+  cleanJsonString,
   validateMomentJson,
   validateSummaryJson,
 } from './prompts.js';
-import { buildTacticalContext } from './chess-facts.js';
 
 const openai = new OpenAI({
   baseURL: config.llmApiBase,
@@ -31,16 +32,6 @@ export function extractJsonString(choice?: OpenAI.Chat.Completions.ChatCompletio
   }
 
   return '{}';
-}
-
-function cleanJsonString(str: string): string {
-  const unquoted = str
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/, '')
-    .replace(/\s*```$/, '')
-    .trim();
-  const match = unquoted.match(/\{[\s\S]*\}/);
-  return match ? match[0] : unquoted;
 }
 
 export function isCreditExhaustionError(err: unknown): boolean {
@@ -159,27 +150,7 @@ export async function explainMoment(
     return createFallbackMoment(moment);
   };
 
-  const tacticalContext = buildTacticalContext(
-    moment.fenBefore,
-    moment.san,
-    moment.bestMoveSan,
-    moment.refutationLineSan
-  );
-
-  const inputPayload = {
-    position_before_fen: moment.fenBefore,
-    played_move: moment.san,
-    player_color: moment.playerColor,
-    player_elo_band: eloBand,
-    tactical_context: tacticalContext,
-    eval_before_pawns: parseFloat(moment.evalBefore.toFixed(2)),
-    eval_after_pawns: parseFloat(moment.evalAfter.toFixed(2)),
-    best_move: moment.bestMoveSan,
-    refutation_line: moment.refutationLineSan,
-    material_note: moment.materialNote,
-    phase: moment.phase,
-    opponent_name: opponentName,
-  };
+  const inputPayload = buildMomentPayload(moment, eloBand, opponentName);
 
   const userContent = JSON.stringify(inputPayload);
 
