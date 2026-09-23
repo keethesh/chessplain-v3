@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>Your Chessplain sign-in link</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+  a.cp-button:hover { background-color: #d8f98f !important; }
+  @media (max-width: 520px) { .cp-card { padding: 28px 22px !important; } .cp-h1 { font-size: 24px !important; } }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#111310;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#111310;">One tap and you're back to your games. The link works once, in the browser where you asked for it.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#111310;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
+        <tr>
+          <td style="padding:0 4px 20px; font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.01em; color:#f0f1e9;">
+            <span style="display:inline-block; width:10px; height:10px; background-color:#c9f36d; margin-right:10px; vertical-align:middle;"></span>chessplain
+          </td>
+        </tr>
+        <tr>
+          <td class="cp-card" style="background-color:#191d19; border:1px solid #343b32; border-radius:14px; padding:36px 32px;">
+            <p style="margin:0 0 12px; font-family:'IBM Plex Mono', Menlo, Consolas, monospace; font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:#c9f36d;">Sign in</p>
+            <h1 class="cp-h1" style="margin:0 0 14px; font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; font-size:28px; line-height:1.2; font-weight:600; letter-spacing:-0.01em; color:#f0f1e9;">Your sign-in link is ready.</h1>
+            <p style="margin:0 0 28px; font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; font-size:16px; line-height:1.6; color:#aab1a3;">Tap the button to sign in as <strong style="color:#f0f1e9; font-weight:600;">{{ .Email }}</strong>. No password needed.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-radius:10px; background-color:#c9f36d;">
+                  <a class="cp-button" href="{{ .ConfirmationURL }}" style="display:inline-block; padding:14px 26px; font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; font-size:16px; font-weight:600; color:#111310; text-decoration:none; border-radius:10px; background-color:#c9f36d;">Sign in to Chessplain &rarr;</a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:28px 0 0; padding-top:20px; border-top:1px solid #343b32; font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; font-size:14px; line-height:1.6; color:#899184;">Open it in the same browser where you asked for it. The link works once and expires in an hour.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 4px 0; font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; font-size:13px; line-height:1.6; color:#899184;">
+            Button not working? Paste this into your browser:<br>
+            <a href="{{ .ConfirmationURL }}" style="color:#aab1a3; word-break:break-all;">{{ .ConfirmationURL }}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 4px 0; font-family:'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; font-size:13px; line-height:1.6; color:#899184;">
+            Didn't ask for this? Ignore it. Nobody can sign in without the link.<br>
+            Chessplain &middot; <a href="https://getchessplain.com" style="color:#aab1a3;">getchessplain.com</a> &middot; <a href="mailto:support@getchessplain.com" style="color:#aab1a3;">support@getchessplain.com</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
