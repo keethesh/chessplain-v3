@@ -131,9 +131,8 @@ Don't switch models on reputation. The harness exists:
   Player names are not stored.
 - `OPENROUTER_API_KEY=… pnpm --filter @chessplain/engine benchmark:models`
   sends each fixture through the production payload builder and system prompt
-  to every candidate model, **pinned to the model's own provider**
-  (`provider: { only: [...], allow_fallbacks: false }`), and records which
-  provider actually served each call. Checks: schema/banned tokens
+  to every candidate model through OpenRouter's normal routing (any host), and
+  records which provider actually served each call. Checks: schema/banned tokens
   (`validateMomentJson`), phantom pieces ("knight on e3" where no knight ever
   stands on e3 in the line), curated must/must-not phrases for known-bad
   positions, and an LLM judge (default `anthropic/claude-sonnet-5`, a different
@@ -141,27 +140,29 @@ Don't switch models on reputation. The harness exists:
   plausibility, and takeaway usefulness. Reports land in
   `apps/engine/benchmark/results/`.
 
-Why pinning matters: the previous gateway (crof.ai) served models that were not
-the advertised ones, which invalidated earlier results. On OpenRouter,
-`deepseek/deepseek-v4.1-flash` is served by 26 hosts, many fp4/fp8-quantized;
-the headline $0.10/$0.50 price is a quantized host, while DeepSeek's own
-endpoint is $0.15/$0.60.
+Why a new benchmark: the previous gateway (crof.ai) served models that were not
+the ones it advertised, which invalidated earlier results. OpenRouter routes to
+real hosts of the named model; the served-by column shows which one answered.
 
-Candidates (first-party price per 1M tokens in/out, 2026-09-23):
+Candidates (OpenRouter list price per 1M tokens in/out, 2026-09-23; Gemini and
+Mistral deliberately excluded):
 
-| Model | Provider | In | Out |
-|---|---|---|---|
-| `openai/gpt-6-luna` (reasoning none, and low) | OpenAI | $0.10 | $0.50 |
-| `deepseek/deepseek-v4.1-flash` | DeepSeek | $0.15 | $0.60 |
-| `qwen/qwen3.8-flash` | Alibaba | $0.15 | $0.47 |
-| `qwen/qwen3.7-flash` | Alibaba | $0.03 | $0.13 |
-| `google/gemini-3.8-flash` | Google AI Studio | $0.75 | $3.75 |
-| `mistralai/mistral-small-2603` | Mistral | $0.15 | $0.60 |
+| Model | In | Out |
+|---|---|---|
+| `openai/gpt-6-luna` (reasoning none, and low) | $0.10 | $0.50 |
+| `openai/gpt-6-luna-pro` | $0.10 | $0.50 |
+| `deepseek/deepseek-v4.1-flash` | $0.10 | $0.50 |
+| `qwen/qwen3.8-flash` | $0.15 | $0.47 |
+| `qwen/qwen3.8-omni-flash` | $0.15 | $0.47 |
+
+`qwen/qwen3.7-flash` was dropped: its only host returned 429 on every probe.
+The judge runs at `reasoning: low` — at default effort Claude Sonnet 5 spends
+the whole token budget reasoning and returns empty content.
 
 Still open: a summary-prompt benchmark (the per-game summary may justify a
 stronger model — spotting a shared root cause across moments is reasoning,
-not narration), and deciding whether production calls OpenRouter with the
-same pinning or each provider's API directly.
+not narration), and switching production to the chosen model through
+OpenRouter.
 
 Production LLM (2026-09-23): `deepseek/deepseek-v4.1-flash` through a local
 CommandCode proxy on the VPS (`127.0.0.1:3050`), which maps

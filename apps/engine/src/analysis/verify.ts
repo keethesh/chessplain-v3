@@ -129,6 +129,7 @@ export async function verifyCandidates(
       bestMoveSan: bestSan || c.bestMoveSan,
       bestMoveUci: bestUci,
       refutationLineSan: refutationSan || c.refutationLineSan,
+      bestLineSan: (d20Before?.pv && buildRefutationLine(c.fenBefore, d20Before.pv, 4)) || c.bestLineSan,
       verified: true,
     });
   }

@@ -12,10 +12,9 @@ import type { MomentExplanation } from '../src/types.js';
 import type { BenchmarkFixture } from './export-benchmark-fixtures.js';
 
 /**
- * Moment-explanation benchmark across models, through OpenRouter with each model
- * PINNED to its first-party provider (allow_fallbacks: false). Resellers serve
- * quantized or substituted weights under the advertised name; pinning plus the
- * served-provider column in the report is what makes a result mean something.
+ * Moment-explanation benchmark across models, through OpenRouter's normal
+ * routing (any host). The report records which provider served each call, so
+ * a host that underperforms shows up and can be excluded by provider slug.
  *
  *   OPENROUTER_API_KEY=… pnpm --filter @chessplain/engine benchmark:models \
  *     [-- --models luna,qwen] [--limit 10] [--runs 2] [--judge anthropic/claude-sonnet-5 | --no-judge]
@@ -28,19 +27,16 @@ import type { BenchmarkFixture } from './export-benchmark-fixtures.js';
 interface Candidate {
   label: string;
   model: string;
-  /** OpenRouter provider slug of the model's own maker. */
-  provider: string;
   reasoning: 'none' | 'low';
 }
 
 const CANDIDATES: Candidate[] = [
-  { label: 'gpt-6-luna', model: 'openai/gpt-6-luna', provider: 'openai', reasoning: 'none' },
-  { label: 'gpt-6-luna+low', model: 'openai/gpt-6-luna', provider: 'openai', reasoning: 'low' },
-  { label: 'deepseek-v4.1-flash', model: 'deepseek/deepseek-v4.1-flash', provider: 'deepseek', reasoning: 'none' },
-  { label: 'qwen3.8-flash', model: 'qwen/qwen3.8-flash', provider: 'alibaba', reasoning: 'none' },
-  { label: 'qwen3.7-flash', model: 'qwen/qwen3.7-flash', provider: 'alibaba', reasoning: 'none' },
-  { label: 'gemini-3.8-flash', model: 'google/gemini-3.8-flash', provider: 'google-ai-studio', reasoning: 'none' },
-  { label: 'mistral-small-2603', model: 'mistralai/mistral-small-2603', provider: 'mistral', reasoning: 'none' },
+  { label: 'gpt-6-luna', model: 'openai/gpt-6-luna', reasoning: 'none' },
+  { label: 'gpt-6-luna+low', model: 'openai/gpt-6-luna', reasoning: 'low' },
+  { label: 'gpt-6-luna-pro', model: 'openai/gpt-6-luna-pro', reasoning: 'none' },
+  { label: 'deepseek-v4.1-flash', model: 'deepseek/deepseek-v4.1-flash', reasoning: 'none' },
+  { label: 'qwen3.8-flash', model: 'qwen/qwen3.8-flash', reasoning: 'none' },
+  { label: 'qwen3.8-omni-flash', model: 'qwen/qwen3.8-omni-flash', reasoning: 'none' },
 ];
 
 /**
@@ -62,14 +58,33 @@ You receive the verified FACTS (engine and board facts: every move of the
 refutation line with its pieces and squares, mate threats, and why the obvious
 defence fails) and the EXPLANATION a model wrote from them.
 
-Score each 1-5 (5 best) and list concrete problems. Strict JSON only:
-{
-  "accuracy": n,          // every claim matches the facts: right piece on the right square at the right moment, no invented moves
-  "explains_why": n,      // says WHY the refutation works: the point of each quiet move, and why the obvious defence fails when the facts give that reason. 1 = restates moves without reasons
-  "plausible_thought": n, // probable_thought is a reasonable idea a player at this rating could hold in this position
-  "useful_takeaway": n,   // one habit a player can actually check mid-game, tied to this mistake
-  "errors": ["…"]         // each factual error or missing key reason, one short sentence each
-}`;
+Score each criterion 1-5 (5 best) and list concrete problems:
+- accuracy: every claim matches the facts — right piece on the right square at the right moment, no invented moves.
+- explains_why: says WHY the refutation works — the point of each quiet move, and why the obvious defence fails when the facts give that reason. 1 = restates moves without reasons.
+- plausible_thought: probable_thought is a reasonable idea a player at this rating could hold in this position.
+- useful_takeaway: one habit a player can actually check mid-game, tied to this mistake.
+- errors: each factual error or missing key reason, one short sentence each (empty if none).`;
+
+const score = { type: 'integer', minimum: 1, maximum: 5 };
+const JUDGE_SCHEMA = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'judgement',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['accuracy', 'explains_why', 'plausible_thought', 'useful_takeaway', 'errors'],
+      properties: {
+        accuracy: score,
+        explains_why: score,
+        plausible_thought: score,
+        useful_takeaway: score,
+        errors: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  },
+};
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -150,7 +165,6 @@ async function runOne(f: BenchmarkFixture, c: Candidate, run: number, judgeModel
   try {
     const { json, ms } = await openRouter({
       model: c.model,
-      provider: { only: [c.provider], allow_fallbacks: false },
       messages: [
         { role: 'system', content: MOMENT_SYSTEM_PROMPT },
         { role: 'user', content: JSON.stringify(payload) },
@@ -193,21 +207,33 @@ async function runOne(f: BenchmarkFixture, c: Candidate, run: number, judgeModel
   }
 
   if (judgeModel) {
-    try {
-      const { json } = await openRouter({
-        model: judgeModel,
-        messages: [
-          { role: 'system', content: JUDGE_SYSTEM },
-          { role: 'user', content: JSON.stringify({ FACTS: payload, EXPLANATION: result.output }) },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0,
-        max_tokens: 800,
-      });
-      result.judge = JSON.parse(cleanJsonString(json.choices?.[0]?.message?.content ?? '{}'));
-    } catch (err) {
-      result.errors.push(`judge: ${err instanceof Error ? err.message : String(err)}`);
+    let lastError = '';
+    for (let attempt = 0; attempt < 2 && !result.judge; attempt++) {
+      try {
+        const { json } = await openRouter({
+          model: judgeModel,
+          messages: [
+            { role: 'system', content: JUDGE_SYSTEM },
+            { role: 'user', content: JSON.stringify({ FACTS: payload, EXPLANATION: result.output }) },
+          ],
+          response_format: JUDGE_SCHEMA,
+          temperature: 0,
+          // Default reasoning spends the whole budget thinking and returns nothing;
+          // low effort answers directly (~$0.0045/judgement vs ~$0.03).
+          max_tokens: 4000,
+          reasoning: { effort: 'low' },
+        });
+        const parsed = JSON.parse(cleanJsonString(json.choices?.[0]?.message?.content ?? '{}'));
+        if (['accuracy', 'explains_why', 'plausible_thought', 'useful_takeaway'].every((k) => typeof parsed[k] === 'number')) {
+          result.judge = { ...parsed, errors: Array.isArray(parsed.errors) ? parsed.errors : [] };
+        } else {
+          lastError = `malformed: ${JSON.stringify(parsed).slice(0, 120)}`;
+        }
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+      }
     }
+    if (!result.judge) result.errors.push(`judge: ${lastError}`);
   }
   return result;
 }
@@ -227,7 +253,7 @@ function report(results: Result[], candidates: Candidate[], fixtures: BenchmarkF
   ];
   for (const c of candidates) {
     const rs = results.filter((r) => r.candidate === c.label);
-    const judged = rs.filter((r) => r.judge);
+    const judged = rs.filter((r) => r.judge && typeof r.judge.accuracy === 'number');
     const curated = rs.filter((r) => r.curated);
     const ms = rs.flatMap((r) => (r.ms ? [r.ms / 1000] : []));
     const cost = rs.flatMap((r) => (r.costUsd !== undefined ? [r.costUsd] : []));

@@ -80,6 +80,7 @@ const candidate = (ply: number, moveNumber: number): CandidateMoment => ({
   bestMoveSan: 'Rxd7',
   bestMoveUci: 'd1d7',
   refutationLineSan: 'Rxd7 Qxd7',
+  bestLineSan: 'Rxd7 Qxd7',
   phase: 'middlegame',
   materialNote: '',
   candidateType: 'Turning point',

@@ -155,8 +155,12 @@ export function extractMoveFacts(fenBefore: string, moveSan: string): MoveFacts 
 }
 
 export interface LineMoveFacts extends MoveFacts {
+  /** Who plays it, relative to the player the report is for. */
+  by: 'you' | 'opponent';
   /** Moves that would deliver checkmate if the mover got a second move in a row. */
   threatens_checkmate: string[];
+  /** For a checkmating move: why the king has no way out. */
+  mate_reason?: string;
 }
 
 export interface TacticalContext {
@@ -167,6 +171,12 @@ export interface TacticalContext {
   refutation_moves: LineMoveFacts[];
   /** Why the obvious defence at the end of the line fails, when a mate threat forces it. */
   after_refutation: string | null;
+  /** Pieces each side loses from the played move through the end of the refutation line. */
+  refutation_outcome: string;
+  /** The engine's line starting with the better move, each move annotated. */
+  best_line_moves: LineMoveFacts[];
+  /** Pieces each side loses over the better line. */
+  best_line_outcome: string;
   refutation_sequence: string;
   threat_summary: string;
 }
@@ -242,36 +252,119 @@ function explainForcedDefence(fen: string): string | null {
   return threat;
 }
 
+const KING_STEPS = [-1, 0, 1].flatMap((df) => [-1, 0, 1].map((dr) => [df, dr])).filter(([df, dr]) => df || dr);
+
+/** Why a checkmated king has no way out: each flight square and what takes it away. */
+export function explainMate(fen: string): string | null {
+  const chess = new Chess(fen);
+  if (!chess.isCheckmate()) return null;
+  const defender = chess.turn();
+  const attacker = defender === 'w' ? 'b' : 'w';
+  const kingSquare = chess.board().flat().find((c) => c?.type === 'k' && c.color === defender)!.square;
+  const name = (sq: Square) => {
+    const p = chess.get(sq)!;
+    return `${getPieceDescription(p.type, p.color)} on ${sq}`;
+  };
+  const checkers = chess.attackers(kingSquare, attacker).map(name);
+
+  // Lift the king off the board so squares behind it along a checking line
+  // count as covered, as they are in the real position.
+  chess.remove(kingSquare);
+  const blocked: string[] = [];
+  const covered: string[] = [];
+  for (const [df, dr] of KING_STEPS) {
+    const file = kingSquare.charCodeAt(0) + df;
+    const rank = Number(kingSquare[1]) + dr;
+    if (file < 97 || file > 104 || rank < 1 || rank > 8) continue;
+    const sq = `${String.fromCharCode(file)}${rank}` as Square;
+    const occupant = chess.get(sq);
+    if (occupant?.color === defender) {
+      blocked.push(`${sq} (its own ${PIECE_NAMES[occupant.type]})`);
+      continue;
+    }
+    const guards = chess.attackers(sq, attacker).map(name);
+    if (guards.length) covered.push(`${sq} by the ${guards.join(' and the ')}`);
+  }
+
+  const parts = [`The ${getPieceDescription('k', defender)} on ${kingSquare} is in check from the ${checkers.join(' and the ')}.`];
+  if (blocked.length) parts.push(`Its own pieces block ${blocked.join(', ')}.`);
+  if (covered.length) parts.push(`${covered.join('; ')} ${covered.length === 1 ? 'is' : 'are'} covered.`);
+  parts.push('Nothing can capture the checking piece or block the check.');
+  return parts.join(' ');
+}
+
+const SIDE_VALUE_ORDER = ['q', 'r', 'b', 'n', 'p'] as const;
+
+function countPieces(fen: string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const c of new Chess(fen).board().flat()) if (c) counts[`${c.color}${c.type}`] = (counts[`${c.color}${c.type}`] ?? 0) + 1;
+  return counts;
+}
+
+/** "You lose a knight; the opponent loses a pawn." — pieces only, never point values. */
+function describeMaterialChange(startFen: string, endFen: string, player: 'w' | 'b'): string {
+  const start = countPieces(startFen);
+  const end = countPieces(endFen);
+  const lost = (color: 'w' | 'b') =>
+    SIDE_VALUE_ORDER.flatMap((t) => {
+      const n = (start[`${color}${t}`] ?? 0) - (end[`${color}${t}`] ?? 0);
+      return n > 0 ? [n === 1 ? `a ${PIECE_NAMES[t]}` : `${n} ${PIECE_NAMES[t]}s`] : [];
+    }).join(' and ');
+  const opponent = player === 'w' ? 'b' : 'w';
+  const mine = lost(player);
+  const theirs = lost(opponent);
+  if (!mine && !theirs) return 'By the end of this line, no material has changed hands.';
+  return `By the end of this line, ${mine ? `you have lost ${mine}` : 'you have lost nothing'} and ${theirs ? `the opponent has lost ${theirs}` : 'the opponent has lost nothing'}.`;
+}
+
+/**
+ * Annotates every move of a line from its own position. Quiet moves otherwise
+ * reach the model as bare notation and it guesses their purpose; without `by`
+ * it credits the player's own moves to the opponent.
+ */
+function annotateLine(line: Chess, sans: string[], player: 'w' | 'b'): LineMoveFacts[] {
+  const out: LineMoveFacts[] = [];
+  for (const san of sans) {
+    const before = line.fen();
+    const facts = extractMoveFacts(before, san);
+    if (!facts) break;
+    const mover = line.turn();
+    line.move(facts.san);
+    const annotated: LineMoveFacts = {
+      ...facts,
+      by: mover === player ? 'you' : 'opponent',
+      threatens_checkmate: facts.is_checkmate ? [] : findMateThreats(line.fen(), mover),
+    };
+    if (facts.is_checkmate) annotated.mate_reason = explainMate(line.fen()) ?? undefined;
+    out.push(annotated);
+  }
+  return out;
+}
+
+const splitLine = (san: string) => (san ? san.trim().split(/\s+/).filter(Boolean) : []);
+
 export function buildTacticalContext(
   fenBefore: string,
   playedMoveSan: string,
   bestMoveSan: string,
-  refutationLineSan: string
+  refutationLineSan: string,
+  /** Engine line from fenBefore starting with the best move; empty when the engine gave none. */
+  bestLineSan = ''
 ): TacticalContext {
+  const player = new Chess(fenBefore).turn();
   const playedFacts = extractMoveFacts(fenBefore, playedMoveSan);
-  const bestFacts = extractMoveFacts(fenBefore, bestMoveSan);
 
-  const line = new Chess(fenBefore);
+  const refutationBoard = new Chess(fenBefore);
   try {
-    line.move(playedMoveSan.replace(/^\d+\.+/, '').trim());
+    refutationBoard.move(playedMoveSan.replace(/^\d+\.+/, '').trim());
   } catch {}
-
-  // Annotate every move of the line from its own position. Only the first move
-  // used to be described, so quiet follow-ups (a queen stepping onto a mating
-  // diagonal) reached the model as bare notation and it guessed their purpose.
-  const refutationMoves: LineMoveFacts[] = [];
-  for (const san of refutationLineSan ? refutationLineSan.trim().split(/\s+/) : []) {
-    const before = line.fen();
-    const facts = extractMoveFacts(before, san);
-    if (!facts) break;
-    line.move(facts.san);
-    refutationMoves.push({
-      ...facts,
-      threatens_checkmate: facts.is_checkmate ? [] : findMateThreats(line.fen(), before.split(' ')[1] as 'w' | 'b'),
-    });
-  }
+  const refutationMoves = annotateLine(refutationBoard, splitLine(refutationLineSan), player);
   const refutationFacts = refutationMoves[0] ?? null;
-  const afterRefutation = refutationMoves.length > 0 ? explainForcedDefence(line.fen()) : null;
+  const afterRefutation = refutationMoves.length > 0 ? explainForcedDefence(refutationBoard.fen()) : null;
+
+  const bestBoard = new Chess(fenBefore);
+  const bestSans = splitLine(bestLineSan);
+  const bestLineMoves = annotateLine(bestBoard, bestSans.length ? bestSans : [bestMoveSan], player);
 
   // Build threat summary
   const threats: string[] = [];
@@ -296,10 +389,13 @@ export function buildTacticalContext(
 
   return {
     played_move: playedFacts,
-    best_move: bestFacts,
+    best_move: bestLineMoves[0] ?? null,
     opponent_refutation: refutationFacts,
     refutation_moves: refutationMoves,
     after_refutation: afterRefutation,
+    refutation_outcome: describeMaterialChange(fenBefore, refutationBoard.fen(), player),
+    best_line_moves: bestLineMoves,
+    best_line_outcome: describeMaterialChange(fenBefore, bestBoard.fen(), player),
     refutation_sequence: refutationLineSan,
     threat_summary: threats.join(' ') || 'No immediate tactical threat captured.',
   };

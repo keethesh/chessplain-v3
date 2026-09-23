@@ -47,6 +47,7 @@ export interface CandidateMoment {
   bestMoveSan: string;
   bestMoveUci: string;
   refutationLineSan: string;
+  bestLineSan: string; // engine line from fenBefore, starting with bestMoveSan
   phase: GamePhase;
   materialNote: string;
   candidateType: SeverityLabel;

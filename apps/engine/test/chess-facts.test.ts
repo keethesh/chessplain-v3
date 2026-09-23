@@ -4,6 +4,7 @@ import {
   buildTacticalContext,
   getAttacksFromSquare,
   findMateThreats,
+  explainMate,
 } from '../src/analysis/chess-facts.js';
 
 describe('Chess Facts Extraction', () => {
@@ -111,5 +112,54 @@ describe('Chess Facts Extraction', () => {
   it('does not invent threats when the side to move is in check', () => {
     // White is in check from the e7 queen; a null move would be illegal.
     expect(findMateThreats('4k3/4q3/8/8/8/8/8/4K3 w - - 0 1', 'b')).toEqual([]);
+  });
+
+  // The next three cases scored low on "explains why" for every benchmarked
+  // model (2026-09-23): the inputs lacked the reason, not the models.
+
+  it("marks which side plays each move, so the player's own check is not credited to the opponent", () => {
+    const ctx = buildTacticalContext('rn2kb1r/pp2qppp/2p2n2/4p1B1/2B1P3/1QN5/PPP2PPP/R3K2R b KQkq - 1 9', '9...b5', 'Kd8', 'Nxb5 Qb4+ Qxb4');
+
+    expect(ctx.refutation_moves.map((m) => [m.san, m.by])).toEqual([
+      ['Nxb5', 'opponent'],
+      ['Qb4+', 'you'],
+      ['Qxb4', 'opponent'],
+    ]);
+    expect(ctx.refutation_outcome).toBe('By the end of this line, you have lost a queen and a pawn and the opponent has lost nothing.');
+  });
+
+  it('says why a checkmate is mate', () => {
+    const ctx = buildTacticalContext('r1b1kbnr/pppp1Npp/8/8/2Bnq3/8/PPPP1P1P/RNBQKR2 w Qkq - 0 7', '7.Be2', 'Qe2', 'Nf3#');
+    const reason = ctx.refutation_moves[0].mate_reason!;
+
+    expect(reason).toContain('White king on e1 is in check from the Black knight on f3');
+    for (const sq of ['d1 (its own queen)', 'e2 (its own bishop)', 'f1 (its own rook)', 'd2 (its own pawn)', 'f2 (its own pawn)']) {
+      expect(reason).toContain(sq);
+    }
+  });
+
+  it('annotates the better line and what it wins, not just its first move', () => {
+    const ctx = buildTacticalContext(
+      'r1b4r/1pN1kpp1/p1np1q1p/2b1p3/2B1P3/3P1N2/PPP2PPP/R2QK2R w KQ - 1 10',
+      '10.Nxa8',
+      'Nd5+',
+      'Kd8 c3 b5',
+      'Nd5+ Kd8 Nxf6 gxf6'
+    );
+
+    expect(ctx.best_line_moves[0].is_check).toBe(true);
+    expect(ctx.best_line_moves[0].attacks_after_move).toContain('Black queen on f6');
+    expect(ctx.best_line_moves[2]).toMatchObject({ san: 'Nxf6', by: 'you', captured: 'Black queen on f6' });
+    expect(ctx.best_line_outcome).toBe('By the end of this line, you have lost a knight and the opponent has lost a queen.');
+  });
+
+  it('explains a back-rank mate, and returns null for a position that is not mate', () => {
+    expect(explainMate('6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1')).toBeNull();
+    const mate = explainMate('R5k1/5ppp/8/8/8/8/8/6K1 b - - 1 1')!;
+    expect(mate).toContain('Black king on g8 is in check from the White rook on a8');
+    expect(mate).toContain('f7 (its own pawn)');
+    // f8 and h8 are along the checking rank: covered, not free.
+    expect(mate).toMatch(/f8 by the White rook on a8/);
+    expect(mate).toMatch(/h8 by the White rook on a8/);
   });
 });

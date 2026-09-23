@@ -58,6 +58,7 @@ function candidate(overrides: Partial<CandidateMoment> = {}): CandidateMoment {
     bestMoveSan: 'Rxd7',
     bestMoveUci: 'd1d7', // what the shallow sweep thought
     refutationLineSan: '',
+    bestLineSan: '',
     phase: 'middlegame',
     materialNote: '',
     candidateType: 'Turning point',

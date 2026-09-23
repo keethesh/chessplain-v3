@@ -53,6 +53,7 @@ const MOMENT = {
   bestMoveSan: 'Rxd7',
   bestMoveUci: 'd1d7',
   refutationLineSan: 'Rxd7 Qxd7',
+  bestLineSan: 'Rxd7 Qxd7',
   phase: 'middlegame' as const,
   materialNote: '',
   candidateType: 'Turning point' as const,
