@@ -2,7 +2,22 @@
 
 Reviewed against the repository on 6 September 2026. Existing strategy documents were treated as hypotheses. No production analytics, customer revenue, VPS benchmarks, Stripe account, or live database was inspected.
 
-For the complete implementation inventory, including design and user-flow changes, see [CHANGES_2026-09-06.md](CHANGES_2026-09-06.md). For current documentation entry points, see [README.md](README.md).
+**This assessment predates three shipped changes: quota enforcement (2026-09-17),
+the Cloudflare Workers migration with a completed custom-domain cutover
+(2026-09-23), and a full visual/UX redesign around a "Forensic Match Report"
+identity with a new headline and guided debrief flow (see
+[`apps/web/DESIGN.md`](../apps/web/DESIGN.md) and
+[`apps/web/PRODUCT.md`](../apps/web/PRODUCT.md) for current state).** The
+monetization mechanics, positioning arguments, and open risks below are
+otherwise still current as of 2026-09-23 — none of those three changes altered
+what the customer pays for, the competitive argument, or the material risks
+list. Treat "current source behavior" claims about the pre-redesign UI as
+historical; treat monetization/positioning/risk analysis as live.
+
+For the complete implementation inventory as of the original review, including
+design and user-flow changes, see [CHANGES_2026-09-06.md](CHANGES_2026-09-06.md)
+(archive — describes the pre-redesign UI). For current documentation entry
+points, see [README.md](README.md).
 
 ## Product decision
 

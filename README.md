@@ -13,8 +13,8 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Current code:** typecheck, 59 unit tests, and production builds for both
-packages pass. The engine is deployed to the production VPS.
+**Current code:** typecheck, 63 unit tests across 15 files, and production
+builds for both packages pass. The engine is deployed to the production VPS.
 
 **Live checks:** analysis works end-to-end on the deployed engine (Morphy Opera
 Game: completed, real chess-accurate prose, no fallback text); the API smoke
@@ -23,9 +23,9 @@ were created and expired without payment. These checks do not prove every
 explanation correct or the full paid lifecycle.
 
 **Cloudflare migration:** The frontend runs on Cloudflare Workers (100,000 free
-requests/day, unlimited static bandwidth, no CPU-timeout billing) and is live on
-`getchessplain.com` with 11/11 routes returning HTTP 200. Deploy updates with
-`pnpm --filter @chessplain/web deploy:worker`.
+requests/day, unlimited static bandwidth, no CPU-timeout billing). `getchessplain.com`
+and `www.getchessplain.com` are cut over and both return HTTP 200. Deploy updates
+with `pnpm --filter @chessplain/web deploy:worker`.
 
 **Before advertising:** two things remain — verify the real subscription/portal
 lifecycle with a card, and create the support mailbox the legal pages promise.
@@ -74,6 +74,7 @@ Read [`docs/README.md`](docs/README.md) for the index. In short:
 
 - [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) — ordered pre-launch steps, env blocks, and what is verified vs still blocking
 - [`docs/PRODUCT_REVIEW.md`](docs/PRODUCT_REVIEW.md) — positioning, monetization, what to validate and in what order
+- [`docs/ANALYSIS_QUALITY_ROADMAP.md`](docs/ANALYSIS_QUALITY_ROADMAP.md) — planned changes to moment selection, prompts, and model choice
 - [`docs/ENGINE_DEPLOYMENT.md`](docs/ENGINE_DEPLOYMENT.md) — how to deploy the engine to a VPS
 - [`apps/web/PRODUCT.md`](apps/web/PRODUCT.md) and [`apps/web/DESIGN.md`](apps/web/DESIGN.md) — product intent and the design system
 - [`plans/README.md`](plans/README.md) — implementation plans, with status

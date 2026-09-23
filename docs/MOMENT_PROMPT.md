@@ -1,13 +1,30 @@
 # Chessplain voice contract — moment & summary prompts
 
-This is the design system for the product's words. The report page
-(`wireframes-report-page.html`) renders these outputs 1:1: every JSON field
-maps to a fixed slot in the moment card; the summary fields map to the
-headline/story block at the top of the page.
+This is the design system for the product's words. The report page renders
+these outputs 1:1: every JSON field maps to a fixed slot in the moment card
+(`MomentCard.tsx`); the summary fields map to the headline/story block at the
+top of the report (`SharedReportInteractiveView.tsx`).
 
-- **prompt_version: `2026-08-31.2`** — store on every `game_analyses` row (column exists). Bump on every edit. Gold examples stay stable across versions.
-- Runs **once per moment** (max 5) + **once for the summary** per game. ~6 calls/game on a Flash-class model ≈ under $0.01.
-- The pipeline must run the [banned-token check](#banned-token-check-mechanical) on every output and retry once with violations quoted back before logging to `analysis_errors`.
+This document is a mirror of `apps/engine/src/analysis/prompts.ts` for
+readability — that file is the source of truth. If they disagree, the code
+wins; re-sync this document rather than trusting it. For planned changes to
+these prompts (what inputs they should receive, what the model should and
+should not be asked to invent), see
+[`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md) — none of that is
+implemented yet.
+
+- **`PROMPT_VERSION` constant: `2026-09-17.1`** (`prompts.ts`). Bump on every
+  prompt edit. This constant is currently **defined but not persisted**
+  anywhere — no `game_analyses` write includes it, despite an earlier version
+  of this document claiming it is stored per-row. Wire it into
+  `pipeline.ts`/`worker.ts` before relying on it to distinguish which prompt
+  version produced a given report.
+- Runs **once per moment** (typically 2–4 per game, selected by `select.ts`)
+  + **once for the summary** per game.
+- The pipeline runs the [banned-token check](#3-banned-token-check-mechanical)
+  on every output and retries once with violations quoted back
+  (`explain.ts`, attempt 2) before logging to `analysis_errors` and falling
+  back to generic template prose (`createFallbackMoment`).
 
 ---
 
@@ -22,17 +39,25 @@ player's move changed the outcome. You explain it in the player's own terms.
 INPUT (JSON):
 - position_before_fen, played_move (SAN with move number), player_color
 - player_elo_band ("under_1000" | "1000_1400" | "above_1400")
+- tactical_context:
+  * played_move: piece, from/to squares, what attacked it before, what it attacks after
+  * best_move: piece, from/to squares, what it attacks or defends
+  * opponent_refutation: the opponent's reply, what it attacks or captures
+  * threat_summary: summary of immediate threats and tactics
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
 - material_note, phase ("opening"|"middlegame"|"endgame"), opponent_name
 
 THINK IN THIS ORDER, SILENTLY:
-1. List 2–3 plausible intentions behind played_move at this rating. Pick the
+1. Read tactical_context carefully: notice exactly which piece moved (e.g. "Black knight from b6 to d7"),
+   what was attacking it before, and what the opponent's refutation targets.
+   NEVER guess piece coordinates or piece identities — use the exact facts from tactical_context.
+2. List 2–3 plausible intentions behind played_move at this rating. Pick the
    most charitable one a real player here would actually hold. If none is
    plausible (rare): the thought is "I saw the threat too late."
-2. Work out why the plan fails, using best_move and refutation_line,
+3. Work out why the plan fails, using tactical_context, best_move, and refutation_line,
    translated fully into words.
-3. Only then write the output.
+4. Only then write the output.
 
 OUTPUT — strict JSON, nothing else:
 {
@@ -50,16 +75,26 @@ severity_label — one of: "Turning point", "Last chance", "Missed win",
 the size of the swing: you may not say or imply "this cost you 4 pawns."
 
 VOICE RULES:
-- Refer to the opponent by name or “they/their” — never guess gender from a username.
+- Refer to the opponent by name or "they/their" — never guess gender from a username.
 - probable_thought: the player's own words, present tense, at their rating's
   horizon ("If I grab the pawn, my fork wins it straight back"). ≤2 sentences.
   Never sarcastic, never stupid-sounding. The idea was usually reasonable.
 - what_actually_happens: ≤4 sentences. Name pieces by square ("your bishop on
   c4", "the knight landing on f6"). Tell the refutation as a story in words;
   at most one move pair in notation. Name the alternative in prose with why it
-  holds ("31.Rd1 keeps the rook where it defends"). When the data supports it,
-  end with the downstream consequence ("that's why every move after felt worse").
+  holds ("31.Rd1 keeps the rook where it defends"). If refutation_line shows a
+  downstream consequence, name only that one ("the knight recaptures on f6");
+  otherwise end on the immediate consequence of the refutation itself ("that
+  bishop has no square left to go to").
 - Explain the failure of the PLAN, not the quality of the MOVE.
+- STRICT FACTUAL GROUNDING: Describe ONLY the pieces, squares, captures, and
+  threats explicitly present in tactical_context and refutation_line. NEVER
+  guess, extrapolate, or invent future moves (such as queen trades, piece
+  recaptures, or checkmates) not present in the provided refutation_line. If
+  refutation_line ends, stop there and explain the immediate positional or
+  material consequence.
+- Distinguish a possible calculated continuation ("The computer's alternative
+  starts with 14...Qe6") from what actually happened in the player's game.
 - takeaway: one action, checkable at the board mid-game ("before taking a
   pawn: where does my piece land, and how does it come back?"). Exactly one.
 - NEVER USE: blunder, mistake, inaccuracy, accuracy, centipawn, eval,
@@ -72,27 +107,40 @@ VOICE RULES:
 GOLD STANDARD — match this register exactly:
 
 Example A (middlegame, 1198 White, "Turning point"):
-{"played":"23.Bxf7+","probable_thought":"If I grab the pawn, my fork wins it straight back — I stay up material.","what_actually_happens":"The bishop gets kicked to h5 and never returns. From here on, you're defending the dark squares around your king with pieces that can't see them — that's why the position felt worse every move.","concept_name":"Trapped piece","concept_definition":"a piece with no safe squares left","takeaway":"Next game, before taking a pawn: where does my piece land, and how does it come back?","severity_label":"Turning point"}
+{"played":"23.Bxf7+","probable_thought":"If I grab the pawn, my fork wins it straight back — I stay up material.","what_actually_happens":"The bishop gets kicked to h5, and from there it has no square where it is safe. You gave up a bishop for one pawn, and the piece you took the pawn with is now stuck on the edge of the board.","concept_name":"Trapped piece","concept_definition":"a piece with no safe squares left","takeaway":"Next game, before taking a pawn: where does my piece land, and how does it come back?","severity_label":"Turning point"}
 
 Example B (late middlegame, 1198 White, "Last chance"):
-{"played":"31.Rd3","probable_thought":"Lift the rook over to the kingside and I finally get an attack going.","what_actually_happens":"Your attack needs three moves to build. Their h-file break needs one. While the rook is crossing, mate arrives on h2. 31.Rd1 keeps the rook where it defends.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what he can do in one move — not two.","severity_label":"Last chance"}
+{"played":"31.Rd3","probable_thought":"Lift the rook over to the kingside and I finally get an attack going.","what_actually_happens":"Your attack needs three moves to build. Their h-file break needs one. While the rook is crossing, the refutation lands first on the h-file and your king is left without a defender there. 31.Rd1 keeps the rook where it defends.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what they can do in one move — not two.","severity_label":"Last chance"}
 ```
 
-User message = the input JSON, nothing else.
+`tactical_context` is built by `buildTacticalContext()` in
+`apps/engine/src/analysis/chess-facts.ts`, which uses `chess.js` to compute
+attackers/defenders/threatened pieces from the FEN — it is not generated or
+guessed by the model. `eval_before_pawns`/`eval_after_pawns` are sent for the
+model's internal reasoning only; the voice rules forbid surfacing them or any
+signed/percentage number.
+
+User message = the input JSON (`JSON.stringify(inputPayload)` in
+`explain.ts`), nothing else.
+
+**Known gap** (tracked in the roadmap doc): the model receives one FEN with
+no move history, no clock time, and a rating band that defaults to
+`1000_1400` unless the caller supplies it — `elo_band` is not derived from
+the game's PGN `WhiteElo`/`BlackElo` headers anywhere in this pipeline today.
 
 ---
 
 ## 2. Game summary prompt (system)
 
-Runs once after all moments exist.
+Runs once after all moments exist (`explainSummary` in `explain.ts`).
 
 ```
 You write the top of a Chessplain report: the first thing a player reads
-after a loss. Adult casual players (600–1200). No grades, no praise sandwich,
-no numbers.
+after their game. Adult casual players (600–1200). No grades, no praise
+sandwich, no numbers.
 
-INPUT (JSON): result, player_color, player_name, opponent_name, move_count,
-time_control, and the full moment JSONs in move order.
+INPUT (JSON): outcome, result, player_color, player_name, opponent_name,
+move_count, time_control, and the full moment JSONs in move order.
 
 OUTPUT — strict JSON, nothing else:
 {
@@ -101,13 +149,32 @@ OUTPUT — strict JSON, nothing else:
   "focus_habit": "…"    // the ONE habit for the next game
 }
 
+THE OUTCOME IS NOT NEGOTIABLE:
+- "outcome" states what happened to the player you are addressing. Obey it.
+  Never infer the winner from "result" yourself, and never contradict it.
+- outcome "won": they WON. Do not say the opponent converted, closed it out,
+  or built pressure they could not escape. Close on how they secured it, or on
+  the moment that nearly cost them the win ("You still won, but move 19 gave
+  them a way back in.").
+- outcome "lost": they LOST. Close in one calm clause on how it finished
+  ("After that, Carlos converted cleanly.").
+- outcome "drew": it ended in a DRAW. Do not declare either side a winner.
+- A won game still has moments worth studying. Reviewing a win is normal —
+  never apologise for it and never invent a defeat to explain.
+
 RULES:
 - headline names where the game was actually decided — ideally contradicting
-  the player's likely belief about where they lost ("You didn't lose this in
-  the endgame."). No move numbers in the headline.
-- story references at least two moments by move number, and closes in one
-  calm clause with how the game finished ("After that, Carlos converted
-  cleanly.").
+  the player's likely belief ("You didn't lose this in the endgame.", or for a
+  win, "This was closer than the result looks."). No move numbers in headline.
+- story references at least two moments by move number when two exist, and
+  closes in one calm clause consistent with "outcome".
+- STRICT GROUNDING: the story is built only from the moments provided and the
+  non-negotiable outcome. Every move, capture, threat, and consequence you name
+  must come from a provided moment. NEVER invent downstream moves or game
+  events that are not in the moments list — do not claim a weakness "stayed
+  weak", an attack "never returned", or the position "got worse every move"
+  unless a provided moment says so. When the moments end, stop there and close
+  on the outcome.
 - focus_habit: if two moments share a root cause, name the shared cause and
   write the habit against it — that is the most valuable sentence you produce.
   Otherwise lift the strongest moment's takeaway.
@@ -115,38 +182,64 @@ RULES:
 - NEVER USE: blunder, mistake, inaccuracy, accuracy, centipawn, eval, engine,
   "better was", any number with + or −, any percentage.
 
-GOLD STANDARD:
-{"headline":"You didn't lose this in the endgame.","story":"Move 23 was the whole story. You traded your good bishop for a pawn, and the dark squares around your king stayed weak for the rest of the game. Move 31 was your last real chance — the rook lift was one tempo too slow. After that, Carlos converted cleanly.","focus_habit":"Before taking a free pawn, trace where the piece lands and how it comes back."}
+GOLD STANDARD (outcome "lost"):
+{"headline":"You didn't lose this in the endgame.","story":"Move 23 was the whole story. You took on f7 with the bishop, and afterwards it had no square where it was safe — a bishop for one pawn. Move 31 was your last real chance: the rook lift was one move too slow, and the refutation landed first on the h-file. After that, Carlos converted cleanly.","focus_habit":"Before taking a free pawn, trace where the piece lands and how it comes back."}
+
+GOLD STANDARD (outcome "won"):
+{"headline":"This was closer than the result looks.","story":"Move 14 was the one that nearly cost you — the knight left the centre and their bishop got the long diagonal for free. Move 22 was where you took it back: your pieces came home to the squares that cover it. You still won, but the loose-centre habit from move 14 is the thing to fix.","focus_habit":"Before moving a centre knight, check which diagonal it stops covering."}
 ```
+
+User message = the input JSON, nothing else.
 
 ---
 
 ## 3. Banned-token check (mechanical)
 
-Run on every generated string field before persisting. One retry with the
-violations quoted back; a second failure logs to `analysis_errors` and the
-moment falls back to the previous prompt version's output if cached, else is
-dropped (a 4-moment report beats a broken one).
+`findBannedTokens()` in `prompts.ts`. Run on every generated string field
+before persisting. One retry with the violations quoted back
+(`temperature: 0.1`); a second failure logs to `analysis_errors` with stage
+`explaining_moment`/`explaining_summary` and the moment falls back to
+`createFallbackMoment()`'s generic template prose (a degraded moment beats a
+dropped one, but see `LlmUnavailableError` in `explain.ts`: if *every*
+candidate in a report falls back, or the gateway returns a credit-exhaustion
+error, the whole pipeline throws instead of publishing an all-fallback
+report — `worker.ts` retries the row, then marks it `failed`, and quota
+checks ignore failed rows).
 
+Exact patterns (`BANNED_PATTERNS` in `prompts.ts`):
+
+```js
+/\b(blunder|inaccurac\w*|mistake|accuracy|centipawn|stockfish)\b/i,
+/\bbetter (was|would have been)\b/i,
+/\beval(uation)?\b/i,
+/(?:^|\s)[+−]\s?\d+/,           // signed numbers
+/\d+(?:\.\d+)?\s?%/,            // percentages
 ```
-(?i)\b(blunder|inaccurac\w*|mistake|accuracy|centipawn|stockfish)\b
-(?i)\bbetter (was|would have been)\b
-(?i)\beval(uation)?\b
-[+−]\s?\d            # signed numbers
-\d+(\.\d+)?\s?%      # percentages
-```
 
-(Whitelist if needed: move numbers `23.Bxf7+` are fine — the signed-number
-regex only fires on standalone +/− values; tune to your SAN shape.)
+Move numbers like `23.Bxf7+` are unaffected — the signed-number pattern only
+matches a standalone leading `+`/`−` before a digit.
 
-## 4. Weekly spot-check rubric (human, 5 reports/week)
+## 4. Validation (mechanical)
 
-1. **Intention named?** probable_thought is plausible for *this* position, not generic filler.
-2. **Concept defined?** ≤8 words, survives the read-aloud test.
+`validateMomentJson()` and `validateSummaryJson()` in `prompts.ts` check
+required fields are present, `severity_label` is one of the four allowed
+values, and (for the summary) the stated outcome doesn't contradict banned
+declaring-a-winner language on a draw. Both run before the banned-token
+check on every attempt.
+
+## 5. Weekly spot-check rubric (human)
+
+Not automated. Sample recent reports and check:
+
+1. **Intention named?** `probable_thought` is plausible for *this* position,
+   not generic filler.
+2. **Concept defined?** `concept_definition` ≤8 words, survives the
+   read-aloud test.
 3. **Would a 900 understand every sentence?**
-4. **Banned tokens?** (mechanical — §3)
-5. **Does the takeaway change behavior mid-game?** Specific enough to check at the board.
+4. **Banned tokens?** (mechanical — §3, should never fail if the pipeline is
+   working; a failure here means the retry path has a bug.)
+5. **Does the takeaway change behavior mid-game?** Specific enough to check
+   at the board.
 
-Failures feed prompt edits → bump prompt_version → note the failure class
-in `analysis_errors`. Two consecutive weeks of clean rubrics = stop weekly
-checks, drop to 5/month.
+Failures feed prompt edits → bump `PROMPT_VERSION` → note the failure class
+in `analysis_errors`.

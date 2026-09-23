@@ -1,18 +1,24 @@
 # Launch checklist
 
 **Status: NOT ready to advertise.** The production API is deployed and live
-checkout creation works. The frontend has been migrated to Cloudflare Workers (replaces Vercel)
-and is live on workers.dev; DNS cutover to `getchessplain.com` and a real subscription lifecycle remain.
+checkout creation works. The frontend has been migrated to Cloudflare Workers
+(replaces Vercel); custom domain cutover is complete — `getchessplain.com` and
+`www.getchessplain.com` both serve the worker directly. A real subscription
+lifecycle test and the support mailbox remain (sections 2 and 4).
 
-Verified on 2026-09-09 against engine commit `d01c697`. Documentation-only commits
-may be newer. Do not confuse the API verifier's `READY` output with launch approval:
-it does not test the website, payment completion, premium access, or cancellation.
+Billing/database/LLM evidence below was verified on 2026-09-09 against engine
+commit `d01c697` and is unchanged since — re-verify before relying on it for a
+launch decision. Repository test count and the domain cutover were reverified
+on 2026-09-23 against web commit `83dc076`. Documentation-only commits may be
+newer. Do not confuse the API verifier's `READY` output with launch approval:
+it does not test the website, payment completion, premium access, or
+cancellation.
 
 ## Current evidence
 
 | Area | Evidence | Scope / remaining gap |
 |---|---|---|
-| Repository | Typecheck, 56/56 tests in 14 files, both production builds passed | Current local verification; not proof of every production flow |
+| Repository | Typecheck, 63/63 tests in 15 files, both production builds passed (reverified 2026-09-23) | Current local verification; not proof of every production flow |
 | GitHub CI | [Run 34393964367](https://github.com/keethesh/chessplain-v3/actions/runs/34393964367) succeeded at `d01c697` | Earlier run at `0163972` failed because tests depended on a local `.env`; fixed |
 | Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, commit `d01c697`, active | VPS tests also passed 56/56 without a local `.env` |
 | API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
@@ -29,7 +35,7 @@ it does not test the website, payment completion, premium access, or cancellatio
 | Webhook routing | New engine endpoint enabled; obsolete web endpoint disabled, not deleted | New: `we_1UDrkeFtgmZSE6kxl5rhwS0F`; old: `we_1SOsFmFtgmZSE6kx0QBpARJx` |
 | Portal configuration | Live default configuration active; cancellation enabled at period end | Customer portal journey and cancellation webhook still need a real subscription test |
 | HTTPS | Caddy validates and reloads; API sends `Strict-Transport-Security: max-age=31536000` | Scoped to API host, no `includeSubDomains` |
-| Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; 11/11 routes verified HTTP 200 | Cutover `getchessplain.com` in Cloudflare dashboard |
+| Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; custom domains cut over — `https://getchessplain.com` and `https://www.getchessplain.com` both verified HTTP 200 on 2026-09-23 | Domain cutover done; remaining launch blockers are sections 2 and 4 below |
 | Quota | **ENFORCED** and verified: free account `201, 201, 402`; premium never blocked (see section 3) | Was unbounded until 2026-09-17 |
 | Client IP | `TRUST_PROXY` was unset, so every request on earth reported `127.0.0.1`, making the anonymous quota and the rate limiter global. Now `127.0.0.1,::1`; a real submission records `77.98.146.19` | Trust only loopback; never `true` |
 
@@ -38,19 +44,20 @@ local viewport audit 30/30 page/width combinations; site and sample share images
 rendered as 1200×630 PNGs. These are recorded local results, not fresh checks of the
 blocked production website or a load test. Rerun the relevant gates after changes.
 
-## 1. Cloudflare Custom Domain Cutover (`getchessplain.com`)
+## 1. Cloudflare Custom Domain Cutover (`getchessplain.com`) — DONE
 
-The frontend has been completely moved from Vercel to **Cloudflare Workers** using
-`@opennextjs/cloudflare`. It is live and verified on Cloudflare's global edge network:
+The frontend has moved from Vercel to **Cloudflare Workers** using
+`@opennextjs/cloudflare`, and the custom domain cutover is complete:
 
-- Live URL: `https://chessplain-web.oxide-website.workers.dev`
-- 11/11 routes returning HTTP 200 (including dynamic `/r/[shareId]` and dynamic OG images)
+- `https://getchessplain.com` and `https://www.getchessplain.com` both serve
+  the worker directly and return HTTP 200 (reverified 2026-09-23).
+- Live worker URL (still reachable directly): `https://chessplain-web.oxide-website.workers.dev`
 - Unlimited static asset bandwidth; 100,000 free edge requests/day; zero Vercel CPU limits
 
-### Cutover steps in Cloudflare Dashboard:
+### How the cutover was done (for reference / redoing on a new zone)
 
-Because `getchessplain.com` is already an active zone in this Cloudflare account,
-switch the domain from the old Vercel IP to the Worker:
+`getchessplain.com` was already an active zone in this Cloudflare account, so
+the domain was switched from the old Vercel IP to the Worker:
 
 1. Open [Cloudflare Dashboard](https://dash.cloudflare.com)
 2. Go to **Workers & Pages** -> **chessplain-web**
