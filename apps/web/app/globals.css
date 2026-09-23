@@ -877,7 +877,6 @@ input, textarea {
   }
 }
 body { color:var(--w-ink1); }
-button { color:inherit; }
 .price-plan,.price-plan h2,.price-value,.price-plan li,.questions-list summary { color:var(--w-ink1); }
 .price-plan > p,.price-value small,.price-plan li p { color:var(--w-ink2); }
 .price-plan .email-input { color:var(--w-ink1); background:#151815; }
@@ -904,3 +903,25 @@ button { color:inherit; }
 .sample-board > div { animation: evidence-settle .28s ease-out both; }
 .report-analysis #lesson-explanation { animation: lesson-arrive .28s ease-out both; }
 @keyframes evidence-settle { from { opacity:.55; transform:scale(.985); } to { opacity:1; transform:scale(1); } }
+#board-view [role="group"] button:first-child {
+  background: var(--w-surface);
+  color: var(--w-ink1);
+  border: 1px solid var(--w-border);
+}
+#board-view [role="group"] button:first-child:hover:not(:disabled) {
+  background: var(--w-surface-subtle);
+}
+#board-view [role="group"] button:last-child {
+  background: var(--w-accent) !important;
+  color: var(--w-on-accent) !important;
+  font-weight: 600;
+}
+#board-view [role="group"] button:last-child span {
+  color: var(--w-on-accent) !important;
+}
+#board-view [role="group"] button:last-child svg {
+  color: var(--w-on-accent) !important;
+}
+#board-view [role="group"] button:last-child:hover:not(:disabled) {
+  background: var(--w-accent-hover) !important;
+}
