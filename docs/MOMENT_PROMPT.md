@@ -13,7 +13,7 @@ should not be asked to invent), see
 [`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md) — none of that is
 implemented yet.
 
-- **`PROMPT_VERSION` constant: `2026-09-23.1`** (`prompts.ts`). Bump on every
+- **`PROMPT_VERSION` constant: `2026-09-23.2`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**
   anywhere — no `game_analyses` write includes it, despite an earlier version
   of this document claiming it is stored per-row. Wire it into
@@ -44,10 +44,14 @@ INPUT (JSON):
   * best_move: piece, from/to squares, what it attacks or defends
   * opponent_refutation: the opponent's reply, what it attacks or captures
   * refutation_moves: EVERY move of refutation_line, in order, each with its piece,
-    squares, capture, what it attacks, and threatens_checkmate (the mate it would
-    deliver if the mover got another move)
+    squares, capture, what it attacks, by ("you" or "opponent" — who plays it),
+    threatens_checkmate (the mate it would deliver if the mover got another move),
+    and mate_reason when the move is checkmate (why the king has no way out)
   * after_refutation: when present, why the obvious defence at the end of the line
     fails (e.g. the attacked piece cannot just move away because of a mate threat)
+  * refutation_outcome: what each side has lost by the end of the refutation line
+  * best_line_moves: the engine's line starting with best_move, annotated the same way
+  * best_line_outcome: what each side has lost by the end of the better line
   * threat_summary: summary of immediate threats and tactics
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
@@ -65,8 +69,15 @@ THINK IN THIS ORDER, SILENTLY:
    capture, no check), say what it does from its own facts — a quiet move is
    the one a player cannot see the point of. If after_refutation is present, the
    player will ask "why can't I just move the piece away?": answer it in words
-   (name the mating square and the pieces that make the threat).
-4. Only then write the output.
+   (name the mating square and the pieces that make the threat). If a move is
+   checkmate, say why from its mate_reason (which squares are blocked or
+   covered). Attribute every move by its "by" field: moves marked "you" are the
+   player's own, even inside the refutation line.
+4. Work out why the better move works from best_line_moves and
+   best_line_outcome: what it attacks, what it forces, what it wins. "It
+   attacks the queen" is not enough when the line shows the queen is won.
+   For "Missed win" moments the played move is not punished — the loss is what
+   best_line_moves would have won; tell that story, not the refutation line.
 
 OUTPUT — strict JSON, nothing else:
 {
@@ -91,17 +102,18 @@ VOICE RULES:
 - what_actually_happens: ≤4 sentences (≤5 when after_refutation is present). Name pieces by square ("your bishop on
   c4", "the knight landing on f6"). Tell the refutation as a story in words;
   at most one move pair in notation. Name the alternative in prose with why it
-  holds ("31.Rd1 keeps the rook where it defends"). If refutation_line shows a
-  downstream consequence, name only that one ("the knight recaptures on f6");
-  otherwise end on the immediate consequence of the refutation itself ("that
-  bishop has no square left to go to").
+  works, using best_line_moves ("31.Rd1 keeps the rook where it defends";
+  "Nd5+ checks the king and hits the queen, so the queen falls next move"). If
+  refutation_line shows a downstream consequence, name only that one ("the
+  knight recaptures on f6"); otherwise end on the immediate consequence of the
+  refutation itself ("that bishop has no square left to go to").
 - Explain the failure of the PLAN, not the quality of the MOVE.
 - STRICT FACTUAL GROUNDING: Describe ONLY the pieces, squares, captures, and
   threats explicitly present in tactical_context and refutation_line. Take each
   move's piece and squares from its own entry in refutation_moves — a piece that
   has moved is no longer on its old square. NEVER guess, extrapolate, or invent
   future moves (such as queen trades, piece recaptures, or checkmates) not
-  present in refutation_moves or after_refutation. If the line ends, stop there
+  present in refutation_moves, best_line_moves, or after_refutation. If a line ends, stop there
   and explain the immediate positional or material consequence.
 - Distinguish a possible calculated continuation ("The computer's alternative
   starts with 14...Qe6") from what actually happened in the player's game.
