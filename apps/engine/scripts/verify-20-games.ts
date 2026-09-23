@@ -126,6 +126,7 @@ async function main() {
         const banned = [
           ...findBannedTokens(m.probable_thought),
           ...findBannedTokens(m.what_actually_happens),
+          ...findBannedTokens(m.why_better),
           ...findBannedTokens(m.takeaway),
         ];
         if (banned.length > 0) {

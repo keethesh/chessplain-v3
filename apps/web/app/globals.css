@@ -195,6 +195,7 @@ input, textarea {
   transition: color 0.18s ease;
 }
 .nav-links a:hover { color: var(--w-accent); }
+.nav-links a { white-space: nowrap; }
 .nav-links .nav-cta {
   border: 0;
   border-radius: 4px;
@@ -807,13 +808,46 @@ input, textarea {
 .badge-accent { background: var(--w-accent-soft); color: var(--w-accent); }
 .badge-error { background: var(--w-error-soft); color: #ffad9f; }
 .badge-success { background: var(--w-success-soft); color: var(--w-success); }
-.analysis-wait { max-width: 680px; }
-.analysis-wait > header { margin-bottom: 30px; }
+.analysis-wait { max-width: 900px; }
+.analysis-wait > header { margin-bottom: 36px; }
 .analysis-wait > header h1 { font-family: var(--font-plex-sans),sans-serif; font-weight: 600; letter-spacing: -.03em; }
-.analysis-wait .wait-stepper { border: 1px solid var(--w-border); border-radius: 6px; background: var(--w-surface); box-shadow: none; padding: 24px; }
+.analysis-wait .wait-stepper { border: 1px solid var(--w-border); border-radius: 6px; background: var(--w-surface); padding: 24px; }
 .analysis-wait .wait-step { min-height: 48px; }
 .analysis-wait .wait-step + .wait-step { border-top: 1px solid var(--w-border); padding-top: 14px; }
-.analysis-wait .wait-mark { border-radius: 50%; }
+.wait-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 36px; align-items: start; }
+.wait-side { display: grid; gap: 28px; }
+.opera-loop { margin: 0; width: 300px; max-width: 100%; }
+.opera-loop figcaption { margin-top: 14px; display: grid; gap: 4px; min-height: 64px; }
+.opera-move { font: 500 12px var(--font-mono); color: var(--w-ink2); font-variant-numeric: tabular-nums; }
+.opera-caption { font-size: 14px; line-height: 1.5; color: var(--w-ink1); animation: tip-in .6s cubic-bezier(.16, 1, .3, 1) both; }
+.wait-tip { padding-inline: 4px; }
+.wait-tip h2 { margin: 0 0 8px; font: 600 13px var(--font-plex-sans), sans-serif; color: var(--w-accent); }
+.wait-tip p { margin: 0; min-height: 3.2em; font-size: 19px; line-height: 1.5; letter-spacing: -.01em; color: var(--w-ink1); text-wrap: pretty; animation: tip-in .7s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes tip-in { from { opacity: 0; transform: translateY(6px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@media (max-width: 740px) {
+  .wait-layout { grid-template-columns: 1fr; justify-items: center; gap: 28px; }
+  .wait-side { width: 100%; }
+}
+.lesson-label { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--w-ink2); }
+.lesson-prose { margin: 0; max-width: 60ch; font-size: 17px; line-height: 1.6; color: var(--w-ink1); text-wrap: pretty; }
+.sq-chip {
+  display: inline-flex; align-items: center; margin: 0 .06em; padding: 0 .38em; border: 0; border-radius: 4px;
+  font: 600 .86em/1.35 var(--font-plex-mono), monospace; vertical-align: baseline;
+  color: var(--sq); background: color-mix(in srgb, var(--sq) 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sq) 60%, transparent);
+  transition: background-color .15s ease-out, color .15s ease-out;
+}
+.sq-chip:hover, .sq-chip:focus-visible { background: var(--sq); color: var(--w-canvas); outline-offset: 2px; }
+.login-page { max-width: 560px; padding-block: 72px 96px; }
+.login-page h1 { margin: 0 0 12px; font-size: clamp(32px, 4vw, 44px); font-weight: 600; letter-spacing: -.03em; line-height: 1.08; }
+.login-lede { margin: 0 0 28px; font-size: 16px; line-height: 1.55; color: var(--w-ink2); }
+.login-lede strong { color: var(--w-ink1); }
+.login-form { display: grid; gap: 12px; }
+.login-form .primary-button { justify-self: start; }
+.login-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.login-perks { display: grid; gap: 10px; margin: 36px 0 0; padding: 20px 0 0; border-top: 1px solid var(--w-border); list-style: none; font-size: 14px; line-height: 1.5; color: var(--w-ink2); }
+.login-perks li { display: flex; gap: 10px; align-items: flex-start; }
+.login-perks svg { flex-shrink: 0; margin-top: 3px; color: var(--w-accent); }
 @keyframes report-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes lesson-arrive { from { opacity: .55; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .spin {
@@ -854,6 +888,10 @@ input, textarea {
   .site-footer { flex-direction: column; align-items: flex-start; gap: 12px; }
   .pricing-grid { grid-template-columns: 1fr; max-width: 470px; }
   .price-plan { padding: 24px; }
+}
+
+@media (max-width: 440px) {
+  .nav-links .nav-sample { display: none; }
 }
 
 @media (max-width: 380px) {

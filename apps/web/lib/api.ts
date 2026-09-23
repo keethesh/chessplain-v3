@@ -21,6 +21,8 @@ export interface MomentReport {
   played: string;
   probable_thought: string;
   what_actually_happens: string;
+  /** Why the better move works. Absent on reports from before 2026-09-24. */
+  why_better?: string;
   concept_name: string;
   concept_definition: string;
   takeaway: string;

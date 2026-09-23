@@ -20,7 +20,7 @@ export default function HomePage() {
   const [color, setColor] = useState<'white' | 'black'>('white');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [quotaReached, setQuotaReached] = useState(false);
+  const [quotaReached, setQuotaReached] = useState<'anonymous' | 'signed-in' | null>(null);
   const [showMove, setShowMove] = useState(false);
   const [recentReviews, setRecentReviews] = useState<RecentReview[]>([]);
   const submitting = useRef(false);
@@ -39,7 +39,7 @@ export default function HomePage() {
     event.preventDefault();
     if (submitting.current) return;
     setError(null);
-    setQuotaReached(false);
+    setQuotaReached(null);
     const value = method === 'username' ? username.trim() : pgn.trim();
     if (!value) {
       setError(method === 'username' ? 'Enter your Chess.com username to find your latest game.' : 'Paste the moves from a completed game.');
@@ -47,8 +47,10 @@ export default function HomePage() {
     }
     submitting.current = true;
     setIsLoading(true);
+    let signedIn = false;
     try {
       const { data } = await supabase.auth.getSession();
+      signedIn = Boolean(data.session);
       const response = await submitReport(
         method === 'username'
           ? { chesscom_username: value, hero_variant: 'editorial_v1' }
@@ -58,7 +60,7 @@ export default function HomePage() {
       captureEvent('game_submitted', { method: method === 'username' ? 'chesscom' : 'pgn' });
       router.push('/report/' + response.id);
     } catch (err) {
-      setQuotaReached(err instanceof ApiError && err.status === 402);
+      setQuotaReached(err instanceof ApiError && err.status === 402 ? (signedIn ? 'signed-in' : 'anonymous') : null);
       setError(err instanceof Error ? err.message : 'We could not submit your game. Please try again.');
       submitting.current = false;
       setIsLoading(false);
@@ -78,7 +80,7 @@ export default function HomePage() {
                 type="button"
                 aria-pressed={method === 'username'}
                 disabled={isLoading}
-                onClick={() => { setMethod('username'); setError(null); setQuotaReached(false); }}
+                onClick={() => { setMethod('username'); setError(null); setQuotaReached(null); }}
               >
                 Chess.com username
               </button>
@@ -86,7 +88,7 @@ export default function HomePage() {
                 type="button"
                 aria-pressed={method === 'pgn'}
                 disabled={isLoading}
-                onClick={() => { setMethod('pgn'); setError(null); setQuotaReached(false); }}
+                onClick={() => { setMethod('pgn'); setError(null); setQuotaReached(null); }}
               >
                 Paste a PGN
               </button>
@@ -149,8 +151,8 @@ export default function HomePage() {
                 <div className="form-error" role="alert">
                   <p>{error}</p>
                   {quotaReached && (
-                    <Link href="/pricing">
-                      See plans or sign in <ArrowRight size={14} />
+                    <Link href={quotaReached === 'anonymous' ? '/login' : '/pricing'}>
+                      {quotaReached === 'anonymous' ? 'Sign in for your own free reviews' : 'See Premium'} <ArrowRight size={14} />
                     </Link>
                   )}
                 </div>
@@ -274,14 +276,14 @@ export default function HomePage() {
               Do I need an account?
               <span className="faq-icon" aria-hidden="true">+</span>
             </summary>
-            <p>You can get two free reports every seven days without signing up. Free usage is counted by network, so people on a shared connection may share the allowance.</p>
+            <p>No. You get two free reports every seven days without signing up. Free usage is counted by network, so people on a shared connection may share the allowance. <Link href="/login" className="underline">Signing in</Link> gives you your own two free reports each week.</p>
           </details>
           <details>
             <summary>
               How are the explanations made?
               <span className="faq-icon" aria-hidden="true">+</span>
             </summary>
-            <p>Stockfish examines positions and possible replies. AI turns that analysis into readable explanations. A suggested intention is an interpretation, and explanations can be wrong: use the board to check them.</p>
+            <p>Stockfish examines positions and possible replies. AI turns that analysis into readable explanations. What a move was going for is read from the board, not your mind, and explanations can be wrong: use the board to check them.</p>
           </details>
           <details>
             <summary>

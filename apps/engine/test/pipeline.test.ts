@@ -55,6 +55,7 @@ describe('Prompts and Banned Tokens', () => {
       played: '23.Bxf7+',
       probable_thought: 'The bishop takes the f7 pawn with check, aiming to win it and keep the extra material.',
       what_actually_happens: "The bishop gets kicked to h5 and never returns. From here on, you're defending the dark squares around your king with pieces that can't see them — that's why the position felt worse every move.",
+      why_better: '23.Bb3 keeps the bishop aimed at f7 from a safe square.',
       concept_name: 'Trapped piece',
       concept_definition: 'a piece with no safe squares left',
       takeaway: 'Next game, before taking a pawn: where does my piece land, and how does it come back?',
@@ -71,6 +72,7 @@ describe('Prompts and Banned Tokens', () => {
       played: '23.Bxf7+',
       probable_thought: 'I made a huge blunder here.',
       what_actually_happens: 'The king takes the piece.',
+      why_better: 'Rd1 holds.',
       concept_name: 'Trapped piece',
       concept_definition: 'a piece with no safe squares left to move anywhere on board', // 11 words > 8
       takeaway: 'Think before moving.',
@@ -88,6 +90,7 @@ describe('Prompts and Banned Tokens', () => {
     const base = {
       played: '23.Bxf7+',
       what_actually_happens: 'The bishop gets kicked to h5 and has no safe square.',
+      why_better: '23.Bb3 keeps the bishop safe.',
       concept_name: 'Trapped piece',
       concept_definition: 'a piece with no safe squares left',
       takeaway: 'Before taking a pawn, check how the piece comes back.',
@@ -95,6 +98,21 @@ describe('Prompts and Banned Tokens', () => {
     };
     expect(validateMomentJson({ ...base, probable_thought: 'If I grab the pawn, my fork wins it back.' }).isValid).toBe(false);
     expect(validateMomentJson({ ...base, probable_thought: 'The bishop grabs the pawn, aiming for a fork.' }).isValid).toBe(true);
+  });
+
+  it('rejects explanations too long to read next to the board', () => {
+    const base = {
+      played: '23.Bxf7+',
+      probable_thought: 'The bishop grabs the pawn, aiming for a fork.',
+      concept_name: 'Trapped piece',
+      concept_definition: 'a piece with no safe squares left',
+      takeaway: 'Before taking a pawn, check how the piece comes back.',
+      severity_label: 'Turning point',
+    };
+    const words = (n: number) => Array.from({ length: n }, () => 'word').join(' ');
+    expect(validateMomentJson({ ...base, what_actually_happens: words(60), why_better: words(45) }).isValid).toBe(true);
+    expect(validateMomentJson({ ...base, what_actually_happens: words(61), why_better: words(45) }).errors).toEqual([expect.stringContaining('what_actually_happens is too long')]);
+    expect(validateMomentJson({ ...base, what_actually_happens: words(60), why_better: words(46) }).errors).toEqual([expect.stringContaining('why_better is too long')]);
   });
 
   it('validates summary JSON successfully', () => {

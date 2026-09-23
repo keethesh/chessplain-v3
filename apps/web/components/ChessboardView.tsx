@@ -10,6 +10,12 @@ interface ChessboardViewProps {
   boardWidth?: number;
   highlightSquares?: string[];
   arrows?: Array<{ startSquare: string; endSquare: string; color?: string }>;
+  /** Squares named in the explanation, outlined in the chip colour. */
+  markedSquares?: Record<string, string>;
+  /** The square the reader is pointing at; filled, not just outlined. */
+  focusSquare?: string | null;
+  /** Piece movement duration; 0 disables animation. */
+  animationMs?: number;
 }
 
 export function ChessboardView({
@@ -18,6 +24,9 @@ export function ChessboardView({
   boardWidth = 360,
   highlightSquares = [],
   arrows = [],
+  markedSquares = {},
+  focusSquare = null,
+  animationMs,
 }: ChessboardViewProps) {
   const customSquareStyles: Record<string, React.CSSProperties> = {};
 
@@ -26,6 +35,13 @@ export function ChessboardView({
       backgroundColor: 'color-mix(in srgb, var(--w-error) 45%, transparent)',
       borderRadius: '0',
       boxShadow: 'inset 0 0 0 3px var(--w-error)',
+    };
+  }
+  for (const [sq, color] of Object.entries(markedSquares)) {
+    customSquareStyles[sq] = {
+      ...customSquareStyles[sq],
+      boxShadow: `inset 0 0 0 3px ${color}, inset 0 0 0 5px rgb(17 19 16 / 45%)`,
+      ...(sq === focusSquare ? { backgroundColor: `color-mix(in srgb, ${color} 60%, transparent)` } : {}),
     };
   }
 
@@ -58,6 +74,7 @@ export function ChessboardView({
             arrows: customArrows,
             darkSquareStyle: { backgroundColor: '#566956' },
             lightSquareStyle: { backgroundColor: '#d9dfca' },
+            ...(animationMs === undefined ? {} : { animationDurationInMs: animationMs, showAnimations: animationMs > 0 }),
           }}
         />
       </div>

@@ -59,6 +59,7 @@ const goodMomentJson = JSON.stringify({
   severity_label: 'Turning point',
   probable_thought: 'You wanted to trade into a calmer position after the pressure built up on the file.',
   what_actually_happens: 'The recapture arrives with tempo and the loose piece on the far side drops next move.',
+  why_better: 'Keeping the rook on the file holds everything together.',
   concept_name: 'Loose piece',
   concept_definition: 'an undefended piece inviting capture',
   takeaway: 'Before trading, check which of your pieces is left undefended afterwards.',

@@ -6,7 +6,8 @@ import { ArrowRight, ArrowLeft, RotateCcw, BookOpen } from 'lucide-react';
 import { Chess } from 'chess.js';
 import type { ReportDetail, MomentReport } from '../lib/api';
 import { ChessboardView } from './ChessboardView';
-import { MomentCard, MomentSkeleton } from './MomentCard';
+import { MomentCard, MomentSkeleton, stageTexts } from './MomentCard';
+import { assignSquareColors } from '../lib/squares';
 
 type LessonStage = 'before' | 'played' | 'alternative' | 'takeaway';
 
@@ -46,6 +47,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
   const [step, setStep] = useState(0);
   const [showAlternative, setShowAlternative] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [focusSquare, setFocusSquare] = useState<string | null>(null);
   const stageHeadingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (report.player_color) setOrientation(report.player_color); }, [report.player_color]);
   const current = moments[activeIndex] || moments[0];
@@ -62,6 +64,15 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
   useEffect(() => {
     if (hasInteracted) stageHeadingRef.current?.focus();
   }, [hasInteracted, activeIndex, step, showAlternative]);
+  useEffect(() => setFocusSquare(null), [activeIndex, step, showAlternative]);
+  // Board outlines only for squares the visible text names; the colour map
+  // also covers the full explanation so a square keeps one colour everywhere.
+  const visibleTexts = useMemo(() => current ? stageTexts(current, lessonStage) : [], [current, lessonStage]);
+  const squareColors = useMemo(() => current ? assignSquareColors([...visibleTexts, current.probable_thought, current.what_actually_happens, current.why_better ?? '', current.takeaway]) : {}, [current, visibleTexts]);
+  const markedSquares = useMemo(() => {
+    const visible = assignSquareColors(visibleTexts);
+    return Object.fromEntries(Object.keys(visible).map(sq => [sq, squareColors[sq]]));
+  }, [visibleTexts, squareColors]);
   const selectMoment = (index: number) => {
     setActiveIndex(index);
     setStep(0);
@@ -147,7 +158,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
             <p className="text-sm text-[var(--w-ink2)]">{moments.length === 1 ? 'One moment to learn from' : `${moments.length} moments to learn from`}</p>
             <div className="flex flex-wrap gap-2" aria-label="Choose a moment">
               {moments.map((moment, index) => (
-                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded-lg border px-4 text-sm font-medium transition-all active:scale-[0.98] ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played}</button>
+                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded-lg border px-4 text-sm font-medium transition-all active:scale-[0.98] ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played.replace(/^\d+\.+\s*/, '')}</button>
               ))}
             </div>
           </div>
@@ -157,7 +168,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
                 <p aria-live="polite" className="text-sm font-medium">{activeStep?.label}</p>
                 <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)] active:scale-[0.98] transition-transform" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
               </div>
-              {activeStep && <ChessboardView fen={activeStep.fen} orientation={orientation} boardWidth={520} arrows={activeArrows} highlightSquares={highlightedSquares} />}
+              {activeStep && <ChessboardView fen={activeStep.fen} orientation={orientation} boardWidth={520} arrows={activeArrows} highlightSquares={highlightedSquares} markedSquares={markedSquares} focusSquare={focusSquare} />}
               <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg" aria-label="Step through the played line" role="group" tabIndex={0} onKeyDown={event => {
                 if (event.altKey || event.ctrlKey || event.metaKey) return;
                 if (event.key === 'ArrowRight') { event.preventDefault(); selectStage(Math.min(steps.length - 1, step + 1)); }
@@ -172,7 +183,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
               <a href="#lesson-explanation" className="lg:hidden mt-3 inline-flex min-h-11 items-center gap-1 text-sm text-[var(--w-accent)] font-medium underline">Read lesson explanation ↓</a>
             </div>
             <div id="lesson-explanation" className="min-w-0 pt-1 lg:pt-3 scroll-mt-6">
-              <MomentCard moment={current} index={activeIndex} stage={lessonStage} headingRef={stageHeadingRef} />
+              <MomentCard moment={current} index={activeIndex} stage={lessonStage} headingRef={stageHeadingRef} squareColors={squareColors} onFocusSquare={setFocusSquare} />
               <a href="#board-view" className="lg:hidden mt-6 inline-flex min-h-11 items-center gap-1 text-sm text-[var(--w-accent)] font-medium underline">↑ Back to chessboard</a>
             </div>
           </div>

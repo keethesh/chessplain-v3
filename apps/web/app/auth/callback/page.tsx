@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { claimReport } from '../../../lib/api';
 import { identifyUser } from '../../../lib/posthog';
+import { safeNextPath } from '../../../lib/use-session';
 
 export default function AuthCallbackPage() {
   const started = useRef(false);
@@ -17,7 +18,7 @@ export default function AuthCallbackPage() {
     const code = url.searchParams.get('code');
     const reportId = url.searchParams.get('report_id');
     const requested = url.searchParams.get('next');
-    const next = reportId ? '/report/' + encodeURIComponent(reportId) : requested === '/pricing' ? '/pricing' : '/';
+    const next = reportId ? '/report/' + encodeURIComponent(reportId) : safeNextPath(requested);
     setDestination(next);
     void (async () => {
       try {

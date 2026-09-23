@@ -195,7 +195,7 @@ async function runOne(f: BenchmarkFixture, c: Candidate, run: number, judgeModel
     return result;
   }
 
-  const text = [result.output.probable_thought, result.output.what_actually_happens, result.output.takeaway].join('\n');
+  const text = [result.output.probable_thought, result.output.what_actually_happens, result.output.why_better, result.output.takeaway].join('\n');
   result.phantoms = phantomPieces(text, knownPieceSquares(f));
   const curated = CURATED[`${f.candidate.fenBefore}|${f.candidate.san}`];
   if (curated) {
@@ -276,7 +276,7 @@ function report(results: Result[], candidates: Candidate[], fixtures: BenchmarkF
       const scores = r.judge ? ` · acc ${r.judge.accuracy} / why ${r.judge.explains_why} / thought ${r.judge.plausible_thought} / takeaway ${r.judge.useful_takeaway}` : '';
       lines.push(`**${r.candidate}**${r.run > 1 ? ` run ${r.run}` : ''}${scores}`, '');
       if (r.output) {
-        lines.push(`> *${r.output.probable_thought}*`, '>', `> ${r.output.what_actually_happens}`, '>', `> **${r.output.concept_name}** — ${r.output.takeaway}`, '');
+        lines.push(`> *${r.output.probable_thought}*`, '>', `> ${r.output.what_actually_happens}`, '>', `> ${r.output.why_better}`, '>', `> **${r.output.concept_name}** — ${r.output.takeaway}`, '');
       }
       if (flags.length) lines.push(...flags.map((x) => `- ${x}`), '');
     }

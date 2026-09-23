@@ -22,6 +22,7 @@ function momentText(moment: MomentReport): string {
     moment.played,
     moment.probable_thought,
     moment.what_actually_happens,
+    moment.why_better,
     moment.concept_name,
     moment.concept_definition,
     moment.takeaway,
@@ -60,6 +61,7 @@ function checkReport(game: RepresentativeGame, report: GameAnalysisReport): void
     const banned = [
       ...findBannedTokens(moment.probable_thought),
       ...findBannedTokens(moment.what_actually_happens),
+      ...findBannedTokens(moment.why_better),
       ...findBannedTokens(moment.takeaway),
     ];
     if (banned.length > 0) {

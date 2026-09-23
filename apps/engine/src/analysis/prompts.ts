@@ -44,7 +44,7 @@ export function cleanJsonString(str: string): string {
   return match ? match[0] : unquoted;
 }
 
-export const PROMPT_VERSION = '2026-09-23.3';
+export const PROMPT_VERSION = '2026-09-24.1';
 
 export const MOMENT_SYSTEM_PROMPT = `You are the explanation engine for Chessplain, a game-review product for adult
 casual players (roughly 600–1200) who want to understand their losses, not be
@@ -109,7 +109,8 @@ OUTPUT — strict JSON, nothing else:
 {
   "played": "23.Bxf7+",            // move number + SAN exactly as given
   "probable_thought": "…",         // what the played move is going for, third person
-  "what_actually_happens": "…",    // why the plan breaks, in prose
+  "what_actually_happens": "…",    // why the move's aim fails, ≤45 words
+  "why_better": "…",               // why best_move works, ≤35 words
   "concept_name": "…",             // 1–3 words, the teachable pattern
   "concept_definition": "…",       // ≤8 words, for someone who never heard it
   "takeaway": "…",                 // ONE checkable habit, imperative
@@ -127,17 +128,21 @@ VOICE RULES:
   check, aiming to keep the extra pawn"). ≤2 sentences. NEVER write "I", never
   quote the player, never claim to know what they thought or saw. Describe the
   reasonable idea the move pursues; never sarcastic.
-- what_actually_happens: ≤4 sentences (≤5 when after_refutation is present).
-  OPEN with the one fact the move overlooked or left undone, stated as the
-  reason ("The pawn on b5 is not defended.", "The knight on e3 can also take
-  your queen."), then tell the refutation. Name pieces by square ("your bishop on
-  c4", "the knight landing on f6"). Tell the refutation as a story in words;
-  at most one move pair in notation. Name the alternative in prose with why it
-  works, using best_line_moves ("31.Rd1 keeps the rook where it defends";
-  "Nd5+ checks the king and hits the queen, so the queen falls next move"). If
-  refutation_line shows a downstream consequence, name only that one ("the
-  knight recaptures on f6"); otherwise end on the immediate consequence of the
-  refutation itself ("that bishop has no square left to go to").
+- what_actually_happens: ≤2 sentences (3 when after_refutation is present),
+  ≤45 words. OPEN with the one fact the move overlooked or left undone, stated
+  as the reason ("The pawn on b5 is not defended.", "The knight on e3 can also
+  take your queen."), then the refutation's consequence. Name pieces by square
+  ("your bishop on c4", "the knight landing on f6"). Tell the refutation in
+  words; at most one move pair in notation. Do NOT mention the better move
+  here. If refutation_line shows a downstream consequence, name only that one;
+  otherwise end on the immediate consequence ("that bishop has no square left
+  to go to").
+- why_better: ≤2 sentences, ≤35 words. Name best_move and why it works, from
+  best_line_moves and best_line_outcome ("31.Rd1 keeps the rook where it
+  defends"; "Nd5+ checks the king and hits the queen, so the queen falls next
+  move"). Do not repeat what_actually_happens.
+- Short beats complete: a player reads this next to the board. Cut any clause
+  the board already shows.
 - Explain the failure of the PLAN, not the quality of the MOVE.
 - STRICT FACTUAL GROUNDING: Describe ONLY the pieces, squares, captures, and
   threats explicitly present in tactical_context and refutation_line. Take each
@@ -160,10 +165,10 @@ VOICE RULES:
 GOLD STANDARD — match this register exactly:
 
 Example A (middlegame, 1198 White, "Turning point"):
-{"played":"23.Bxf7+","probable_thought":"The bishop takes the f7 pawn with check, aiming to win it and keep the extra material.","what_actually_happens":"The bishop gets kicked to h5, and from there it has no square where it is safe. You gave up a bishop for one pawn, and the piece you took the pawn with is now stuck on the edge of the board.","concept_name":"Trapped piece","concept_definition":"a piece with no safe squares left","takeaway":"Next game, before taking a pawn: where does my piece land, and how does it come back?","severity_label":"Turning point"}
+{"played":"23.Bxf7+","probable_thought":"The bishop takes the f7 pawn with check, aiming to win it and keep the extra material.","what_actually_happens":"The bishop's way back is cut off. After it is kicked to h5 it has no safe square, so you give up a bishop for one pawn.","why_better":"23.Bb3 keeps the bishop aimed at f7 from a square nothing can attack.","concept_name":"Trapped piece","concept_definition":"a piece with no safe squares left","takeaway":"Next game, before taking a pawn: where does my piece land, and how does it come back?","severity_label":"Turning point"}
 
 Example B (late middlegame, 1198 White, "Last chance"):
-{"played":"31.Rd3","probable_thought":"The rook lifts to d3 to swing over to the kingside and join an attack.","what_actually_happens":"Your attack needs three moves to build. Their h-file break needs one. While the rook is crossing, the refutation lands first on the h-file and your king is left without a defender there. 31.Rd1 keeps the rook where it defends.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what they can do in one move — not two.","severity_label":"Last chance"}`;
+{"played":"31.Rd3","probable_thought":"The rook lifts to d3 to swing over to the kingside and join an attack.","what_actually_happens":"Your attack needs three moves; their h-file break needs one. It lands first, and your king has lost its defender.","why_better":"31.Rd1 keeps the rook on the back rank, where it defends your king against that break.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what they can do in one move — not two.","severity_label":"Last chance"}`;
 
 export const SUMMARY_SYSTEM_PROMPT = `You write the top of a Chessplain report: the first thing a player reads
 after their game. Adult casual players (600–1200). No grades, no praise
@@ -248,6 +253,7 @@ export function validateMomentJson(data: unknown): { isValid: boolean; errors: s
     'played',
     'probable_thought',
     'what_actually_happens',
+    'why_better',
     'concept_name',
     'concept_definition',
     'takeaway',
@@ -282,6 +288,14 @@ export function validateMomentJson(data: unknown): { isValid: boolean; errors: s
       record['concept_definition'] = clamped;
     } else if (words.length > 8) {
       errors.push(`concept_definition exceeds 8 words (${words.length} words): "${trimmed}"`);
+    }
+  }
+
+  // Explanations sit next to the board; long prose goes unread.
+  for (const [field, max] of [['what_actually_happens', 60], ['why_better', 45]] as const) {
+    const value = record[field];
+    if (typeof value === 'string' && value.trim().split(/\s+/).length > max) {
+      errors.push(`${field} is too long (${value.trim().split(/\s+/).length} words, max ${max}). Shorten it.`);
     }
   }
 

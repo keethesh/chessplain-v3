@@ -58,6 +58,7 @@ export interface MomentExplanation {
   played: string;
   probable_thought: string;
   what_actually_happens: string;
+  why_better: string;
   concept_name: string;
   concept_definition: string;
   takeaway: string;

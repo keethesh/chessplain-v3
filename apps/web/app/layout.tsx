@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PostHogProvider } from '../components/PostHogProvider';
+import { AccountNav } from '../components/AccountNav';
 import './globals.css';
 
 // Public marketing origin. Not a credential: it only affects how absolute
@@ -56,8 +57,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               chessplain
             </Link>
             <nav className="nav-links" aria-label="Main navigation">
-              <Link href="/report/demo">Sample review</Link>
+              <Link href="/report/demo" className="nav-sample">Sample review</Link>
               <Link href="/pricing">Pricing</Link>
+              <AccountNav />
               <Link href="/#analyze" className="nav-cta">Review a game</Link>
             </nav>
           </div>
