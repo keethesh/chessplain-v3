@@ -13,7 +13,7 @@ should not be asked to invent), see
 [`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md) — none of that is
 implemented yet.
 
-- **`PROMPT_VERSION` constant: `2026-09-17.1`** (`prompts.ts`). Bump on every
+- **`PROMPT_VERSION` constant: `2026-09-23.1`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**
   anywhere — no `game_analyses` write includes it, despite an earlier version
   of this document claiming it is stored per-row. Wire it into
@@ -43,6 +43,11 @@ INPUT (JSON):
   * played_move: piece, from/to squares, what attacked it before, what it attacks after
   * best_move: piece, from/to squares, what it attacks or defends
   * opponent_refutation: the opponent's reply, what it attacks or captures
+  * refutation_moves: EVERY move of refutation_line, in order, each with its piece,
+    squares, capture, what it attacks, and threatens_checkmate (the mate it would
+    deliver if the mover got another move)
+  * after_refutation: when present, why the obvious defence at the end of the line
+    fails (e.g. the attacked piece cannot just move away because of a mate threat)
   * threat_summary: summary of immediate threats and tactics
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
@@ -56,7 +61,11 @@ THINK IN THIS ORDER, SILENTLY:
    most charitable one a real player here would actually hold. If none is
    plausible (rare): the thought is "I saw the threat too late."
 3. Work out why the plan fails, using tactical_context, best_move, and refutation_line,
-   translated fully into words.
+   translated fully into words. For every quiet move in refutation_moves (no
+   capture, no check), say what it does from its own facts — a quiet move is
+   the one a player cannot see the point of. If after_refutation is present, the
+   player will ask "why can't I just move the piece away?": answer it in words
+   (name the mating square and the pieces that make the threat).
 4. Only then write the output.
 
 OUTPUT — strict JSON, nothing else:
@@ -79,7 +88,7 @@ VOICE RULES:
 - probable_thought: the player's own words, present tense, at their rating's
   horizon ("If I grab the pawn, my fork wins it straight back"). ≤2 sentences.
   Never sarcastic, never stupid-sounding. The idea was usually reasonable.
-- what_actually_happens: ≤4 sentences. Name pieces by square ("your bishop on
+- what_actually_happens: ≤4 sentences (≤5 when after_refutation is present). Name pieces by square ("your bishop on
   c4", "the knight landing on f6"). Tell the refutation as a story in words;
   at most one move pair in notation. Name the alternative in prose with why it
   holds ("31.Rd1 keeps the rook where it defends"). If refutation_line shows a
@@ -88,11 +97,12 @@ VOICE RULES:
   bishop has no square left to go to").
 - Explain the failure of the PLAN, not the quality of the MOVE.
 - STRICT FACTUAL GROUNDING: Describe ONLY the pieces, squares, captures, and
-  threats explicitly present in tactical_context and refutation_line. NEVER
-  guess, extrapolate, or invent future moves (such as queen trades, piece
-  recaptures, or checkmates) not present in the provided refutation_line. If
-  refutation_line ends, stop there and explain the immediate positional or
-  material consequence.
+  threats explicitly present in tactical_context and refutation_line. Take each
+  move's piece and squares from its own entry in refutation_moves — a piece that
+  has moved is no longer on its old square. NEVER guess, extrapolate, or invent
+  future moves (such as queen trades, piece recaptures, or checkmates) not
+  present in refutation_moves or after_refutation. If the line ends, stop there
+  and explain the immediate positional or material consequence.
 - Distinguish a possible calculated continuation ("The computer's alternative
   starts with 14...Qe6") from what actually happened in the player's game.
 - takeaway: one action, checkable at the board mid-game ("before taking a
@@ -116,17 +126,22 @@ Example B (late middlegame, 1198 White, "Last chance"):
 `tactical_context` is built by `buildTacticalContext()` in
 `apps/engine/src/analysis/chess-facts.ts`, which uses `chess.js` to compute
 attackers/defenders/threatened pieces from the FEN — it is not generated or
-guessed by the model. `eval_before_pawns`/`eval_after_pawns` are sent for the
-model's internal reasoning only; the voice rules forbid surfacing them or any
-signed/percentage number.
+guessed by the model. Every refutation move is annotated from its own
+position; `threatens_checkmate` comes from a null move (give the mover a second
+move, list moves that mate), and `after_refutation` is only emitted after the
+code has actually played an escape of the attacked piece and found the mate.
+`eval_before_pawns`/`eval_after_pawns` are sent for the model's internal
+reasoning only; the voice rules forbid surfacing them or any signed/percentage
+number.
 
-User message = the input JSON (`JSON.stringify(inputPayload)` in
-`explain.ts`), nothing else.
+User message = `JSON.stringify(buildMomentPayload(...))` (`prompts.ts`),
+nothing else. The benchmark (`scripts/benchmark-models.ts`) sends the same
+payload, so benchmark results transfer to production.
 
-**Known gap** (tracked in the roadmap doc): the model receives one FEN with
-no move history, no clock time, and a rating band that defaults to
-`1000_1400` unless the caller supplies it — `elo_band` is not derived from
-the game's PGN `WhiteElo`/`BlackElo` headers anywhere in this pipeline today.
+**Known gaps** (tracked in the roadmap doc): the model receives one FEN with
+no move history and no clock time. `elo_band` comes from the Chess.com API
+rating for username imports (`mapEloToBand` in `chesscom.ts`); pasted PGNs
+default to `1000_1400` and their `WhiteElo`/`BlackElo` headers are ignored.
 
 ---
 

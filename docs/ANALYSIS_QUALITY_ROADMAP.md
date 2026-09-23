@@ -2,11 +2,10 @@
 
 Captured from a design review of `apps/engine`'s analysis pipeline
 (`sweep.ts` → `select.ts` → `verify.ts` → `chess-facts.ts` → `explain.ts`).
-Nothing here is implemented yet — this is the plan for the next round of
-prompt/model/selection work. Current prompt lives in
-`apps/engine/src/analysis/prompts.ts` (`PROMPT_VERSION`); `docs/MOMENT_PROMPT.md`
-is the older spec and is now behind the code — reconcile or retire it when
-this work lands.
+Most of this is still plan. Shipped so far (2026-09-23, prompt `2026-09-23.1`):
+per-move refutation facts with mate-threat and forced-defence detection, and
+the model benchmark harness — both marked below. Current prompt lives in
+`apps/engine/src/analysis/prompts.ts`; `docs/MOMENT_PROMPT.md` mirrors it.
 
 ## Principle
 
@@ -85,16 +84,23 @@ would have used to make it:
 - **No clock times.** Chess.com PGNs carry `%clk` annotations; we parse
   none of it. "12 seconds on the clock" explains a lot of blunders and
   changes the honest story.
-- **Rating is guessed, not read.** PGNs carry `WhiteElo`/`BlackElo`, but
-  `elo_band` defaults to `1000_1400` unless set elsewhere — `[INFERENCE]`,
-  not yet traced where/if it's set from the PGN on ingest. A 700-rated
-  player can get explanations pitched at 1200.
+- **Rating is only read for Chess.com imports.** Username imports get
+  `elo_band` from the Chess.com API rating (`mapEloToBand`); pasted PGNs
+  default to `1000_1400` even when they carry `WhiteElo`/`BlackElo`, so a
+  700-rated player pasting a PGN gets explanations pitched at 1200.
 - **No continuation for the better move.** The model gets `best_move` but
   not the line after it, so "why it holds" is reasoned out rather than
   given.
 - **Refutation line capped at 3 plies** (`buildRefutationLine`,
   `maxMoves = 3`). Traps that pay off later than that get described
-  vaguely or not at all.
+  vaguely or not at all. *Partly addressed:* every move of the line is now
+  annotated from its own position, quiet moves carry the mate they threaten
+  (`threatens_checkmate`, via a null move), and `after_refutation` states why
+  the obvious escape fails, verified by playing it. Found via production report
+  `6992cfc4` (18...Ne3 Qxc5 Nxf1 Qc3): the explanation never said the f1
+  knight is lost because Qxg7 is mate, and put the knight on the wrong square.
+  Still open: threats other than mate (e.g. winning an undefended piece), and
+  longer lines.
 - **No "only move" signal.** The engine can tell us whether many moves
   were fine or only one held the position. That changes the story ("you
   had to find this" vs "anything reasonable was fine here").
@@ -113,31 +119,54 @@ would have used to make it:
   real mistake the shallow pass missed at that depth never reaches
   verification and never gets flagged.
 
-## Benchmark plan (prerequisite for any model change)
+## Benchmark — harness built (2026-09-23)
 
-Don't switch models on reputation. Build first:
+Don't switch models on reputation. The harness exists:
 
-1. **30–50 real positions** from actual games — all three rating bands,
-   wins and losses, and the common recurring ideas (hanging piece, fork,
-   trapped piece, tempo loss, back-rank weakness).
-2. **Automatic checks** (mostly code we already have): valid JSON, no
-   banned tokens (`findBannedTokens`), every square/piece mentioned
-   matches the board (extend the fact-grounding check beyond banned
-   words), stated outcome matches `outcome` field.
-3. **Model-as-judge for subjective quality**: is the stated move-aim (v1)
-   or player reasoning (v2) plausible, is the takeaway checkable mid-game,
-   is the tone right for the register.
-4. **Run 3–4 candidate models** through the harness and compare cost vs.
-   quality. Working hypothesis (`[INFERENCE]`, unverified): a cheap fast
-   model is sufficient for per-moment explanation once the model is only
-   narrating code-supplied facts; the once-per-game summary may justify a
-   stronger reasoning model since spotting a shared root cause across
-   moments is genuine cross-moment reasoning, not narration.
+- `pnpm --filter @chessplain/engine benchmark:fixtures` (run on the VPS; needs
+  Stockfish + DB) freezes verified candidate moments into
+  `apps/engine/benchmark/fixtures.json`. Current set: **49 positions from 28
+  games** — the 8 representative games plus the 20 most recent completed
+  production analyses, all three rating bands, all four severity labels.
+  Player names are not stored.
+- `OPENROUTER_API_KEY=… pnpm --filter @chessplain/engine benchmark:models`
+  sends each fixture through the production payload builder and system prompt
+  to every candidate model, **pinned to the model's own provider**
+  (`provider: { only: [...], allow_fallbacks: false }`), and records which
+  provider actually served each call. Checks: schema/banned tokens
+  (`validateMomentJson`), phantom pieces ("knight on e3" where no knight ever
+  stands on e3 in the line), curated must/must-not phrases for known-bad
+  positions, and an LLM judge (default `anthropic/claude-sonnet-5`, a different
+  family from every candidate) scoring accuracy, *explains why*, thought
+  plausibility, and takeaway usefulness. Reports land in
+  `apps/engine/benchmark/results/`.
 
-Current model: `deepseek-v4-flash-0731` via `crof.ai` (`config.ts`,
-`LLM_MODEL` env var), called at `temperature: 0.2` with
-`response_format: json_object`, one retry at `temperature: 0.1` with
-violations quoted back.
+Why pinning matters: the previous gateway (crof.ai) served models that were not
+the advertised ones, which invalidated earlier results. On OpenRouter,
+`deepseek/deepseek-v4.1-flash` is served by 26 hosts, many fp4/fp8-quantized;
+the headline $0.10/$0.50 price is a quantized host, while DeepSeek's own
+endpoint is $0.15/$0.60.
+
+Candidates (first-party price per 1M tokens in/out, 2026-09-23):
+
+| Model | Provider | In | Out |
+|---|---|---|---|
+| `openai/gpt-6-luna` (reasoning none, and low) | OpenAI | $0.10 | $0.50 |
+| `deepseek/deepseek-v4.1-flash` | DeepSeek | $0.15 | $0.60 |
+| `qwen/qwen3.8-flash` | Alibaba | $0.15 | $0.47 |
+| `qwen/qwen3.7-flash` | Alibaba | $0.03 | $0.13 |
+| `google/gemini-3.8-flash` | Google AI Studio | $0.75 | $3.75 |
+| `mistralai/mistral-small-2603` | Mistral | $0.15 | $0.60 |
+
+Still open: a summary-prompt benchmark (the per-game summary may justify a
+stronger model — spotting a shared root cause across moments is reasoning,
+not narration), and deciding whether production calls OpenRouter with the
+same pinning or each provider's API directly.
+
+Production LLM (2026-09-23): `deepseek/deepseek-v4.1-flash` through a local
+CommandCode proxy on the VPS (`127.0.0.1:3050`), which maps
+`reasoning_effort:'none'` to `'low'`. The `config.ts` default (`crof.ai`,
+`deepseek-v4-flash-0731`) is unused in production.
 
 ## Suggested execution order
 
@@ -146,8 +175,7 @@ violations quoted back.
 2. Ship `probable_thought` v1 (prompt-only, code already has the facts).
 3. Add missing inputs: move history, clock times, real rating from PGN
    headers, best-move continuation, only-move signal.
-4. Build the benchmark harness (positions + automatic checks + judge
-   questions).
+4. ~~Build the benchmark harness~~ — done; see above.
 5. Run candidate models through the benchmark; pick based on results, not
    assumption.
 6. Fix selection thresholds (win% swing, multi-PV `engineAgrees`, verify

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Chess } from 'chess.js';
 import {
