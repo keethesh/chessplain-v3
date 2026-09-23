@@ -143,8 +143,8 @@ also now per visitor.
   keys must remain server-side. Do not indiscriminately rotate unrelated keys.
 
 - Delete the sign-in test account `keethesh15+cptest@gmail.com` (Supabase ->
-  Authentication -> Users). It owns no analyses; its profile row is removed by the
-  `ON DELETE CASCADE` on `profiles.id`.
+  Authentication -> Users). Its profile row is removed by the `ON DELETE CASCADE` on
+  `profiles.id`; any analyses it owned become anonymous (`ON DELETE SET NULL`).
 
 ## 5. Final deployed checks
 
