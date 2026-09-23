@@ -1,12 +1,12 @@
 import { ImageResponse } from 'next/og';
 
 // Share card for every page that does not define its own. Organic traffic from
-// X, Instagram and TikTok arrives via pasted links, so a bare link preview is
+// social platforms arrives via pasted links, so a bare link preview is
 // lost reach. Colours mirror DESIGN.md: canvas #f8f6f0, ink #1c2826,
 // accent #2d5a3d.
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = 'Chessplain — a little clarity, a better next game.';
+export const alt = 'Chessplain: a little clarity, a better next game.';
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -41,7 +41,7 @@ export default function OpengraphImage() {
             A little clarity. A better next game.
           </div>
           <div style={{ fontSize: 34, lineHeight: 1.35, color: '#4a5754', maxWidth: 880 }}>
-            The few moments that decided your chess game — explained, and playable on the board.
+            The few moments that decided your chess game. Explained, and playable on the board.
           </div>
         </div>
 

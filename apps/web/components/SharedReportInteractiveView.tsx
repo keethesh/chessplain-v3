@@ -108,7 +108,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-[var(--w-ink2)]">{isDemo ? 'A short teaching example. Explore the move, its consequence, and one habit to take away.' : 'Follow the key moments, then try a review of your own game.'}</p>
             </div>
           </div>
-          <Link href="/#analyze" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--w-accent)] px-4 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)]">Review your game <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
+          <Link href="/#analyze" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--w-accent)] px-4 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] active:scale-[0.98] transition-transform">Review your game <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
         </div>
       )}
 
@@ -127,7 +127,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
             <p className="text-sm text-[var(--w-ink2)]">{moments.length === 1 ? 'One moment to learn from' : `${moments.length} moments to learn from`}</p>
             <div className="flex flex-wrap gap-2" aria-label="Choose a moment">
               {moments.map((moment, index) => (
-                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded-lg border px-4 text-sm font-medium transition-colors ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played}</button>
+                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded-lg border px-4 text-sm font-medium transition-all active:scale-[0.98] ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played}</button>
               ))}
             </div>
           </div>
@@ -135,7 +135,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
             <div id="board-view" className="min-w-0 lg:sticky lg:top-8 scroll-mt-6">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p aria-live="polite" className="text-sm font-medium">{activeStep?.label}</p>
-                <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)]" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
+                <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)] active:scale-[0.98] transition-transform" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
               </div>
               {activeStep && (
                 <ChessboardView
@@ -152,9 +152,9 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
                 if (event.key === 'ArrowRight') { event.preventDefault(); setStep(prev => Math.min(steps.length - 1, prev + 1)); }
                 if (event.key === 'ArrowLeft') { event.preventDefault(); setStep(prev => Math.max(0, prev - 1)); }
               }}>
-                <button disabled={step === 0} onClick={() => { setShowAlternative(false); setStep(prev => Math.max(0, prev - 1)); }} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--w-border)] px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
+                <button disabled={step === 0} onClick={() => { setShowAlternative(false); setStep(prev => Math.max(0, prev - 1)); }} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--w-border)] px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98] transition-transform"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back</button>
                 <span className="text-xs tabular-nums text-[var(--w-ink2)]">{showAlternative ? 'Alternative position' : 'Position ' + Math.min(step + 1, steps.length) + ' of ' + steps.length}</span>
-                <button disabled={step >= steps.length - 1} onClick={() => { setShowAlternative(false); setStep(prev => Math.min(steps.length - 1, prev + 1)); }} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--w-ink1)] px-3 text-sm text-[var(--w-canvas)] disabled:cursor-not-allowed disabled:opacity-40">{step === 0 ? 'Show move' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></button>
+                <button disabled={step >= steps.length - 1} onClick={() => { setShowAlternative(false); setStep(prev => Math.min(steps.length - 1, prev + 1)); }} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--w-ink1)] px-3 text-sm text-[var(--w-canvas)] disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98] transition-transform">{step === 0 ? 'Show move' : 'Continue'}<ArrowRight aria-hidden="true" className="h-4 w-4" /></button>
               </div>
               {alternative && <button type="button" aria-pressed={showAlternative} onClick={() => setShowAlternative(value => !value)} className="text-link underline mt-3">{showAlternative ? 'Return to the played line' : 'Compare alternative: ' + current.best_move}</button>}
               {current.refutation_line && <p className="mt-4 break-words text-sm leading-relaxed text-[var(--w-ink2)]"><span className="font-medium">The continuation:</span> <span className="t-notation">{current.refutation_line}</span></p>}
@@ -167,7 +167,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
           </div>
         </section>
       ) : complete ? (
-        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">Nothing in this game turned on one move.</h2><p className="mt-2 max-w-2xl text-[var(--w-ink2)]">No position swung far enough to single out, so there is no moment to step through here. That usually means you kept the game steady — not that every move was the strongest available.</p><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
+        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">Nothing in this game turned on one move.</h2><p className="mt-2 max-w-2xl text-[var(--w-ink2)]">No position swung far enough to single out, so there is no moment to step through here. That usually means you kept the game steady, not that every move was the strongest available.</p><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
       ) : <MomentSkeleton />}
 
       {complete && report.summary?.focus_habit && <section className="mt-12 border-y border-[var(--w-border)] py-8 sm:py-10"><h2 className="mb-3 text-sm font-semibold text-[var(--w-accent)]">One habit for your next game</h2><p className="t-heading max-w-3xl text-2xl leading-snug sm:text-3xl">{report.summary.focus_habit}</p></section>}

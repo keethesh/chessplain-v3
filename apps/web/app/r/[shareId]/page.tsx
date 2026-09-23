@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!report) {
     return {
-      title: 'Report not found — Chessplain',
+      title: 'Report not found. Chessplain',
       description: 'This review link is no longer available. Review one of your own games instead.',
       robots: { index: false, follow: true },
     };
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     'The moments that decided this game, explained and playable on the board.';
 
   return {
-    title: `${headline} — Chessplain`,
+    title: `${headline}. Chessplain`,
     description: description.length > 200 ? `${description.slice(0, 197)}…` : description,
     alternates: { canonical: `/r/${shareId}` },
     openGraph: {
@@ -52,6 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: { card: 'summary_large_image', title: headline },
   };
 }
+
 export default async function SharedReportPage({ params }: PageProps) {
   const { shareId } = await params;
   let report = null;

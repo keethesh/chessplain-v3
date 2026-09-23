@@ -43,22 +43,18 @@ export function AnalysisWaitState({ status, stalled, onRetry, playerNames }: Ana
   const [tipIndex, setTipIndex] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % CHESS_TIPS.length);
+    const interval = setInterval(() => {
+      setTipIndex(prev => (prev + 1) % CHESS_TIPS.length);
     }, 7000);
-    return () => clearInterval(timer);
+    return () => clearInterval(interval);
   }, []);
 
   const activeStageIndex =
-    status === 'pending'
+    status === 'pending' || status === 'sweeping'
       ? 0
-      : status === 'sweeping'
-        ? 0
-        : status === 'verifying'
-          ? 1
-          : status === 'explaining'
-            ? 2
-            : 2;
+      : status === 'verifying'
+        ? 1
+        : 2;
 
   const currentTip = CHESS_TIPS[tipIndex];
 
@@ -70,7 +66,7 @@ export function AnalysisWaitState({ status, stalled, onRetry, playerNames }: Ana
           {playerNames ? `Reviewing ${playerNames}` : 'Preparing your game review'}
         </h1>
         <p className="text-sm text-[var(--w-ink2)]">
-          Stockfish depth 20 • Usually takes 30–45 seconds
+          Stockfish depth 20 · Usually takes 30-45 seconds
         </p>
       </div>
 

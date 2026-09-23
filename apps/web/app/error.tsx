@@ -6,7 +6,7 @@ import { RotateCcw } from 'lucide-react';
 import { captureEvent } from '../lib/posthog';
 
 // Last line of defence. Without this, an unhandled render error shows Next's
-// own error screen — no branding, no way back, and nothing recorded. In-app
+// own error screen: no branding, no way back, and nothing recorded. In-app
 // browsers on iOS and Android are where unexpected client failures actually
 // happen, and that is most of the traffic.
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -24,7 +24,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <div className="page-width py-16 max-w-2xl">
       <h1 className="t-display mb-5">Something went wrong on this page.</h1>
       <p className="t-body text-[var(--w-ink2)] mb-7">
-        This is on us, not on your game. Trying again usually works — nothing you submitted has been lost, and a
+        This is on us, not on your game. Trying again usually works. Nothing you submitted has been lost, and a
         review that was already running will still be at its own link.
       </p>
       <div className="flex flex-wrap gap-3">

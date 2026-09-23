@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 import { SUPPORT_EMAIL } from '../layout';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — Chessplain',
+  title: 'Terms of Service. Chessplain',
   description: 'What Chessplain provides, how subscriptions and refunds work, and fair use.',
 };
 

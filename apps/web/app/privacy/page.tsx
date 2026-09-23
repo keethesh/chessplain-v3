@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 import { SUPPORT_EMAIL } from '../layout';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Chessplain',
+  title: 'Privacy Policy. Chessplain',
   description: 'What Chessplain collects, how it is used, and how to have it deleted.',
 };
 
