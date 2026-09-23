@@ -204,8 +204,16 @@ Still open: a summary-prompt benchmark (the per-game summary may justify a
 stronger model — spotting a shared root cause across moments is reasoning,
 not narration).
 
-Production LLM (2026-09-23, before the switch): `deepseek/deepseek-v4.1-flash`
-through a local CommandCode proxy on the VPS (`127.0.0.1:3050`). It ignores
+**Production LLM since 2026-09-23 16:00 UTC: `openai/gpt-6-luna` via OpenRouter**
+(`LLM_API_BASE=https://openrouter.ai/api/v1`, engine commit `1d8d0df`, prompt
+`2026-09-23.2`). Verified with the deployment verifier (25/25) and the Ne3
+production game run through `runAnalysisPipeline` on the VPS: no fallback prose,
+and the explanation names the Qxg7 mate threat and why the f1 knight cannot
+escape. The OpenRouter key expires 2026-10-23 with a $10 limit — replace it
+before then. Rollback: `/etc/chessplain/engine.env.bak-20260923-155930`.
+
+Before the switch: `deepseek/deepseek-v4.1-flash` through a local CommandCode
+proxy on the VPS (`127.0.0.1:3050`, still running, now unused). It ignored
 `reasoning_effort:'none'` and `max_tokens`: each moment spent 1.9k–4k reasoning
 tokens over 12–23 s, and 3 of 6 test calls returned empty content (which
 production turns into a retry, then fallback prose). The `config.ts` default
