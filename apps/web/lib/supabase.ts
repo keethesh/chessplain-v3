@@ -8,5 +8,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { flowType: 'pkce' }, // /auth/callback exchanges ?code=: requires PKCE, not the implicit default
+  auth: {
+    flowType: 'pkce', // /auth/callback exchanges ?code=: requires PKCE, not the implicit default
+    // /auth/callback owns the exchange. Left on, the client exchanges ?code= itself on
+    // load, so the callback's second exchange fails and shows an error to a signed-in user.
+    detectSessionInUrl: false,
+  },
 });
