@@ -159,15 +159,57 @@ Mistral deliberately excluded):
 The judge runs at `reasoning: low` — at default effort Claude Sonnet 5 spends
 the whole token budget reasoning and returns empty content.
 
+### Results (2026-09-23, 49 positions, one run each, judge scores 1–5)
+
+Round 1, prompt `2026-09-23.1` (report `benchmark/results/2026-09-23T15-44-54-026Z.md`):
+
+| Model | Valid | Accuracy | Explains why | Thought | Takeaway | p95 s | $/1k moments |
+|---|---|---|---|---|---|---|---|
+| gpt-6-luna | 49/49 | 4.02 | 2.86 | 4.06 | 3.65 | 5.8 | 0.13 |
+| gpt-6-luna+low | 49/49 | 4.08 | 2.86 | 4.12 | 3.76 | 11.7 | 0.25 |
+| gpt-6-luna-pro | 49/49 | 3.98 | 2.78 | 3.96 | 3.69 | 9.7 | 0.66 |
+| deepseek-v4.1-flash | 49/49 | 3.71 | 3.31 | 4.08 | 3.69 | 31.5 | 0.31 |
+| qwen3.8-flash | 49/49 | 3.67 | 2.88 | 3.94 | 3.69 | 6.2 | 0.15 |
+| qwen3.8-omni-flash | 47/49 | 3.57 | 2.85 | 3.94 | 3.68 | 5.9 | 0.39 |
+
+Every model scored ~3/5 or lower on *explains why*, and 12 positions scored low
+for every model — the inputs lacked the reason. Fixed in prompt `2026-09-23.2`:
+the better move's engine line is now annotated (`best_line_moves`,
+`best_line_outcome`), every line move says who plays it (`by`), and mates carry
+`mate_reason`. Luna Pro (5× the price, no better) and Qwen Omni (weakest) were
+dropped.
+
+Round 2, prompt `2026-09-23.2` (report `benchmark/results/2026-09-23T15-54-31-561Z.md`):
+
+| Model | Valid | Accuracy | Explains why | Thought | Takeaway | p95 s | $/1k moments |
+|---|---|---|---|---|---|---|---|
+| gpt-6-luna | 49/49 | 4.02 | 3.10 | 4.06 | 3.69 | 4.7 | 0.25 |
+| gpt-6-luna+low | 49/49 | 4.00 | 2.88 | 4.02 | 3.71 | 11.5 | 0.31 |
+| deepseek-v4.1-flash | 48/49 | 3.79 | 3.52 | 4.04 | 3.85 | 26.5 | 0.34 |
+| qwen3.8-flash | 48/49 | 3.71 | 3.19 | 4.02 | 3.81 | 5.8 | 0.29 |
+
+**Choice: `openai/gpt-6-luna`, no reasoning.** Most accurate, all valid, one
+real provider (OpenAI) with the tightest latency, ~$0.00025 per moment. DeepSeek
+explains a little more but states more wrong facts, and OpenRouter's host
+rotation puts its p95 at 26 s. Reasoning effort `low` bought nothing. Verified
+against the engine's exact request shape (`reasoning_effort: 'none'`,
+`max_tokens: 500`): 8/8 of the longest inputs valid, ≤263 completion tokens.
+
+Caveats: one run per position, and the judge runs at low reasoning — its
+comments are occasionally wrong on chess details, so treat ±0.2 as noise.
+*Explains why* is still ~3/5; the remaining gaps are lines cut at 3–4 plies and
+non-mate threats.
+
 Still open: a summary-prompt benchmark (the per-game summary may justify a
 stronger model — spotting a shared root cause across moments is reasoning,
-not narration), and switching production to the chosen model through
-OpenRouter.
+not narration).
 
-Production LLM (2026-09-23): `deepseek/deepseek-v4.1-flash` through a local
-CommandCode proxy on the VPS (`127.0.0.1:3050`), which maps
-`reasoning_effort:'none'` to `'low'`. The `config.ts` default (`crof.ai`,
-`deepseek-v4-flash-0731`) is unused in production.
+Production LLM (2026-09-23, before the switch): `deepseek/deepseek-v4.1-flash`
+through a local CommandCode proxy on the VPS (`127.0.0.1:3050`). It ignores
+`reasoning_effort:'none'` and `max_tokens`: each moment spent 1.9k–4k reasoning
+tokens over 12–23 s, and 3 of 6 test calls returned empty content (which
+production turns into a retry, then fallback prose). The `config.ts` default
+(`crof.ai`, `deepseek-v4-flash-0731`) is unused.
 
 ## Suggested execution order
 

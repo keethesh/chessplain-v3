@@ -17,7 +17,7 @@ import type { BenchmarkFixture } from './export-benchmark-fixtures.js';
  * a host that underperforms shows up and can be excluded by provider slug.
  *
  *   OPENROUTER_API_KEY=… pnpm --filter @chessplain/engine benchmark:models \
- *     [-- --models luna,qwen] [--limit 10] [--runs 2] [--judge anthropic/claude-sonnet-5 | --no-judge]
+ *     [-- --models gpt-6-luna,qwen3.8-flash] [--limit 10] [--runs 2] [--judge anthropic/claude-sonnet-5 | --no-judge]
  *
  * Inputs are benchmark/fixtures.json (see export-benchmark-fixtures.ts), sent
  * through the production payload builder and system prompt. Output lands in
@@ -287,7 +287,10 @@ function report(results: Result[], candidates: Candidate[], fixtures: BenchmarkF
 async function main() {
   if (!KEY) throw new Error('OPENROUTER_API_KEY is required.');
   const filter = arg('models')?.split(',');
-  const candidates = filter ? CANDIDATES.filter((c) => filter.some((f) => c.label.includes(f))) : CANDIDATES;
+  const candidates = filter ? CANDIDATES.filter((c) => filter.includes(c.label)) : CANDIDATES;
+  if (filter && candidates.length !== filter.length) {
+    throw new Error(`Unknown --models label; known: ${CANDIDATES.map((c) => c.label).join(', ')}`);
+  }
   const all: BenchmarkFixture[] = JSON.parse(readFileSync(new URL('../benchmark/fixtures.json', import.meta.url), 'utf8'));
   const fixtures = all.slice(0, Number(arg('limit') ?? all.length));
   const runs = Number(arg('runs') ?? 1);
