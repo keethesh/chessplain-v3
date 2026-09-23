@@ -13,24 +13,30 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Current code:** typecheck, 63 unit tests across 15 files, and production
-builds for both packages pass. The engine is deployed to the production VPS.
+**Current code:** typecheck, **69 tests across 15 files**, and production builds
+for both packages pass. The engine is deployed to the production VPS at
+engine commit `1d8d0df`; the deployed service is active.
 
-**Live checks:** analysis works end-to-end on the deployed engine (Morphy Opera
-Game: completed, real chess-accurate prose, no fallback text); the API smoke
-suite passes 25/25; authenticated live monthly/yearly Stripe Checkout sessions
-were created and expired without payment. These checks do not prove every
-explanation correct or the full paid lifecycle.
+**Live checks:** the deployment verifier passes 25/25 checks. The deployed
+pipeline was run against the Ne3 production game with no fallback prose, and
+the explanation covered the Qxg7 mate threat and why the f1 knight cannot
+escape. These checks do not prove every explanation correct or the full paid
+lifecycle.
+
+**LLM:** Production uses `openai/gpt-6-luna` through OpenRouter with
+`reasoning_effort: none`. The model was selected from a 49-position benchmark;
+see [`docs/ANALYSIS_QUALITY_ROADMAP.md`](docs/ANALYSIS_QUALITY_ROADMAP.md).
+The current OpenRouter credential expires on 2026-10-23 and must be replaced
+before then.
 
 **Cloudflare migration:** The frontend runs on Cloudflare Workers (100,000 free
-requests/day, unlimited static bandwidth, no CPU-timeout billing). `getchessplain.com`
-and `www.getchessplain.com` are cut over and both return HTTP 200. Deploy updates
+requests/day, unlimited static bandwidth). `getchessplain.com` and
+`www.getchessplain.com` are cut over and both return HTTP 200. Deploy updates
 with `pnpm --filter @chessplain/web deploy:worker`.
 
-**Before advertising:** two things remain — verify the real subscription/portal
-lifecycle with a card, and create the support mailbox the legal pages promise.
-The LLM provider is currently a reseller gateway, so move to a first-party
-provider before spend scales.
+**Before advertising:** two things remain — verify the real
+subscription/portal lifecycle with a card, and create the support mailbox the
+legal pages promise.
 
 Start with [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) for current
 production evidence and the remaining steps. It distinguishes completed checks
@@ -72,12 +78,12 @@ rather than silently connecting to production.
 
 Read [`docs/README.md`](docs/README.md) for the index. In short:
 
-- [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) — ordered pre-launch steps, env blocks, and what is verified vs still blocking
+- [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) — current production evidence, remaining launch blockers, and deployment checks
 - [`docs/PRODUCT_REVIEW.md`](docs/PRODUCT_REVIEW.md) — positioning, monetization, what to validate and in what order
-- [`docs/ANALYSIS_QUALITY_ROADMAP.md`](docs/ANALYSIS_QUALITY_ROADMAP.md) — planned changes to moment selection, prompts, and model choice
-- [`docs/ENGINE_DEPLOYMENT.md`](docs/ENGINE_DEPLOYMENT.md) — how to deploy the engine to a VPS
+- [`docs/ANALYSIS_QUALITY_ROADMAP.md`](docs/ANALYSIS_QUALITY_ROADMAP.md) — implemented analysis-quality changes, benchmark results, and remaining work
+- [`docs/ENGINE_DEPLOYMENT.md`](docs/ENGINE_DEPLOYMENT.md) — current VPS topology and repeatable engine deployment procedure
 - [`apps/web/PRODUCT.md`](apps/web/PRODUCT.md) and [`apps/web/DESIGN.md`](apps/web/DESIGN.md) — product intent and the design system
-- [`plans/README.md`](plans/README.md) — implementation plans, with status
+- [`plans/README.md`](plans/README.md) — closed implementation plans retained as historical records
 - `docs/archive/` — finished work records. History, not instructions.
 
 When docs disagree with each other, the code wins; when they disagree about

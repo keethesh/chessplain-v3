@@ -7,11 +7,10 @@ top of the report (`SharedReportInteractiveView.tsx`).
 
 This document is a mirror of `apps/engine/src/analysis/prompts.ts` for
 readability — that file is the source of truth. If they disagree, the code
-wins; re-sync this document rather than trusting it. For planned changes to
-these prompts (what inputs they should receive, what the model should and
-should not be asked to invent), see
-[`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md) — none of that is
-implemented yet.
+wins; re-sync this document rather than trusting it. Remaining prompt work
+(move history, clocks, pasted-PGN ratings, and the `probable_thought` v1/v2
+decision) is tracked in
+[`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md).
 
 - **`PROMPT_VERSION` constant: `2026-09-23.2`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**

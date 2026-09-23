@@ -15,7 +15,7 @@ list. Treat "current source behavior" claims about the pre-redesign UI as
 historical; treat monetization/positioning/risk analysis as live.
 
 For the complete implementation inventory as of the original review, including
-design and user-flow changes, see [CHANGES_2026-09-06.md](CHANGES_2026-09-06.md)
+design and user-flow changes, see [CHANGES_2026-09-06.md](archive/CHANGES_2026-09-06.md)
 (archive — describes the pre-redesign UI). For current documentation entry
 points, see [README.md](README.md).
 

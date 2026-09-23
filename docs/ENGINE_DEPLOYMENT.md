@@ -1,6 +1,12 @@
 # Engine deployment on the 24GB VPS
 
-The VPS memory is user-supplied information. CPU allocation, disk, operating system, current services, and observed performance are unknown. This is a concrete deployment recipe and verification plan, not a claim the server was deployed.
+The production engine currently runs on `london-ampere` at
+`/home/ubuntu/chessplain-v3` under systemd unit `chessplain-engine`.
+Production uses `openai/gpt-6-luna` through OpenRouter; the current API
+credential expires 2026-10-23 and is intentionally not documented here.
+This document is both the observed production topology and the repeatable
+deployment/verification recipe. Resource numbers below are starting guidance,
+not claims about every host.
 
 ## Process model and initial sizing
 

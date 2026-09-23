@@ -2,10 +2,11 @@
 
 Captured from a design review of `apps/engine`'s analysis pipeline
 (`sweep.ts` → `select.ts` → `verify.ts` → `chess-facts.ts` → `explain.ts`).
-Most of this is still plan. Shipped so far (2026-09-23, prompt `2026-09-23.1`):
-per-move refutation facts with mate-threat and forced-defence detection, and
-the model benchmark harness — both marked below. Current prompt lives in
-`apps/engine/src/analysis/prompts.ts`; `docs/MOMENT_PROMPT.md` mirrors it.
+Implemented as of 2026-09-23: per-move refutation facts with mate-threat and
+forced-defence detection, the better-line annotations, and the model benchmark
+that selected the current provider/model. Remaining work is marked below.
+Current prompt lives in `apps/engine/src/analysis/prompts.ts`;
+`docs/MOMENT_PROMPT.md` mirrors it.
 
 ## Principle
 
@@ -221,15 +222,20 @@ production turns into a retry, then fallback prose). The `config.ts` default
 
 ## Suggested execution order
 
-1. Lock the output-ownership contract (table above) — no model/prompt work
-   until this is settled, since it changes what the benchmark measures.
-2. Ship `probable_thought` v1 (prompt-only, code already has the facts).
-3. Add missing inputs: move history, clock times, real rating from PGN
-   headers, best-move continuation, only-move signal.
-4. ~~Build the benchmark harness~~ — done; see above.
-5. Run candidate models through the benchmark; pick based on results, not
-   assumption.
-6. Fix selection thresholds (win% swing, multi-PV `engineAgrees`, verify
-   against the same depth used for selection).
-7. Revisit `probable_thought` v2 (ask-the-player) once the benchmark can
-   measure whether it beats v1.
+1. ~~Lock the output-ownership contract~~ — benchmarked current contract; the
+   model narrates facts while code owns board truth.
+2. **Ship `probable_thought` v1** — still open. Stop first-person mind-reading;
+   describe the move's objective aim instead.
+3. **Add missing inputs** — still open: last 3–4 plies, clock times, real rating
+   from pasted PGN headers, and an only-move signal. The better-move continuation
+   and per-move/forced-defence facts are now shipped.
+4. ~~Build the benchmark harness~~ — done; 49 anonymized fixtures and automatic
+   plus judge checks are committed.
+5. ~~Run candidate models and choose one~~ — done; production uses
+   `openai/gpt-6-luna` with no reasoning through OpenRouter.
+6. **Fix selection thresholds** — still open: win-probability swing instead of
+   raw pawns, multi-PV `engineAgrees`, and selecting/validating at aligned depth.
+7. **Benchmark the summary prompt** — still open; the game-level summary may
+   justify a stronger model.
+8. **Revisit `probable_thought` v2** — ask the player what they were going for
+   after v1 can be compared against a neutral aim description.

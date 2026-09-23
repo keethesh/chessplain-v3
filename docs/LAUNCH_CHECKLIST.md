@@ -1,43 +1,43 @@
 # Launch checklist
 
 **Status: NOT ready to advertise.** The production API is deployed and live
-checkout creation works. The frontend has been migrated to Cloudflare Workers
-(replaces Vercel); custom domain cutover is complete — `getchessplain.com` and
-`www.getchessplain.com` both serve the worker directly. A real subscription
-lifecycle test and the support mailbox remain (sections 2 and 4).
+checkout creation works. The frontend runs on Cloudflare Workers and both
+custom domains are cut over. A real subscription lifecycle test and the
+support mailbox remain (sections 2 and 4).
 
-Billing/database/LLM evidence below was verified on 2026-09-09 against engine
-commit `d01c697` and is unchanged since — re-verify before relying on it for a
-launch decision. Repository test count and the domain cutover were reverified
-on 2026-09-23 against web commit `83dc076`. Documentation-only commits may be
-newer. Do not confuse the API verifier's `READY` output with launch approval:
-it does not test the website, payment completion, premium access, or
-cancellation.
+The current engine deployment and model switch were verified on 2026-09-23:
+engine commit `1d8d0df`, prompt `2026-09-23.2`, `openai/gpt-6-luna` through
+OpenRouter. Earlier rows retain dated evidence where it is still useful; do
+not treat old commit IDs or old provider settings below as current state.
+Do not confuse the API verifier's `READY` output with launch approval: it does
+not test the website, payment completion, premium access, or cancellation.
+
+The current OpenRouter credential expires 2026-10-23 and has a $10 spending
+limit. Replace it before that date.
 
 ## Current evidence
 
 | Area | Evidence | Scope / remaining gap |
 |---|---|---|
-| Repository | Typecheck, 63/63 tests in 15 files, both production builds passed (reverified 2026-09-23) | Current local verification; not proof of every production flow |
-| GitHub CI | [Run 34393964367](https://github.com/keethesh/chessplain-v3/actions/runs/34393964367) succeeded at `d01c697` | Earlier run at `0163972` failed because tests depended on a local `.env`; fixed |
-| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, commit `d01c697`, active | VPS tests also passed 56/56 without a local `.env` |
+| Repository | Typecheck, 69/69 tests in 15 files, both production builds passed (reverified 2026-09-23) | Current local/VPS verification; not proof of every production flow |
+| GitHub CI | Earlier CI run succeeded at `d01c697` | Historical CI evidence; rerun after the current engine changes |
+| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, deployed engine commit `1d8d0df`, active | VPS tests 69/69; current model is OpenRouter/Luna |
 | API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
-| Black-side production report | `3067cfdc-ffa4-4947-af48-37bdfd471cc5` completed; all selected moments have Black perspective and even plies | Verifies the deployed perspective fix for this game, not universal narrative accuracy |
+| Analysis works end-to-end | Deployed `runAnalysisPipeline` run on the Ne3 production game completed with 1 moment and **0 fallback phrases** | Direct pipeline verification bypassed HTTP quota; OpenRouter usage increased as expected |
+| Analysis quality | 49-position benchmark; prompt `2026-09-23.2`; current choice `openai/gpt-6-luna` | One run per position; benchmark judge scores are directional, not a guarantee |
 | Database | `analysis_errors.analysis_id` exists; signup trigger installed once; no auth users without profiles; migrations 7 and 8 recorded | Production retains 71 older migration-history entries absent from this repo; see migration warning below |
-| LLM provider | Production switched to `deepseek/deepseek-v4.1-flash` via local CommandCode proxy (`http://127.0.0.1:3050/v1`) using user CommandCode API key | Proxy automatically maps `reasoning_effort: 'none'` to `'low'` and adds reasoning headroom so deepseek-v4.1-flash generates full structured coaching without mid-thought truncation |
-| Analysis works end-to-end | Morphy Opera Game submitted to production: `completed` in ~50s, 1 moment, **0 fallback phrases**, outstanding human-grade analysis (`457ae85a-d094-4b45-b05a-7e649a9fed84`) | Headline: *"You didn't lose this in the endgame. There wasn't one."* |
-| Error telemetry | Migration 9 (`analysis_errors_stage_check` now accepts `explaining_moment`, `explaining_summary`, `llm_credits_exhausted`); insert of all four v3 stages verified, then rolled back | **Why the outage was invisible:** migration 7 fixed `source`/`severity` but missed `stage`, so every LLM failure was rejected (23514) and only reached journald |
-| Silent-failure gap | **OPEN.** A total LLM outage still yields a `completed` report full of generic fallback prose rather than a visible failure | Users saw "analysis doesn't work" as fake content, not an error |
-| LLM request shape | The engine hardcodes `reasoning_effort:'none'`; measured on the VPS as load-bearing — without it `deepseek-v4-flash` spent its whole 500-token budget on reasoning and returned empty content | Any future model must be checked with its current `max_tokens` before switching |
-| Stripe live configuration | Existing Vercel live secret verified with Stripe and securely installed on VPS; both configured USD prices active; charges enabled | No secret values stored in this document or printed during transfer |
-| Live Checkout | Authenticated month/year sessions created at $9.99/$99.99, subscription mode, correct owner; duplicate calls returned the same session | No card charged; both unpaid sessions expired; temporary auth user/profile deleted |
-| Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not Stripe delivery or paid entitlement updates |
-| Webhook routing | New engine endpoint enabled; obsolete web endpoint disabled, not deleted | New: `we_1UDrkeFtgmZSE6kxl5rhwS0F`; old: `we_1SOsFmFtgmZSE6kx0QBpARJx` |
+| LLM provider | **Current:** `openai/gpt-6-luna` via `https://openrouter.ai/api/v1`, `reasoning_effort: none` | Credential expires 2026-10-23; replace before expiry |
+| Error telemetry | Migration 9 (`analysis_errors_stage_check` accepts `explaining_moment`, `explaining_summary`, `llm_credits_exhausted`) | Reverify after future schema changes |
+| Silent-failure gap | **OPEN.** A total LLM outage still yields a `completed` report with generic fallback prose rather than a visible failure | Fix before claiming outage transparency |
+| Stripe live configuration | Existing live Stripe secret is installed on VPS; configured USD prices active | No secret values stored in this document |
+| Live Checkout | Authenticated month/year sessions created at $9.99/$99.99; unpaid sessions expired | No card charged; paid entitlement still needs a real card |
+| Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not paid entitlement updates |
 | Portal configuration | Live default configuration active; cancellation enabled at period end | Customer portal journey and cancellation webhook still need a real subscription test |
+| Webhook routing | Current engine endpoint enabled; obsolete web endpoint disabled, not deleted | Verify delivery on a paid checkout |
 | HTTPS | Caddy validates and reloads; API sends `Strict-Transport-Security: max-age=31536000` | Scoped to API host, no `includeSubDomains` |
-| Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; custom domains cut over — `https://getchessplain.com` and `https://www.getchessplain.com` both verified HTTP 200 on 2026-09-23 | Domain cutover done; remaining launch blockers are sections 2 and 4 below |
-| Quota | **ENFORCED** and verified: free account `201, 201, 402`; premium never blocked (see section 3) | Was unbounded until 2026-09-17 |
-| Client IP | `TRUST_PROXY` was unset, so every request on earth reported `127.0.0.1`, making the anonymous quota and the rate limiter global. Now `127.0.0.1,::1`; a real submission records `77.98.146.19` | Trust only loopback; never `true` |
+| Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; `getchessplain.com` and `www.getchessplain.com` verified HTTP 200 on 2026-09-23 | Domain cutover done |
+| Quota | **ENFORCED** and verified: free account `201, 201, 402`; premium never blocked | Was unbounded until 2026-09-17 |
+| Client IP | `TRUST_PROXY=127.0.0.1,::1`; loopback is trusted, arbitrary forwarded addresses are not | Reverify if the proxy topology changes |
 
 Earlier same-day acceptance evidence: real Stockfish/LLM gate 20/20, p50 13.89s;
 local viewport audit 30/30 page/width combinations; site and sample share images
@@ -46,13 +46,14 @@ blocked production website or a load test. Rerun the relevant gates after change
 
 ## 1. Cloudflare Custom Domain Cutover (`getchessplain.com`) — DONE
 
-The frontend has moved from Vercel to **Cloudflare Workers** using
+The frontend runs on **Cloudflare Workers** using
 `@opennextjs/cloudflare`, and the custom domain cutover is complete:
 
 - `https://getchessplain.com` and `https://www.getchessplain.com` both serve
   the worker directly and return HTTP 200 (reverified 2026-09-23).
 - Live worker URL (still reachable directly): `https://chessplain-web.oxide-website.workers.dev`
-- Unlimited static asset bandwidth; 100,000 free edge requests/day; zero Vercel CPU limits
+- Cloudflare's current plan provides 100,000 free edge requests/day and
+  unlimited static asset bandwidth.
 
 ### How the cutover was done (for reference / redoing on a new zone)
 
