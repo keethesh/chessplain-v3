@@ -53,7 +53,7 @@ describe('Prompts and Banned Tokens', () => {
   it('validates moment JSON successfully for gold standard output', () => {
     const goldMoment = {
       played: '23.Bxf7+',
-      probable_thought: 'If I grab the pawn, my fork wins it straight back — I stay up material.',
+      probable_thought: 'The bishop takes the f7 pawn with check, aiming to win it and keep the extra material.',
       what_actually_happens: "The bishop gets kicked to h5 and never returns. From here on, you're defending the dark squares around your king with pieces that can't see them — that's why the position felt worse every move.",
       concept_name: 'Trapped piece',
       concept_definition: 'a piece with no safe squares left',
@@ -81,6 +81,20 @@ describe('Prompts and Banned Tokens', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.some((e) => e.includes('Banned tokens'))).toBe(true);
     expect(result.errors.some((e) => e.includes('exceeds 8 words'))).toBe(true);
+    expect(result.errors.some((e) => e.includes('third person'))).toBe(true);
+  });
+
+  it('rejects a first-person probable_thought, which claims to read the player\'s mind', () => {
+    const base = {
+      played: '23.Bxf7+',
+      what_actually_happens: 'The bishop gets kicked to h5 and has no safe square.',
+      concept_name: 'Trapped piece',
+      concept_definition: 'a piece with no safe squares left',
+      takeaway: 'Before taking a pawn, check how the piece comes back.',
+      severity_label: 'Turning point',
+    };
+    expect(validateMomentJson({ ...base, probable_thought: 'If I grab the pawn, my fork wins it back.' }).isValid).toBe(false);
+    expect(validateMomentJson({ ...base, probable_thought: 'The bishop grabs the pawn, aiming for a fork.' }).isValid).toBe(true);
   });
 
   it('validates summary JSON successfully', () => {

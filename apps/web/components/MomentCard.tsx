@@ -54,9 +54,8 @@ export function MomentCard({ moment, index, isActive = true, onSelect, stage = '
           <h2 ref={headingRef} tabIndex={-1} className="t-heading mb-5 text-3xl leading-tight outline-none sm:text-4xl">The position changed after {playedMove}.</h2>
           {moment.probable_thought && (
             <div className="mb-6">
-              <h3 className="mb-2 text-sm font-semibold text-[var(--w-ink2)]">The idea may have been</h3>
-              <p className="text-lg italic leading-relaxed text-[var(--w-ink2)]">“{moment.probable_thought}”</p>
-              <p className="mt-2 text-xs text-[var(--w-ink3)]">A possible intention, inferred from the move.</p>
+              <h3 className="mb-2 text-sm font-semibold text-[var(--w-ink2)]">What the move was going for</h3>
+              <p className="text-lg leading-relaxed text-[var(--w-ink2)]">{moment.probable_thought}</p>
             </div>
           )}
           <div className="border-t border-[var(--w-border)] pt-5">
@@ -90,7 +89,7 @@ export function MomentCard({ moment, index, isActive = true, onSelect, stage = '
         <summary className="focus-ring inline-flex min-h-11 items-center text-sm font-semibold text-[var(--w-accent)]">Read the full explanation</summary>
         <div className="mt-4 space-y-5">
           {moment.concept_definition && <p className="text-sm leading-relaxed text-[var(--w-ink2)]">{moment.concept_definition}</p>}
-          {moment.probable_thought && <p className="text-sm italic leading-relaxed text-[var(--w-ink2)]">“{moment.probable_thought}”</p>}
+          {moment.probable_thought && <p className="text-sm leading-relaxed text-[var(--w-ink2)]">{moment.probable_thought}</p>}
           <p className="text-sm leading-relaxed text-[var(--w-ink2)]">{moment.what_actually_happens}</p>
           <p className="text-sm font-medium leading-relaxed">{moment.takeaway}</p>
         </div>

@@ -21,13 +21,23 @@ export function uciToSan(fen: string, uciMove: string): { san: string; nextFen: 
   }
 }
 
+/** Plies a line may run past `maxMoves` to finish a capture sequence. */
+const MAX_EXCHANGE_EXTENSION = 2;
+
+/**
+ * SAN for the first `maxMoves` plies of an engine PV. A line never stops right
+ * after a capture while the PV recaptures next: cutting "…Qxe3" before "Bxe3"
+ * turns a queen trade into "you lose a queen".
+ */
 export function buildRefutationLine(fenAfterMove: string, pvUci: string, maxMoves: number = 3): string {
   if (!pvUci) return '';
   const moves = pvUci.trim().split(/\s+/);
   const chess = new Chess(fenAfterMove);
   const sanList: string[] = [];
+  let lastWasCapture = false;
 
-  for (let i = 0; i < Math.min(moves.length, maxMoves); i++) {
+  for (let i = 0; i < Math.min(moves.length, maxMoves + MAX_EXCHANGE_EXTENSION); i++) {
+    if (i >= maxMoves && !lastWasCapture) break;
     const uci = moves[i];
     if (uci.length < 4) break;
     const from = uci.substring(0, 2);
@@ -37,7 +47,10 @@ export function buildRefutationLine(fenAfterMove: string, pvUci: string, maxMove
     try {
       const move = chess.move({ from, to, promotion });
       if (!move) break;
+      // Past the limit, only a capture continues the exchange.
+      if (i >= maxMoves && !move.captured) break;
       sanList.push(move.san);
+      lastWasCapture = Boolean(move.captured);
     } catch {
       break;
     }

@@ -21,7 +21,7 @@ export const DEMO_REPORT: ReportDetail = {
     ply: 6, move_number: 3, played: 'Nf6', fen_before: fenBefore, fen_after: game.fen(),
     player_color: 'black', best_move: 'Qe7', refutation_line: '4. Qxf7#', eval_swing: 0,
     severity_label: 'Turning point',
-    probable_thought: 'I can develop my knight and make the queen move at the same time.',
+    probable_thought: 'The knight develops to f6 and attacks the queen on h5.',
     what_actually_happens: 'White plays Qxf7#. The bishop on c4 protects the queen, so your king cannot capture it. The king has no safe escape and the adjacent queen check cannot be blocked.',
     concept_name: 'A threat comes first',
     concept_definition: 'An attack on a piece only gains time if your opponent needs to answer it.',
