@@ -53,7 +53,7 @@ If every moment falls back to generic text, or credits run out, the pipeline thr
 ## Constraints
 
 - **Production database, no staging.** A local engine pointed at production must run with `WORKER_ENABLED=false`, or it will consume real queued jobs.
-- **Migrations:** production has migration history absent from this repo. Don't blindly `supabase db push` or mark migrations applied; see the migration warning in `docs/LAUNCH_CHECKLIST.md`.
+- **Migrations:** production has migration history absent from this repo. Don't blindly `supabase db push` or mark migrations applied; see the migration warning in `docs/LAUNCH_CHECKLIST.md`. That history includes constraints the repo schema lacks: `UNIQUE (user_id, source, external_id)` on `source_games` and `UNIQUE (source_game_id)` on `game_analyses`. So there's one report per game per signed-in user: `external_id` is the Chess.com game URL, and `POST /api/reports` returns the existing report on resubmit.
 - **No default credentials.** Missing config fails at startup by design (`src/config.ts`, `apps/web/lib/supabase.ts`).
 - **Web on Workers:** load fonts with `<link>`/`@import`, not `next/font/google`. `patches/` carries required patches for `next` and `@opennextjs/cloudflare`.
 - **Auth email templates** are sourced from `supabase/templates/` and pasted into the Supabase dashboard; the auth server keeps sending the old template for ~10 minutes after a save. Mail goes out through Resend SMTP from `mail.getchessplain.com`.
