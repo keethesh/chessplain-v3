@@ -34,9 +34,14 @@ requests/day, unlimited static bandwidth). `getchessplain.com` and
 `www.getchessplain.com` are cut over and both return HTTP 200. Deploy updates
 with `pnpm --filter @chessplain/web deploy:worker`.
 
-**Before advertising:** two things remain — verify the real
-subscription/portal lifecycle with a card, and create the support mailbox the
-legal pages promise.
+**Sign-in:** passwordless magic links work end to end for any address since
+2026-09-24. Auth email goes out through Resend SMTP from
+`mail.getchessplain.com`, using the in-theme templates in `supabase/templates/`.
+
+**Before advertising:** verify the real subscription/portal lifecycle with a
+card, send a test to `support@getchessplain.com` (Cloudflare forwarding) from
+an outside address, replace the expiring OpenRouter key, and rotate the
+Supabase service-role key.
 
 Start with [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) for current
 production evidence and the remaining steps. It distinguishes completed checks
