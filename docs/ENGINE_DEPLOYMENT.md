@@ -3,7 +3,9 @@
 The production engine currently runs on `london-ampere` at
 `/home/ubuntu/chessplain-v3` under systemd unit `chessplain-engine`.
 Production uses `openai/gpt-6-luna` through OpenRouter; the current API
-credential expires 2026-10-23 and is intentionally not documented here.
+credential expires 2026-12-25 and is intentionally not documented here. Replace it
+with `ssh london-ampere "chessplain-set-llm-key '<key>'"` (installed at
+`/usr/local/bin/chessplain-set-llm-key`; rejects keys OpenRouter does not accept).
 This document is both the observed production topology and the repeatable
 deployment/verification recipe. Resource numbers below are starting guidance,
 not claims about every host.

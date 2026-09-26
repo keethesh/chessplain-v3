@@ -1,10 +1,9 @@
 # Launch checklist
 
-**Status: NOT ready to advertise.** **Blocker (2026-09-26 21:12 UTC): the
-production OpenRouter key is rejected (`401 User not found`), so every report
-with at least one moment fails.** Install a valid key in
-`/etc/chessplain/engine.env` and verify with one real report. The production API
-is deployed and live checkout creation works. The frontend runs on Cloudflare
+**Status: NOT ready to advertise.** The OpenRouter key was replaced on
+2026-09-26 after the old one was revoked (`401 User not found`); a real report
+then completed with 3 moments and 0 fallback phrases. The production API is
+deployed and live checkout creation works. The frontend runs on Cloudflare
 Workers and both custom domains are cut over. Passwordless sign-in works end to
 end for non-team addresses since 2026-09-24. A real subscription lifecycle test,
 an inbound support-mail test and credential rotation remain (sections 2 and 4).
@@ -27,7 +26,7 @@ not test the website, payment completion, premium access, or cancellation.
 | Analysis works end-to-end | Deployed `runAnalysisPipeline` run on the Ne3 production game completed with 1 moment and **0 fallback phrases** | Direct pipeline verification bypassed HTTP quota; OpenRouter usage increased as expected |
 | Analysis quality | 49-position benchmark; prompt `2026-09-24.1`; current choice `openai/gpt-6-luna` | Benchmark judge scores are directional, not a guarantee |
 | Database | `analysis_errors.analysis_id` exists; signup trigger installed once; no auth users without profiles; migrations 7 and 8 recorded | Production retains 71 older migration-history entries absent from this repo; see migration warning below |
-| LLM provider | **Current:** `openai/gpt-6-luna` via `https://openrouter.ai/api/v1`, `reasoning_effort: none` | Credential expires 2026-10-23; replace before expiry |
+| LLM provider | **Current:** `openai/gpt-6-luna` via `https://openrouter.ai/api/v1`, `reasoning_effort: none`. Key replaced 2026-09-26: $10 limit, expires 2026-12-25; one 3-moment report cost $0.00127 | Replace before 2026-12-25 with `ssh london-ampere "chessplain-set-llm-key '<key>'"` (checks the key with OpenRouter before writing, backs up, restarts) |
 | Error telemetry | Migration 9 (`analysis_errors_stage_check` accepts `explaining_moment`, `explaining_summary`, `llm_credits_exhausted`) | Reverify after future schema changes |
 | Silent-failure gap | **CLOSED** in `2dfe75b` (deployed): when every moment falls back or credits are exhausted, `pipeline.ts` throws `LlmUnavailableError`; the worker retries, then marks the row failed, and quota ignores failed rows | A partial outage still publishes the explained moments with a generic summary, by design |
 | Auth email | Custom SMTP via Resend (`smtp.resend.com:465`, sender `no-reply@mail.getchessplain.com`, domain verified, DKIM/SPF on `mail.` subdomain); email rate limit 100/h. Delivered to a non-team address and sign-in completed on `www.` on 2026-09-24; the signup trigger created its `profiles` row (`free`). Resend click and open tracking are off, so sign-in links are not rewritten through a tracking redirect | Before this, Supabase's built-in sender only mailed team members: real visitors could not sign in. Templates live in `supabase/templates/` and must be pasted into the dashboard after edits; the auth server keeps sending the previous template for roughly 10 minutes after a save |

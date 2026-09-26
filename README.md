@@ -26,8 +26,8 @@ lifecycle.
 **LLM:** Production uses `openai/gpt-6-luna` through OpenRouter with
 `reasoning_effort: none`. The model was selected from a 49-position benchmark;
 see [`docs/ANALYSIS_QUALITY_ROADMAP.md`](docs/ANALYSIS_QUALITY_ROADMAP.md).
-The current OpenRouter credential expires on 2026-10-23 and must be replaced
-before then.
+The current OpenRouter credential expires on 2026-12-25 and must be replaced
+before then (`ssh london-ampere "chessplain-set-llm-key '<key>'"`).
 
 **Cloudflare migration:** The frontend runs on Cloudflare Workers (100,000 free
 requests/day, unlimited static bandwidth). `getchessplain.com` and

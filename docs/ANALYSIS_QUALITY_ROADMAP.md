@@ -243,8 +243,8 @@ to `what_actually_happens`.
 prompt `2026-09-24.1` (deployed 2026-09-23 ~21:25 UTC). Verified with the deployment verifier (25/25) and the Ne3
 production game run through `runAnalysisPipeline` on the VPS: no fallback prose,
 and the explanation names the Qxg7 mate threat and why the f1 knight cannot
-escape. The OpenRouter key expires 2026-10-23 with a $10 limit — replace it
-before then. Rollback: `/etc/chessplain/engine.env.bak-20260923-155930`.
+escape. The OpenRouter key was replaced on 2026-09-26 ($10 limit, expires
+2026-12-25). Rollback: `/etc/chessplain/engine.env.bak-20260923-155930`.
 
 Before the switch: `deepseek/deepseek-v4.1-flash` through a local CommandCode
 proxy on the VPS (`127.0.0.1:3050`, still running, now unused). It ignored
