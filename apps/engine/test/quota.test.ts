@@ -60,7 +60,7 @@ vi.mock('../src/db/supabase.js', () => {
       from: (table: string) => {
         const log: Log = [];
         const builder: Record<string, unknown> & { log: Log } = { log };
-        for (const method of ['select', 'eq', 'neq', 'gte', 'is', 'in', 'single', 'insert', 'update', 'order', 'limit']) {
+        for (const method of ['select', 'eq', 'neq', 'or', 'gte', 'is', 'in', 'single', 'maybeSingle', 'insert', 'update', 'order', 'limit']) {
           builder[method] = (...args: unknown[]) => { log.push([method, args]); return builder; };
         }
         builder.then = (onFulfilled: (value: unknown) => unknown, onRejected: (reason: unknown) => unknown) => {

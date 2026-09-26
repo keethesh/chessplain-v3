@@ -8,7 +8,7 @@ import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { startWorker, stopWorker } from '../queue/worker.js';
-import { ChessComInputError, fetchRecentChessComGame, type ChessComGameResult } from '../analysis/chesscom.js';
+import { ChessComInputError, fetchRecentChessComGame, listRecentChessComGames, type ChessComGameResult } from '../analysis/chesscom.js';
 
 interface RawBodyRequest extends FastifyRequest {
   rawBody?: Buffer;
@@ -72,6 +72,21 @@ async function bootstrap() {
     };
   });
 
+  // Recent standard games for a Chess.com player, so they can choose which one to review.
+  fastify.get('/api/chesscom/:username/games', async (request, reply) => {
+    const { username } = request.params as { username: string };
+    if (!/^[a-zA-Z0-9_-]{3,25}$/.test(username)) {
+      return reply.status(400).send({ error: 'invalid_input', message: 'Enter a valid Chess.com username.' });
+    }
+    try {
+      return reply.send({ games: await listRecentChessComGames(username) });
+    } catch (err) {
+      if (err instanceof ChessComInputError) return reply.status(400).send({ error: 'chesscom_input', message: err.message });
+      fastify.log.warn(err, 'Chess.com game list failed');
+      return reply.status(502).send({ error: 'chesscom_unavailable', message: 'Chess.com did not respond. Try again in a moment, or paste the game’s PGN.' });
+    }
+  });
+
   // 3. POST /api/reports (Submit game for analysis)
   fastify.post(
     '/api/reports',
@@ -94,13 +109,15 @@ async function bootstrap() {
       const body = request.body as {
         pgn?: string;
         chesscom_username?: string;
+        chesscom_game_url?: string;
         hero_variant?: string;
         player_color?: 'white' | 'black';
       };
 
       if ((body.pgn !== undefined && (typeof body.pgn !== 'string' || body.pgn.length > 100_000)) ||
           (body.chesscom_username !== undefined && (typeof body.chesscom_username !== 'string' || !/^[a-zA-Z0-9_-]{3,25}$/.test(body.chesscom_username))) ||
-          (body.player_color !== undefined && !['white', 'black'].includes(body.player_color))) {
+          (body.player_color !== undefined && !['white', 'black'].includes(body.player_color)) ||
+          (body.chesscom_game_url !== undefined && (typeof body.chesscom_game_url !== 'string' || body.chesscom_game_url.length > 200))) {
         return reply.status(400).send({ error: 'invalid_input', message: 'Enter a valid Chess.com username or a PGN under 100 KB, and choose your side.' });
       }
 
@@ -169,7 +186,7 @@ async function bootstrap() {
       let chesscomGame: ChessComGameResult | null = null;
       if (body.chesscom_username) {
         try {
-          chesscomGame = await fetchRecentChessComGame(body.chesscom_username);
+          chesscomGame = await fetchRecentChessComGame(body.chesscom_username, body.chesscom_game_url);
         } catch (err) {
           if (err instanceof ChessComInputError) return reply.status(400).send({ error: 'chesscom_input', message: err.message });
           fastify.log.warn(err, 'Chess.com fetch failed');
@@ -212,6 +229,7 @@ async function bootstrap() {
           .select('id', { count: 'exact', head: true })
           .eq(quotaKey.column, quotaKey.value)
           .neq('status', 'failed') // abandoned/failed runs don't consume quota
+          .or('status.neq.completed,moments.neq.[]') // nor do reports with nothing to review
           .gte('created_at', sevenDaysAgo);
 
         if (countErr) return reply.status(503).send({ error: 'quota_unavailable', message: 'We could not check your report allowance. Please try again shortly.' });
