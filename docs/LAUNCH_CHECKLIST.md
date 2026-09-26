@@ -21,7 +21,7 @@ limit. Replace it before that date.
 | Area | Evidence | Scope / remaining gap |
 |---|---|---|
 | Repository | Typecheck, 73/73 tests in 16 files, both production builds passed (reverified 2026-09-23) | Current local/VPS verification; not proof of every production flow |
-| GitHub CI | Earlier CI run succeeded at `d01c697` | Historical CI evidence; rerun after the current engine changes |
+| GitHub CI | CI green on `main` through `96d4dfb` (2026-09-26) | Rerun after further changes |
 | Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, deployed engine commit `20830d6`, active | VPS tests 73/73; current model is OpenRouter/Luna |
 | API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
 | Analysis works end-to-end | Deployed `runAnalysisPipeline` run on the Ne3 production game completed with 1 moment and **0 fallback phrases** | Direct pipeline verification bypassed HTTP quota; OpenRouter usage increased as expected |
@@ -42,6 +42,7 @@ limit. Replace it before that date.
 | Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; `getchessplain.com` and `www.getchessplain.com` verified HTTP 200 on 2026-09-23 | Domain cutover done |
 | Quota | **ENFORCED** and verified: free account `201, 201, 402`; premium never blocked | Was unbounded until 2026-09-17 |
 | Client IP | `TRUST_PROXY=127.0.0.1,::1`; loopback is trusted, arbitrary forwarded addresses are not | Reverify if the proxy topology changes |
+| Analytics (PostHog, EU) | Production page sends events (`POST eu.i.posthog.com/e/` → 200, 2026-09-26). Session replay, surveys, heatmaps and dead-click capture are disabled in `apps/web/lib/posthog.ts`; Do Not Track respected; opt-out toggle on `/privacy` persists across reloads | Relies on the UK PECR statistical-purposes exemption (DUAA 2025, in force 2026-02-05): stats only, clear information, simple opt-out, no banner. Re-enabling replay or surveys needs prior consent. Not legal advice |
 
 Earlier same-day acceptance evidence: real Stockfish/LLM gate 20/20, p50 13.89s;
 local viewport audit 30/30 page/width combinations; site and sample share images

@@ -71,7 +71,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <p>Chessplain. A little more understanding, every game.</p>
           <div>
             <Link href="/pricing">Pricing</Link>
-            <Link href="/privacy">Privacy</Link>
+            <Link href="/privacy">Privacy &amp; cookies</Link>
             <Link href="/terms">Terms</Link>
           </div>
         </footer>

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 import { SUPPORT_EMAIL } from '../layout';
+import { AnalyticsOptOut } from '../../components/AnalyticsOptOut';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy. Chessplain',
@@ -50,8 +51,20 @@ export default function PrivacyPage() {
           </p>
         </div>
 
+        <div id="analytics" className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
+          <h2 className="t-section text-lg font-bold mb-2">4. Analytics and Cookies</h2>
+          <p className="text-sm text-[var(--w-ink2)]">
+            We use PostHog, hosted in the EU, only to count and understand how Chessplain is used (pages viewed,
+            games submitted, clicks) so we can improve it. It stores a random identifier in a first-party cookie and
+            local storage. If you sign in, events are linked to your account ID, not your email. We do not record
+            sessions, use analytics for advertising, or track you on other sites. Sign-in uses its own storage to keep
+            you signed in. Browsers sending Do Not Track are not tracked.
+          </p>
+          <AnalyticsOptOut />
+        </div>
+
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
-          <h2 className="t-section text-lg font-bold mb-2">4. Contact & Deletion</h2>
+          <h2 className="t-section text-lg font-bold mb-2">5. Contact & Deletion</h2>
           <p className="text-sm text-[var(--w-ink2)]">
             You may request complete deletion of your account and game history at any time by emailing{' '}
             <a className="underline text-[var(--w-accent)]" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We
@@ -59,7 +72,7 @@ export default function PrivacyPage() {
           </p>
         </div>
 
-        <p className="t-caption text-[var(--w-ink3)] mt-2">Last updated: August 31, 2026</p>
+        <p className="t-caption text-[var(--w-ink3)] mt-2">Last updated: September 26, 2026</p>
       </div>
     </div>
   );
