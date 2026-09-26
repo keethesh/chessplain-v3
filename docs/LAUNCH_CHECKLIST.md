@@ -91,6 +91,11 @@ Subscribed events: `checkout.session.completed`,
 The obsolete `/api/stripe/webhook` endpoint on the web host is disabled to stop
 Stripe retrying deliveries to a retired route.
 
+Checkout accepts promotion codes (`allow_promotion_codes`, engine `4cbfe2f`). For a
+cheap real charge, create a single-use, once-only $9.49-off code; the first monthly
+invoice is then $0.50, Stripe's USD minimum. Cancelling at period end prevents a
+full-price renewal.
+
 Before advertising, using a consenting owner's account and payment method:
 
 1. Sign in through the deployed site and complete one real subscription checkout.
