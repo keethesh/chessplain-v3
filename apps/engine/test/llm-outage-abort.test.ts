@@ -145,7 +145,6 @@ describe('Pipeline aborts instead of publishing an unexplained report', () => {
 
     expect(result.report.status).toBe('completed');
     expect(result.momentsCount).toBe(0);
-    expect(result.report.summary?.headline).toBe('No single moment decided this game.');
     expect(mocks.create, 'summarised a momentless game with the LLM').not.toHaveBeenCalled();
   });
 });

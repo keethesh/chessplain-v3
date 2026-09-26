@@ -283,19 +283,6 @@ export async function explainSummary(
   },
   analysisId?: string
 ): Promise<GameSummary> {
-  // No moments cleared the review thresholds. The summary prompt requires the
-  // story to cite at least two moments by move number, so sending an empty
-  // payload invites invented move numbers. Answer honestly instead, and skip
-  // the LLM call entirely.
-  if (moments.length === 0) {
-    return {
-      headline: 'No single moment decided this game.',
-      story:
-        'No position in this game swung far enough for us to single it out. That can mean you kept things steady, or that the game was decided gradually rather than at one turning point. It does not mean every move was the strongest available — only that nothing here stands out as the moment to study.',
-      focus_habit: 'Before choosing a move, check your opponent’s checks, captures, and threats.',
-    };
-  }
-
   // Derive the outcome rather than leaving the model to reconcile "1-0" with
   // player_color. It got that wrong in testing and told a player who had just
   // won by mate that their opponent "converted cleanly".
@@ -312,6 +299,26 @@ export async function explainSummary(
             ? 'won'
             : 'lost'
           : 'unknown';
+
+  // None of the player's moves cleared the review thresholds. The summary prompt
+  // requires the story to cite at least two moments by move number, so sending an
+  // empty payload invites invented move numbers. Answer honestly instead, and skip
+  // the LLM call. Only the player's moves are reviewed, so never claim that no
+  // moment decided the game: the opponent's blunder may well have.
+  if (moments.length === 0) {
+    const scope = 'This review looks only at your moves, not your opponent’s.';
+    return outcome === 'won'
+      ? {
+          headline: 'You won without a costly mistake.',
+          story: `None of your moves gave away enough to single out, so there is no mistake of yours to study in this game. ${scope}`,
+          focus_habit: 'Before choosing a move, check your opponent’s checks, captures, and threats.',
+        }
+      : {
+          headline: 'None of your moves stands out as the one that cost you.',
+          story: `No move of yours swung the position far enough to single it out. That can mean the game was decided gradually rather than at one turning point. It does not mean every move was the strongest available. ${scope}`,
+          focus_habit: 'Before choosing a move, check your opponent’s checks, captures, and threats.',
+        };
+  }
 
   const inputPayload = {
     outcome,
