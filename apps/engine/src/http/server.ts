@@ -164,6 +164,38 @@ async function bootstrap() {
         }
       }
 
+      // Resolve the username now, not in the worker: a typo must show on the form
+      // immediately rather than after three background retries.
+      let chesscomGame: ChessComGameResult | null = null;
+      if (body.chesscom_username) {
+        try {
+          chesscomGame = await fetchRecentChessComGame(body.chesscom_username);
+        } catch (err) {
+          if (err instanceof ChessComInputError) return reply.status(400).send({ error: 'chesscom_input', message: err.message });
+          fastify.log.warn(err, 'Chess.com fetch failed');
+          return reply.status(502).send({ error: 'chesscom_unavailable', message: 'Chess.com did not respond. Try again in a moment, or paste the game’s PGN.' });
+        }
+      }
+
+      // Production carries legacy UNIQUE constraints on source_games
+      // (user_id, source, external_id) and game_analyses (source_game_id): one
+      // report per game per user. A signed-in user resubmitting the same
+      // Chess.com game gets that report back without spending quota.
+      const externalId = chesscomGame?.gameUrl ?? null;
+      let sourceGameId: string | undefined;
+      let failedAnalysisId: string | undefined;
+      if (userId && externalId) {
+        const { data: existing } = await supabase.from('source_games').select('id, game_analyses(id, share_id, status)')
+          .eq('user_id', userId).eq('source', 'chesscom').eq('external_id', externalId).maybeSingle();
+        sourceGameId = existing?.id;
+        // PostgREST embeds a one-to-one relation as an object, one-to-many as an array.
+        const prior = [existing?.game_analyses].flat()[0] as { id: string; share_id: string; status: string } | null | undefined;
+        if (prior && prior.status !== 'failed') {
+          return reply.status(200).send({ id: prior.id, share_id: prior.share_id, status: prior.status });
+        }
+        failedAnalysisId = prior?.id;
+      }
+
       // Check quota for free/anon users (2 reports in 7 days).
       // Signed-in users are counted by user_id: an IP key punishes everyone
       // behind shared NAT for a stranger's usage, and resets when they change
@@ -198,30 +230,20 @@ async function bootstrap() {
         }
       }
 
-      // Resolve the username now, not in the worker: a typo must show on the form
-      // immediately rather than after three background retries.
-      let chesscomGame: ChessComGameResult | null = null;
-      if (body.chesscom_username) {
-        try {
-          chesscomGame = await fetchRecentChessComGame(body.chesscom_username);
-        } catch (err) {
-          if (err instanceof ChessComInputError) return reply.status(400).send({ error: 'chesscom_input', message: err.message });
-          fastify.log.warn(err, 'Chess.com fetch failed');
-          return reply.status(502).send({ error: 'chesscom_unavailable', message: 'Chess.com did not respond. Try again in a moment, or paste the game’s PGN.' });
+      if (failedAnalysisId) {
+        // Re-queue the failed report in place; created_at resets so quota counts it this week.
+        const { data: requeued, error: requeueErr } = await supabase.from('game_analyses')
+          .update({ status: 'pending', attempts: 0, next_attempt_at: null, locked_at: null, created_at: new Date().toISOString() })
+          .eq('id', failedAnalysisId)
+          .select('id, share_id, status')
+          .single();
+        if (requeueErr || !requeued) {
+          fastify.log.error(requeueErr, 'Failed to re-queue game_analyses');
+          return reply.status(500).send({ error: 'Database error re-queuing game analysis' });
         }
+        return reply.status(201).send({ id: requeued.id, share_id: requeued.share_id, status: requeued.status });
       }
 
-      const shareId = nanoid(8);
-
-      // Production carries a legacy UNIQUE (user_id, source, external_id), so a
-      // signed-in user resubmitting the same Chess.com game reuses its row.
-      const externalId = chesscomGame?.gameUrl ?? null;
-      let sourceGameId: string | undefined;
-      if (userId && externalId) {
-        const { data: existing } = await supabase.from('source_games').select('id')
-          .eq('user_id', userId).eq('source', 'chesscom').eq('external_id', externalId).maybeSingle();
-        sourceGameId = existing?.id;
-      }
       if (!sourceGameId) {
         const { data: sourceGame, error: sourceErr } = await supabase
           .from('source_games')
@@ -243,14 +265,13 @@ async function bootstrap() {
         sourceGameId = sourceGame.id;
       }
 
-      // Insert game_analyses
       const { data: analysis, error: analysisErr } = await supabase
         .from('game_analyses')
         .insert({
           user_id: userId,
           source_game_id: sourceGameId,
           ip: clientIp,
-          share_id: shareId,
+          share_id: nanoid(8),
           hero_variant: body.hero_variant,
           elo_band: chesscomGame?.eloBand,
           status: 'pending',
