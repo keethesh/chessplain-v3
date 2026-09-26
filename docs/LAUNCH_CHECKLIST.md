@@ -33,9 +33,9 @@ not test the website, payment completion, premium access, or cancellation.
 | Auth redirects | Site URL `https://getchessplain.com`; allow list is exactly `http://localhost:3000/**`, `https://getchessplain.com/**`, `https://www.getchessplain.com/**` (2026-09-24; obsolete Vercel preview entries removed) | Add a preview host here before testing sign-in on it |
 | Sign-in callback | `detectSessionInUrl: false` (`1915e69`, web `8316e1b9`): the client no longer exchanges `?code=` itself, so `/auth/callback` no longer shows "Let's try that link again" to a user it just signed in | Links still only complete in the requesting browser (PKCE); an email code fallback is not built |
 | Stripe live configuration | Existing live Stripe secret is installed on VPS; configured USD prices active | No secret values stored in this document |
-| Live Checkout | **Real paid checkout 2026-09-26:** owner account, monthly plan, promo `OWNERTEST-E355AF` ($9.49 off once), charged $0.50 USD live. Profile `premium` with matching `cus_…`/`sub_…`; subscription `active`, metadata `user_id` matches | Cancellation not yet exercised |
+| Live Checkout | **Real paid checkout 2026-09-26:** owner account, monthly plan, promo `OWNERTEST-E355AF` ($9.49 off once), charged $0.50 USD live. Profile `premium` with matching `cus_…`/`sub_…`; subscription `active`, metadata `user_id` matches. **Cancelled via portal** the same day: `cancel_at_period_end=true`, `cancel_at` 2026-10-26, `customer.subscription.updated` delivered, profile still `premium` | Downgrade happens on `customer.subscription.deleted` at 2026-10-26 20:32 UTC. On 2026-10-27, check the profile is `free` |
 | Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not paid entitlement updates |
-| Portal configuration | Live default configuration active; cancellation enabled at period end | Customer portal journey and cancellation webhook still need a real subscription test |
+| Portal configuration | Live default configuration active; cancellation at period end exercised by a real customer (2026-09-26) | — |
 | Webhook routing | `checkout.session.completed`, `customer.subscription.created/updated`, `invoice.paid` for the test customer all show `pending_webhooks=0` (delivered) | — |
 | HTTPS | Caddy validates and reloads; API sends `Strict-Transport-Security: max-age=31536000` | Scoped to API host, no `includeSubDomains` |
 | Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; `getchessplain.com` and `www.getchessplain.com` verified HTTP 200 on 2026-09-23 | Domain cutover done |
@@ -106,9 +106,10 @@ Before advertising, using a consenting owner's account and payment method:
    the period ends; verify eventual cancellation/deletion downgrades the profile.
 6. If a refund is desired, explicitly authorize it and perform it through Stripe.
 
-Steps 1–4 verified 2026-09-26 (see evidence table): real $0.50 payment, premium set
+Steps 1–5 verified 2026-09-26 (see evidence table): real $0.50 payment, premium set
 with matching IDs, second checkout 409, portal session created on
-`billing.stripe.com`. Steps 5–6 (cancellation, optional refund) remain.
+`billing.stripe.com`, at-period-end cancellation keeps premium. The final downgrade
+to `free` fires on 2026-10-26; confirm it on 2026-10-27. No refund was made.
 
 ## 3. Quota — DONE and verified
 
