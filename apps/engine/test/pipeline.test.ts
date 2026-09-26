@@ -74,7 +74,7 @@ describe('Prompts and Banned Tokens', () => {
       what_actually_happens: 'The king takes the piece.',
       why_better: 'Rd1 holds.',
       concept_name: 'Trapped piece',
-      concept_definition: 'a piece with no safe squares left to move anywhere on board', // 11 words > 8
+      concept_definition: 'a piece with no safe squares left to move to anywhere on the board', // 14 words > 12
       takeaway: 'Think before moving.',
       severity_label: 'Turning point',
     };
@@ -82,7 +82,7 @@ describe('Prompts and Banned Tokens', () => {
     const result = validateMomentJson(badMoment);
     expect(result.isValid).toBe(false);
     expect(result.errors.some((e) => e.includes('Banned tokens'))).toBe(true);
-    expect(result.errors.some((e) => e.includes('exceeds 8 words'))).toBe(true);
+    expect(result.errors.some((e) => e.includes('concept_definition is too long'))).toBe(true);
     expect(result.errors.some((e) => e.includes('third person'))).toBe(true);
   });
 

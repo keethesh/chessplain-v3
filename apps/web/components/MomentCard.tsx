@@ -28,6 +28,12 @@ export function stageTexts(moment: MomentReport, stage: MomentStage): string[] {
   return [moment.takeaway];
 }
 
+/** "An undefended piece." → "an undefended piece", ready to follow "X means". */
+function asDefinition(text: string): string {
+  const trimmed = text.trim().replace(/\.$/, '');
+  return /^[A-Z][a-z]/.test(trimmed) ? trimmed[0].toLowerCase() + trimmed.slice(1) : trimmed;
+}
+
 export function MomentCard({ moment, index, isActive = true, onSelect, stage = 'played', headingRef, squareColors = {}, onFocusSquare }: MomentCardProps) {
   const playedMove = moment.played.replace(/^\d+\.+\s*/, '');
   const bestMove = moment.best_move.replace(/^\d+\.+\s*/, '');
@@ -55,7 +61,7 @@ export function MomentCard({ moment, index, isActive = true, onSelect, stage = '
         <>
           <p className="mb-2 text-sm font-semibold text-[var(--w-accent)]">Before your move</p>
           <h2 ref={headingRef} tabIndex={-1} className="t-heading mb-4 text-3xl leading-tight outline-none sm:text-4xl">{moment.concept_name}</h2>
-          <p className="lesson-prose">{prose(moment.concept_definition)}</p>
+          <p className="lesson-prose"><dfn className="font-semibold not-italic text-[var(--w-ink1)]">{moment.concept_name}</dfn> means {prose(asDefinition(moment.concept_definition))}.</p>
         </>
       )}
 
@@ -88,7 +94,7 @@ export function MomentCard({ moment, index, isActive = true, onSelect, stage = '
         <>
           <p className="mb-2 text-sm font-semibold text-[var(--w-accent)]">One habit for your next game</p>
           <h2 ref={headingRef} tabIndex={-1} className="t-heading mb-4 text-3xl leading-tight outline-none sm:text-4xl">{prose(moment.takeaway)}</h2>
-          <p className="text-sm text-[var(--w-ink2)]"><strong className="text-[var(--w-ink1)]">{moment.concept_name}:</strong> {moment.concept_definition}</p>
+          <p className="text-sm text-[var(--w-ink2)]"><dfn className="font-semibold not-italic text-[var(--w-ink1)]">{moment.concept_name}</dfn> means {asDefinition(moment.concept_definition)}.</p>
         </>
       )}
 

@@ -278,17 +278,13 @@ export function validateMomentJson(data: unknown): { isValid: boolean; errors: s
     errors.push('probable_thought must describe what the move does in the third person, not the player\'s thoughts (no "I", "me", "my").');
   }
 
+  // The prompt asks for ≤8 words; accept a slight overage rather than cutting a
+  // definition mid-phrase (which once produced "doing moves in the order that
+  // makes them"). Longer ones are rejected so the model rewrites them.
   const conceptDef = record['concept_definition'];
   if (typeof conceptDef === 'string') {
-    const trimmed = conceptDef.trim();
-    const words = trimmed.split(/\s+/);
-    if (words.length > 8 && words.length <= 11) {
-      // Auto-clamp minor overages (9-11 words) to 8 words to prevent slow roundtrips
-      const clamped = words.slice(0, 8).join(' ');
-      record['concept_definition'] = clamped;
-    } else if (words.length > 8) {
-      errors.push(`concept_definition exceeds 8 words (${words.length} words): "${trimmed}"`);
-    }
+    const words = conceptDef.trim().split(/\s+/).length;
+    if (words > 12) errors.push(`concept_definition is too long (${words} words, aim for 8 or fewer). Shorten it.`);
   }
 
   // Explanations sit next to the board; long prose goes unread.
