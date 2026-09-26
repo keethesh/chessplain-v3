@@ -36,6 +36,9 @@ export function mapEloToBand(rating: number): EloBand {
   return 'above_1400';
 }
 
+/** A problem with the username itself (not found, no games); retrying cannot fix it. */
+export class ChessComInputError extends Error {}
+
 export async function fetchRecentChessComGame(username: string): Promise<ChessComGameResult> {
   const cleanUsername = username.trim().toLowerCase();
   const headers = {
@@ -43,19 +46,15 @@ export async function fetchRecentChessComGame(username: string): Promise<ChessCo
     'Accept': 'application/json',
   };
 
-  // 1. Fetch user stats for Elo rating
+  // 1. Fetch user stats for Elo rating; a 404 here means the player does not exist.
   let rating = 1100; // default middle rating if not found
-  try {
-    const statsRes = await fetch(`https://api.chess.com/pub/player/${cleanUsername}/stats`, { headers });
-    if (statsRes.ok) {
-      const stats = (await statsRes.json()) as ChessComStatsResponse;
-      const rapid = stats.chess_rapid?.last?.rating;
-      const blitz = stats.chess_blitz?.last?.rating;
-      const bullet = stats.chess_bullet?.last?.rating;
-      rating = rapid || blitz || bullet || 1100;
-    }
-  } catch (err) {
-    console.warn(`Failed to fetch stats for ${cleanUsername}:`, err);
+  const statsRes = await fetch(`https://api.chess.com/pub/player/${cleanUsername}/stats`, { headers }).catch(() => null);
+  if (statsRes?.status === 404) {
+    throw new ChessComInputError(`Chess.com has no player called '${username}'. Check the spelling.`);
+  }
+  if (statsRes?.ok) {
+    const stats = (await statsRes.json().catch(() => ({}))) as ChessComStatsResponse;
+    rating = stats.chess_rapid?.last?.rating || stats.chess_blitz?.last?.rating || stats.chess_bullet?.last?.rating || 1100;
   }
 
   const eloBand = mapEloToBand(rating);
@@ -73,10 +72,12 @@ export async function fetchRecentChessComGame(username: string): Promise<ChessCo
     if (res.ok) {
       const data = (await res.json()) as ChessComGamesResponse;
       games = data.games || [];
+    } else if (res.status !== 404) {
+      throw new Error(`Chess.com returned ${res.status} for ${cleanUsername}'s games`);
     }
   }
   if (games.length === 0) {
-    throw new Error(`No recent games found for Chess.com user '${username}'`);
+    throw new ChessComInputError(`'${username}' has no finished Chess.com games in the last 4 months. Paste the game's PGN instead.`);
   }
 
   // Take the most recent *standard* game. Variants (Chess960 above all) carry a
@@ -86,7 +87,7 @@ export async function fetchRecentChessComGame(username: string): Promise<ChessCo
   // dead end. Skip back to their last standard game instead.
   const standardGames = games.filter((g) => g.pgn && (g.rules ?? 'chess') === 'chess' && !/^\[Variant\s/m.test(g.pgn));
   if (standardGames.length === 0) {
-    throw new Error(
+    throw new ChessComInputError(
       `No standard chess games found for '${username}'. Chessplain reviews standard chess only — variants like Chess960 are not supported yet.`
     );
   }

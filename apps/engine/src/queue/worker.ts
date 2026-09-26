@@ -4,7 +4,6 @@ import { supabase } from '../db/supabase.js';
 import { recordAnalysisError } from '../db/errors.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { runAnalysisPipeline } from '../analysis/pipeline.js';
-import { fetchRecentChessComGame } from '../analysis/chesscom.js';
 import { EloBand } from '../types.js';
 import { parsePgn } from '../analysis/pgn.js';
 
@@ -79,7 +78,7 @@ export async function processNextJob(): Promise<boolean> {
   console.log(`[Worker] Started processing analysis ${analysis.id}`);
 
   let pgn = '';
-  let eloBand: EloBand = analysis.elo_band || '1000_1400';
+  const eloBand: EloBand = analysis.elo_band || '1000_1400';
   let targetPlayer: string | undefined;
 
   try {
@@ -100,23 +99,6 @@ export async function processNextJob(): Promise<boolean> {
         pgn = source.pgn;
         if (!targetPlayer && metadata['player_color'] === 'black') {
           targetPlayer = parsePgn(pgn).headers['Black'] || 'Black';
-        }
-      } else if (chesscomUser) {
-        const fetched = await fetchRecentChessComGame(chesscomUser);
-        pgn = fetched.pgn;
-        eloBand = fetched.eloBand;
-        targetPlayer = chesscomUser;
-
-        if (source) {
-          await supabase
-            .from('source_games')
-            .update({
-              pgn,
-              player_color: fetched.playerColor,
-              white_player: fetched.playerColor === 'white' ? chesscomUser : fetched.opponentUsername,
-              black_player: fetched.playerColor === 'black' ? chesscomUser : fetched.opponentUsername,
-            })
-            .eq('id', source.id);
         }
       }
     }

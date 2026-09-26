@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { startWorker, stopWorker } from '../queue/worker.js';
+import { ChessComInputError, fetchRecentChessComGame, type ChessComGameResult } from '../analysis/chesscom.js';
 
 interface RawBodyRequest extends FastifyRequest {
   rawBody?: Buffer;
@@ -196,6 +197,20 @@ async function bootstrap() {
           });
         }
       }
+
+      // Resolve the username now, not in the worker: a typo must show on the form
+      // immediately rather than after three background retries.
+      let chesscomGame: ChessComGameResult | null = null;
+      if (body.chesscom_username) {
+        try {
+          chesscomGame = await fetchRecentChessComGame(body.chesscom_username);
+        } catch (err) {
+          if (err instanceof ChessComInputError) return reply.status(400).send({ error: 'chesscom_input', message: err.message });
+          fastify.log.warn(err, 'Chess.com fetch failed');
+          return reply.status(502).send({ error: 'chesscom_unavailable', message: 'Chess.com did not respond. Try again in a moment, or paste the game’s PGN.' });
+        }
+      }
+
       const shareId = nanoid(8);
 
       // Insert source_games
@@ -204,7 +219,7 @@ async function bootstrap() {
         .insert({
           user_id: userId,
           ip: clientIp,
-          pgn: body.pgn,
+          pgn: body.pgn ?? chesscomGame?.pgn,
           source: body.chesscom_username ? 'chesscom' : 'pgn',
           external_id: body.chesscom_username || null,
           metadata: body.chesscom_username ? { chesscom_username: body.chesscom_username } : { player_color: body.player_color || 'white' },
@@ -226,6 +241,7 @@ async function bootstrap() {
           ip: clientIp,
           share_id: shareId,
           hero_variant: body.hero_variant,
+          elo_band: chesscomGame?.eloBand,
           status: 'pending',
         })
         .select('id, share_id, status')
