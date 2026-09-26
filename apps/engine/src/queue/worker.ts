@@ -34,8 +34,6 @@ interface GameAnalysisRow {
 interface SourceGameRow {
   id: string;
   pgn?: string;
-  source?: string;
-  external_id?: string;
   metadata?: Record<string, unknown>;
   user_id?: string;
 }
@@ -86,13 +84,13 @@ export async function processNextJob(): Promise<boolean> {
     if (analysis.source_game_id) {
       const { data: sourceData } = await supabase
         .from('source_games')
-        .select('id, pgn, source, external_id, metadata')
+        .select('id, pgn, metadata')
         .eq('id', analysis.source_game_id)
         .single();
 
       const source = sourceData as SourceGameRow | null;
       const metadata = source?.metadata || {};
-      const chesscomUser = (metadata['chesscom_username'] as string) || (source?.source === 'chesscom' ? source?.external_id : undefined);
+      const chesscomUser = metadata['chesscom_username'] as string | undefined;
       targetPlayer = chesscomUser;
 
       if (source?.pgn) {

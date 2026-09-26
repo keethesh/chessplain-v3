@@ -6,6 +6,7 @@ export interface ChessComGameResult {
   rating: number;
   playerColor: 'white' | 'black';
   opponentUsername: string;
+  gameUrl: string | null;
 }
 
 interface ChessComStatsResponse {
@@ -21,6 +22,7 @@ interface ChessComGamePlayer {
 
 interface ChessComGameItem {
   pgn?: string;
+  url?: string;
   rules?: string; // 'chess' for standard; 'chess960', 'bughouse', etc. for variants
   white: ChessComGamePlayer;
   black: ChessComGamePlayer;
@@ -105,5 +107,6 @@ export async function fetchRecentChessComGame(username: string): Promise<ChessCo
     rating,
     playerColor,
     opponentUsername,
+    gameUrl: latestGame.url ?? null,
   };
 }

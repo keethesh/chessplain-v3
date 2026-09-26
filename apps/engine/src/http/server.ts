@@ -213,23 +213,34 @@ async function bootstrap() {
 
       const shareId = nanoid(8);
 
-      // Insert source_games
-      const { data: sourceGame, error: sourceErr } = await supabase
-        .from('source_games')
-        .insert({
-          user_id: userId,
-          ip: clientIp,
-          pgn: body.pgn ?? chesscomGame?.pgn,
-          source: body.chesscom_username ? 'chesscom' : 'pgn',
-          external_id: body.chesscom_username || null,
-          metadata: body.chesscom_username ? { chesscom_username: body.chesscom_username } : { player_color: body.player_color || 'white' },
-        })
-        .select('id')
-        .single();
+      // Production carries a legacy UNIQUE (user_id, source, external_id), so a
+      // signed-in user resubmitting the same Chess.com game reuses its row.
+      const externalId = chesscomGame?.gameUrl ?? null;
+      let sourceGameId: string | undefined;
+      if (userId && externalId) {
+        const { data: existing } = await supabase.from('source_games').select('id')
+          .eq('user_id', userId).eq('source', 'chesscom').eq('external_id', externalId).maybeSingle();
+        sourceGameId = existing?.id;
+      }
+      if (!sourceGameId) {
+        const { data: sourceGame, error: sourceErr } = await supabase
+          .from('source_games')
+          .insert({
+            user_id: userId,
+            ip: clientIp,
+            pgn: body.pgn ?? chesscomGame?.pgn,
+            source: body.chesscom_username ? 'chesscom' : 'pgn',
+            external_id: externalId,
+            metadata: body.chesscom_username ? { chesscom_username: body.chesscom_username } : { player_color: body.player_color || 'white' },
+          })
+          .select('id')
+          .single();
 
-      if (sourceErr || !sourceGame) {
-        fastify.log.error(sourceErr, 'Failed to insert source_games');
-        return reply.status(500).send({ error: 'Database error creating source game' });
+        if (sourceErr || !sourceGame) {
+          fastify.log.error(sourceErr, 'Failed to insert source_games');
+          return reply.status(500).send({ error: 'Database error creating source game' });
+        }
+        sourceGameId = sourceGame.id;
       }
 
       // Insert game_analyses
@@ -237,7 +248,7 @@ async function bootstrap() {
         .from('game_analyses')
         .insert({
           user_id: userId,
-          source_game_id: sourceGame.id,
+          source_game_id: sourceGameId,
           ip: clientIp,
           share_id: shareId,
           hero_variant: body.hero_variant,
