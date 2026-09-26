@@ -189,7 +189,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
           </div>
         </section>
       ) : complete ? (
-        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">No move of yours to step through.</h2><p className="mt-2 max-w-2xl text-[var(--w-ink2)]">This review looks only at your moves, and none of them swung the position far enough to single out. That usually means you kept the game steady, not that every move was the strongest available.</p><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
+        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">No move of yours to step through.</h2><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
       ) : <MomentSkeleton />}
 
       {complete && report.summary?.focus_habit && moments.length > 1 && <section className="mt-12 border-y border-[var(--w-border)] py-8 sm:py-10"><h2 className="mb-3 text-sm font-semibold text-[var(--w-accent)]">One habit for your next game</h2><p className="t-heading max-w-3xl text-2xl leading-snug sm:text-3xl">{report.summary.focus_habit}</p></section>}
