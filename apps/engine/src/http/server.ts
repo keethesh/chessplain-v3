@@ -434,6 +434,7 @@ async function bootstrap() {
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         payment_method_types: ['card'],
+        allow_promotion_codes: true,
         line_items: [
           {
             price: priceId,
