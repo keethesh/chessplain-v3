@@ -33,10 +33,10 @@ not test the website, payment completion, premium access, or cancellation.
 | Auth redirects | Site URL `https://getchessplain.com`; allow list is exactly `http://localhost:3000/**`, `https://getchessplain.com/**`, `https://www.getchessplain.com/**` (2026-09-24; obsolete Vercel preview entries removed) | Add a preview host here before testing sign-in on it |
 | Sign-in callback | `detectSessionInUrl: false` (`1915e69`, web `8316e1b9`): the client no longer exchanges `?code=` itself, so `/auth/callback` no longer shows "Let's try that link again" to a user it just signed in | Links still only complete in the requesting browser (PKCE); an email code fallback is not built |
 | Stripe live configuration | Existing live Stripe secret is installed on VPS; configured USD prices active | No secret values stored in this document |
-| Live Checkout | Authenticated month/year sessions created at $9.99/$99.99; unpaid sessions expired | No card charged; paid entitlement still needs a real card |
+| Live Checkout | **Real paid checkout 2026-09-26:** owner account, monthly plan, promo `OWNERTEST-E355AF` ($9.49 off once), charged $0.50 USD live. Profile `premium` with matching `cus_…`/`sub_…`; subscription `active`, metadata `user_id` matches | Cancellation not yet exercised |
 | Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not paid entitlement updates |
 | Portal configuration | Live default configuration active; cancellation enabled at period end | Customer portal journey and cancellation webhook still need a real subscription test |
-| Webhook routing | Current engine endpoint enabled; obsolete web endpoint disabled, not deleted | Verify delivery on a paid checkout |
+| Webhook routing | `checkout.session.completed`, `customer.subscription.created/updated`, `invoice.paid` for the test customer all show `pending_webhooks=0` (delivered) | — |
 | HTTPS | Caddy validates and reloads; API sends `Strict-Transport-Security: max-age=31536000` | Scoped to API host, no `includeSubDomains` |
 | Website (Cloudflare) | Live on `https://chessplain-web.oxide-website.workers.dev`; `getchessplain.com` and `www.getchessplain.com` verified HTTP 200 on 2026-09-23 | Domain cutover done |
 | Quota | **ENFORCED** and verified: free account `201, 201, 402`; premium never blocked | Was unbounded until 2026-09-17 |
@@ -106,9 +106,9 @@ Before advertising, using a consenting owner's account and payment method:
    the period ends; verify eventual cancellation/deletion downgrades the profile.
 6. If a refund is desired, explicitly authorize it and perform it through Stripe.
 
-No real payment, refund, or customer cancellation has been performed by the
-verification steps above. Synthetic signature tests are not a substitute for this
-sequence. Do not claim the paid lifecycle is verified until these observations exist.
+Steps 1–4 verified 2026-09-26 (see evidence table): real $0.50 payment, premium set
+with matching IDs, second checkout 409, portal session created on
+`billing.stripe.com`. Steps 5–6 (cancellation, optional refund) remain.
 
 ## 3. Quota — DONE and verified
 
