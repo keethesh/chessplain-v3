@@ -5,8 +5,21 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.getc
 export interface SubmitReportPayload {
   pgn?: string;
   chesscom_username?: string;
+  chesscom_game_url?: string;
   hero_variant?: string;
   player_color?: 'white' | 'black';
+}
+
+/** One of the player's recent Chess.com games, from their side. */
+export interface ChessComGameSummary {
+  url: string;
+  endedAt: string;
+  timeClass: string;
+  playerColor: 'white' | 'black';
+  outcome: 'win' | 'loss' | 'draw';
+  playerRating: number | null;
+  opponent: string;
+  opponentRating: number | null;
 }
 
 export interface SubmitReportResponse {
@@ -114,6 +127,9 @@ export function normalizeReport(data: ReportDetail): ReportDetail {
 
 export function submitReport(payload: SubmitReportPayload, token?: string): Promise<SubmitReportResponse> {
   return request('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify(payload) });
+}
+export async function listChessComGames(username: string): Promise<ChessComGameSummary[]> {
+  return (await request<{ games: ChessComGameSummary[] }>('/api/chesscom/' + encodeURIComponent(username) + '/games', { cache: 'no-store' })).games;
 }
 export async function getReportById(id: string): Promise<ReportDetail> {
   return normalizeReport(await request<ReportDetail>('/api/reports/' + encodeURIComponent(id), { cache: 'no-store' }));

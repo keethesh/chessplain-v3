@@ -5,12 +5,22 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Chess } from 'chess.js';
 import { ArrowRight, Check, ChevronRight, LoaderCircle, MoveUpRight } from 'lucide-react';
-import { ApiError, submitReport } from '../lib/api';
+import { ApiError, listChessComGames, submitReport, type ChessComGameSummary, type SubmitReportPayload } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { supabase } from '../lib/supabase';
 import { ChessboardView } from '../components/ChessboardView';
 import { DEMO_REPORT } from '../lib/demo-report';
 import { getRecentReviews, clearRecentReviews, type RecentReview } from '../lib/recent-reviews';
+
+function playedAgo(iso: string): string {
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  const minutes = Math.max(1, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  if (minutes < 60) return rtf.format(-minutes, 'minute');
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? rtf.format(-hours, 'hour') : rtf.format(-Math.round(hours / 24), 'day');
+}
+
+const OUTCOME_LABEL = { win: 'Won', loss: 'Lost', draw: 'Drew' } as const;
 
 export default function HomePage() {
   const router = useRouter();
@@ -23,6 +33,8 @@ export default function HomePage() {
   const [quotaReached, setQuotaReached] = useState<'anonymous' | 'signed-in' | null>(null);
   const [showMove, setShowMove] = useState(false);
   const [recentReviews, setRecentReviews] = useState<RecentReview[]>([]);
+  const [games, setGames] = useState<ChessComGameSummary[] | null>(null);
+  const [pickingUrl, setPickingUrl] = useState<string | null>(null);
   const submitting = useRef(false);
   const sample = DEMO_REPORT.moments[0];
   const sampleBoard = new Chess(sample.fen_before);
@@ -35,36 +47,55 @@ export default function HomePage() {
     setRecentReviews(getRecentReviews());
   }, []);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function startReview(payload: SubmitReportPayload, source: 'chesscom' | 'pgn') {
     if (submitting.current) return;
-    setError(null);
-    setQuotaReached(null);
-    const value = method === 'username' ? username.trim() : pgn.trim();
-    if (!value) {
-      setError(method === 'username' ? 'Enter your Chess.com username to find your latest game.' : 'Paste the moves from a completed game.');
-      return;
-    }
     submitting.current = true;
     setIsLoading(true);
+    setError(null);
+    setQuotaReached(null);
     let signedIn = false;
     try {
       const { data } = await supabase.auth.getSession();
       signedIn = Boolean(data.session);
-      const response = await submitReport(
-        method === 'username'
-          ? { chesscom_username: value, hero_variant: 'editorial_v1' }
-          : { pgn: value, player_color: color, hero_variant: 'editorial_v1' },
-        data.session?.access_token
-      );
-      captureEvent('game_submitted', { method: method === 'username' ? 'chesscom' : 'pgn' });
+      const response = await submitReport(payload, data.session?.access_token);
+      captureEvent('game_submitted', { method: source });
       router.push('/report/' + response.id);
     } catch (err) {
       setQuotaReached(err instanceof ApiError && err.status === 402 ? (signedIn ? 'signed-in' : 'anonymous') : null);
       setError(err instanceof Error ? err.message : 'We could not submit your game. Please try again.');
       submitting.current = false;
       setIsLoading(false);
+      setPickingUrl(null);
     }
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (submitting.current) return;
+    setError(null);
+    setQuotaReached(null);
+    if (method === 'pgn') {
+      if (!pgn.trim()) return setError('Paste the moves from a completed game.');
+      return startReview({ pgn: pgn.trim(), player_color: color, hero_variant: 'editorial_v1' }, 'pgn');
+    }
+    if (!username.trim()) return setError('Enter your Chess.com username to see your recent games.');
+    submitting.current = true;
+    setIsLoading(true);
+    try {
+      setGames(await listChessComGames(username.trim()));
+      captureEvent('games_listed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'We could not reach Chess.com. Please try again.');
+    } finally {
+      submitting.current = false;
+      setIsLoading(false);
+    }
+  }
+
+  function reviewGame(url: string) {
+    if (submitting.current) return;
+    setPickingUrl(url);
+    startReview({ chesscom_username: username.trim(), chesscom_game_url: url, hero_variant: 'editorial_v1' }, 'chesscom');
   }
 
   return (
@@ -95,24 +126,62 @@ export default function HomePage() {
             </div>
             <form onSubmit={handleSubmit} className="submit-form" aria-busy={isLoading}>
               {method === 'username' ? (
-                <div className="field-group">
-                  <label htmlFor="chess-username">Your Chess.com username</label>
-                  <input
-                    id="chess-username"
-                    name="username"
-                    autoComplete="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    value={username}
-                    maxLength={100}
-                    onChange={e => setUsername(e.target.value)}
-                    placeholder="e.g. your_chess_username"
-                    disabled={isLoading}
-                    aria-describedby="source-help"
-                    aria-invalid={!!error}
-                  />
-                  <p id="source-help" className="field-help">Your latest completed game. No Chess.com password needed.</p>
-                </div>
+                games ? (
+                  <div className="game-picker">
+                    <div className="game-picker-head">
+                      <p id="game-list-label">Recent games for <strong>{username.trim()}</strong></p>
+                      <button type="button" className="text-button" disabled={isLoading} onClick={() => { setGames(null); setError(null); setQuotaReached(null); }}>
+                        Change
+                      </button>
+                    </div>
+                    <ul className="game-list" aria-labelledby="game-list-label">
+                      {games.map(game => (
+                        <li key={game.url}>
+                          <button
+                            type="button"
+                            className="game-row"
+                            disabled={isLoading}
+                            aria-busy={pickingUrl === game.url}
+                            onClick={() => reviewGame(game.url)}
+                          >
+                            <span className={`game-outcome game-outcome-${game.outcome}`}>{OUTCOME_LABEL[game.outcome]}</span>
+                            <span className="game-row-main">
+                              <span className="game-opponent">
+                                vs {game.opponent}
+                                {game.opponentRating !== null && <span className="game-rating">{game.opponentRating}</span>}
+                              </span>
+                              <span className="game-meta">
+                                <span className="game-time-class">{game.timeClass}</span> · {playedAgo(game.endedAt)} · as {game.playerColor}
+                              </span>
+                            </span>
+                            {pickingUrl === game.url
+                              ? <LoaderCircle size={17} className="spin" aria-label="Opening your review" />
+                              : <ChevronRight size={17} aria-hidden="true" />}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="field-group">
+                    <label htmlFor="chess-username">Your Chess.com username</label>
+                    <input
+                      id="chess-username"
+                      name="username"
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      value={username}
+                      maxLength={100}
+                      onChange={e => setUsername(e.target.value)}
+                      placeholder="e.g. your_chess_username"
+                      disabled={isLoading}
+                      aria-describedby="source-help"
+                      aria-invalid={!!error}
+                    />
+                    <p id="source-help" className="field-help">Pick any of your 10 most recent games. No Chess.com password needed.</p>
+                  </div>
+                )
               ) : (
                 <>
                   <div className="field-group">
@@ -157,17 +226,19 @@ export default function HomePage() {
                   )}
                 </div>
               )}
-              <button className="primary-button" type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <LoaderCircle size={17} className="spin" /> Opening your review…
-                  </>
-                ) : (
-                  <>
-                    Explain my game <ArrowRight size={17} />
-                  </>
-                )}
-              </button>
+              {!(method === 'username' && games) && (
+                <button className="primary-button" type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <LoaderCircle size={17} className="spin" /> {method === 'username' ? 'Finding your games…' : 'Opening your review…'}
+                    </>
+                  ) : (
+                    <>
+                      {method === 'username' ? 'Show my recent games' : 'Explain my game'} <ArrowRight size={17} />
+                    </>
+                  )}
+                </button>
+              )}
               <p className="form-reassurance">
                 <Check size={14} /> 2 free reports every 7 days. No signup required.
               </p>
@@ -269,7 +340,7 @@ export default function HomePage() {
               Can I choose a different game?
               <span className="faq-icon" aria-hidden="true">+</span>
             </summary>
-            <p>The username option imports your latest completed Chess.com game. To review a specific game from Chess.com or Lichess, paste its PGN and select your side.</p>
+            <p>Yes. Enter your Chess.com username and pick any of your 10 most recent games. For an older game, or one from Lichess, paste its PGN and select your side.</p>
           </details>
           <details>
             <summary>
