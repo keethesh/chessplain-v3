@@ -12,6 +12,18 @@ export interface ParsedGame {
   moveCount: number;
 }
 
+// PGN headers are user-controlled and flow into prompts, storage and reports.
+const MAX_PLAYER_NAME_LENGTH = 80;
+
+function sanitizePlayerName(value: string | undefined, fallback: string): string {
+  const sanitized = (value || '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_PLAYER_NAME_LENGTH);
+  return sanitized || fallback;
+}
+
 export function parsePgn(pgn: string, targetPlayer?: string): ParsedGame {
   const chess = new Chess();
   chess.loadPgn(pgn);
@@ -22,8 +34,10 @@ export function parsePgn(pgn: string, targetPlayer?: string): ParsedGame {
     headers[k] = v ?? undefined;
   }
 
-  const whiteName = headers['White'] || 'White';
-  const blackName = headers['Black'] || 'Black';
+  const whiteName = sanitizePlayerName(headers['White'], 'White');
+  const blackName = sanitizePlayerName(headers['Black'], 'Black');
+  headers['White'] = whiteName;
+  headers['Black'] = blackName;
 
   let playerColor: 'white' | 'black' = 'white';
   let playerName = whiteName;

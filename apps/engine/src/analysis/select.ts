@@ -59,6 +59,11 @@ export function buildRefutationLine(fenAfterMove: string, pvUci: string, maxMove
   return sanList.join(' ');
 }
 
+// Floor for the "Quiet drift" fallback, in pawns from the player's side. It is
+// lower than the normal -1.0 bar so clean games still get one lesson;
+// verify.ts re-applies it at depth 20 so shallow noise is not published.
+export const MIN_QUIET_DRIFT_SWING = -0.75;
+
 export function selectCandidateMoments(
   positions: PositionInfo[],
   evalMap: Map<string, EngineEvalResult>,
@@ -137,10 +142,8 @@ export function selectCandidateMoments(
 
   // If 0 candidates found, fall back to the player's worst move as "Quiet
   // drift" — but only if it is genuinely their worst move and not merely
-  // engine noise. Below this floor there is nothing a human did wrong, and
-  // verify.ts exempts 'Quiet drift' from its swing filter, so an unfloored
-  // fallback reaches the report unchallenged.
-  const MIN_QUIET_DRIFT_SWING = -0.75;
+  // engine noise. Keep the same floor during depth-20 verification so the
+  // fallback preserves its intended low-swing band without publishing noise.
   if (deduplicated.length === 0) {
     let worstPos: PositionInfo | null = null;
     let worstSwing = 0;

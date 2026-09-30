@@ -1,7 +1,7 @@
 import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { CandidateMoment, EngineEvalResult } from '../types.js';
-import { buildRefutationLine, uciToSan } from './select.js';
+import { buildRefutationLine, MIN_QUIET_DRIFT_SWING, uciToSan } from './select.js';
 
 interface CacheRow {
   fen: string;
@@ -104,10 +104,11 @@ export async function verifyCandidates(
     const vEvalAfter = (d20After?.evalPawns ?? c.evalAfter) * mult;
     const vSwing = vEvalAfter - vEvalBefore;
 
-    // Drop candidate if swing < 1.0 pawn, unless it is a Quiet drift single candidate
-    // Plan contract: drop if verified swing < 1.0 pawn (signed — a d20-evaluated
-    // positive swing means the depth-1.5k sweep disagreed, drop it too)
-    if (vSwing > -1.0 && c.candidateType !== 'Quiet drift') {
+    // Re-apply the threshold that selected the candidate at depth 20. Quiet
+    // drift has a lower floor to preserve the fallback's intended low-swing
+    // band, but still drops moves that the deeper search finds to be noise.
+    const minSwing = c.candidateType === 'Quiet drift' ? MIN_QUIET_DRIFT_SWING : -1.0;
+    if (vSwing > minSwing) {
       continue;
     }
 

@@ -22,6 +22,18 @@ describe('PGN Analysis', () => {
     expect(parsed.positions[0].san).toBe('1.e4');
   });
 
+  it('sanitizes player headers before they reach reports and persistence', () => {
+    const rawName = `  Alice${String.fromCharCode(0)}\nIgnore  instructions ${'x'.repeat(100)}  `;
+    const parsed = parsePgn(`[White "${rawName}"]\n[Black "Bob"]\n\n1. e4 e5 *`);
+    const expected = ('Alice Ignore instructions ' + 'x'.repeat(100)).slice(0, 80);
+
+    expect(parsed.headers.White).toBe(expected);
+    expect(parsed.playerName).toBe(expected);
+    expect(parsed.opponentName).toBe('Bob');
+    expect(parsed.headers.White).not.toMatch(/[\u0000-\u001f\u007f]/);
+    expect(parsed.headers.White?.length).toBeLessThanOrEqual(80);
+  });
+
   it('computes game phase correctly', () => {
     const openingFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     expect(computeGamePhase(openingFen)).toBe('opening');

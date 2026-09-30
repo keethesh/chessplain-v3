@@ -14,6 +14,10 @@ import type { CandidateMoment, EngineEvalResult } from '../src/types.js';
 
 const FEN_BEFORE = '4kb1r/p2r1ppp/4qn2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 2 15';
 const FEN_AFTER = '4kb1r/p2B1ppp/4qn2/4p1B1/4P3/1Q6/PPP2PPP/2KR4 b k - 0 15';
+const QUIET_FEN_BEFORE = '8/8/8/8/8/8/8/K6k w - - 0 1';
+const QUIET_FEN_AFTER = '8/8/8/8/8/8/8/K6k b - - 1 1';
+const QUIET_KEEP_FEN_BEFORE = '7k/8/8/8/8/8/6K1/7R w - - 0 1';
+const QUIET_KEEP_FEN_AFTER = '7k/8/8/8/8/8/6K1/7R b - - 1 1';
 const PLAYED_UCI = 'b5d7';
 
 const flatEval = (fen: string, evalPawns: number, bestMove: string): EngineEvalResult => ({
@@ -34,10 +38,14 @@ vi.mock('../src/db/supabase.js', () => ({
   },
 }));
 
-const evaluate = vi.fn(async (fen: string) =>
-  // At depth 20 the engine's best move at FEN_BEFORE *is* what the player played.
-  fen === FEN_BEFORE ? flatEval(fen, 3.0, PLAYED_UCI) : flatEval(fen, 2.0, 'e6e7')
-);
+const evaluate = vi.fn(async (fen: string) => {
+  if (fen === FEN_BEFORE) return flatEval(fen, 3.0, PLAYED_UCI);
+  if (fen === QUIET_FEN_BEFORE) return flatEval(fen, 1.0, 'a1a2');
+  if (fen === QUIET_FEN_AFTER) return flatEval(fen, 0.7, 'h1h2');
+  if (fen === QUIET_KEEP_FEN_BEFORE) return flatEval(fen, 1.0, 'h1h2');
+  if (fen === QUIET_KEEP_FEN_AFTER) return flatEval(fen, 0.2, 'a1a2');
+  return flatEval(fen, 2.0, 'e6e7');
+});
 
 vi.mock('../src/uci/engine-pool.js', () => ({
   enginePool: { evaluate: (fen: string) => evaluate(fen) },
@@ -83,5 +91,30 @@ describe('verifyCandidates', () => {
     expect(verified.length).toBe(1);
     expect(verified[0].bestMoveUci).toBe(PLAYED_UCI);
     expect(verified[0].verified).toBe(true);
+  });
+  it('drops a Quiet drift fallback when depth 20 finds only engine noise', async () => {
+    const verified = await verifyCandidates([
+      candidate({
+        fenBefore: QUIET_FEN_BEFORE,
+        fenAfter: QUIET_FEN_AFTER,
+        uci: 'a1a2',
+        candidateType: 'Quiet drift',
+      }),
+    ]);
+
+    expect(verified).toEqual([]);
+  });
+  it('keeps Quiet drift at its intended depth-20 floor', async () => {
+    const verified = await verifyCandidates([
+      candidate({
+        fenBefore: QUIET_KEEP_FEN_BEFORE,
+        fenAfter: QUIET_KEEP_FEN_AFTER,
+        uci: 'g2g3',
+        candidateType: 'Quiet drift',
+      }),
+    ]);
+
+    expect(verified).toHaveLength(1);
+    expect(verified[0].swing).toBe(-0.8);
   });
 });
