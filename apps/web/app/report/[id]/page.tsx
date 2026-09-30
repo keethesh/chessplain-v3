@@ -174,8 +174,11 @@ function ReportSession({ id }: { id: string }) {
         });
         captureEvent('report_shared', { report_id: id, is_demo: isDemo, method: 'web_share' });
         return;
-      } catch {
-        // User dismissed share dialog
+      } catch (error) {
+        // Dismissing the native picker is not a share failure; do not silently
+        // copy a link the reader did not ask to copy.
+        if (error instanceof Error && error.name === 'AbortError') return;
+        // Fall through to clipboard when native sharing is unavailable.
       }
     }
     setShareMessage('');

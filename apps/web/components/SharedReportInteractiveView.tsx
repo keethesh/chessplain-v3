@@ -57,7 +57,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
     try { const board = new Chess(current.fen_before); const move = board.move(current.best_move.replace(/^\d+\.+\s*/, '')); return move ? { fen: board.fen(), label: 'Alternative: ' + move.san } : null; } catch { return null; }
   }, [current]);
   const activeStep = showAlternative && alternative ? alternative : steps[Math.min(step, steps.length - 1)];
-  const isDemo = report.id === 'demo' || shareId === 'demo-sample';
+  const isDemo = shareId ? shareId === 'demo-sample' : report.id === 'demo';
   const complete = report.status === 'completed';
   const lessonStage: LessonStage = showAlternative ? 'alternative' : step === 0 ? 'before' : step === 1 ? 'played' : step === steps.length - 1 ? 'takeaway' : 'played';
   const nextLabel = step === 0 ? 'Show what changed' : step >= steps.length - 1 ? 'Line complete' : 'Continue';
@@ -140,7 +140,9 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
         <div className="report-notice mb-5 flex flex-col justify-between gap-3 border-b border-[var(--w-border)] pb-4 sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-semibold">{isDemo ? 'Sample review' : 'Shared game review'}</p>
-            <p className="mt-1 max-w-lg text-sm text-[var(--w-ink2)]">{isDemo ? 'Explore one turning point and the lesson it reveals.' : 'Explore the key moments, then review a game of your own.'}</p>
+            <p className="mt-1 max-w-lg text-sm text-[var(--w-ink2)]">
+              {isDemo ? 'Explore one turning point and the lesson it reveals.' : 'Anyone with this link can view the review, including the player names.'}
+            </p>
           </div>
           <Link href="/#analyze" className="primary-button min-h-11 shrink-0">Review your game <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
         </div>
@@ -151,6 +153,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
           <p>{report.player_name || 'Your game'}{report.opponent_name ? ` vs ${report.opponent_name}` : ''}{result ? ` · ${result}` : ''}{report.move_count ? ` · ${report.move_count} moves` : ''}{report.time_control ? ` · ${report.time_control}` : ''}</p>
           {actions}
         </div>
+        <p className="mb-4 max-w-2xl text-xs leading-relaxed text-[var(--w-ink2)]">Engine-backed evidence can point to a useful explanation, but it is not a certainty. Use the board and continuation to check the idea yourself.</p>
         <h1 className="t-heading max-w-4xl text-4xl leading-[1.1] sm:text-5xl lg:text-[3.5rem]">{report.summary?.headline || (complete ? 'Your game, a little clearer.' : 'Finding the moments that matter.')}</h1>
         {report.summary?.story && <p className="mt-5 max-w-3xl text-base leading-relaxed text-[var(--w-ink2)] sm:text-lg">{report.summary.story}</p>}
       </header>
@@ -192,7 +195,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
           </div>
         </section>
       ) : complete ? (
-        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">No move of yours to step through.</h2><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
+        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">No major turning point found.</h2><p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--w-ink2)]">None of your moves changed the game enough to single out. That is useful evidence too—try another game if you want a lesson to explore.</p><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
       ) : <MomentSkeleton />}
 
       {complete && report.summary?.focus_habit && moments.length > 1 && <section className="mt-12 border-y border-[var(--w-border)] py-8 sm:py-10"><h2 className="mb-3 text-sm font-semibold text-[var(--w-accent)]">One habit for your next game</h2><p className="t-heading max-w-3xl text-2xl leading-snug sm:text-3xl">{report.summary.focus_habit}</p></section>}
