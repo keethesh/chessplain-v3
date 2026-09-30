@@ -55,6 +55,9 @@ export const config = {
   enginePoolSize: positiveInteger('ENGINE_POOL_SIZE', 4),
   engineHashMb: positiveInteger('ENGINE_HASH_MB', 512),
   engineThreads: positiveInteger('ENGINE_THREADS', 1),
+  // Games analysed at once. 2 overlaps one game's LLM wait with another's
+  // Stockfish work on a 4-core host; raise with cores, not RAM.
+  workerConcurrency: positiveInteger('WORKER_CONCURRENCY', 2),
   staleLeaseMinutes: positiveInteger('STALE_LEASE_MINUTES', 15),
   // Trust forwarded IPs only from an explicitly configured reverse proxy
   // (comma-separated, e.g. "127.0.0.1,::1"). Unset means the socket address,

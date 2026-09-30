@@ -26,6 +26,8 @@ export interface PipelineResult {
   durationMs: number;
   cacheHitRate: number;
   momentsCount: number;
+  // Wall-clock ms per stage, so tail latency can be attributed (engine vs LLM).
+  stageMs: { sweep: number; verify: number; explain: number; summary: number };
 }
 
 export async function runAnalysisPipeline(options: PipelineOptions): Promise<PipelineResult> {
@@ -55,11 +57,13 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   });
 
   const cacheHitRate = totalPositions > 0 ? cacheHits / totalPositions : 0;
+  const sweptAt = Date.now();
 
   // 2. Stage 2: Moment Selection & Verification (depth 20)
   if (onStageChange) await onStageChange('verifying');
   const rawCandidates = selectCandidateMoments(parsedGame.positions, evalMap, parsedGame.playerColor);
   const verifiedCandidates = await verifyCandidates(rawCandidates);
+  const verifiedAt = Date.now();
 
   // 3. Stage 3: LLM Explanation
   if (onStageChange) await onStageChange('explaining');
@@ -98,6 +102,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   });
 
   await Promise.all(explainPromises);
+  const explainedAt = Date.now();
 
   // Ensure moments are sorted chronologically
   completedMoments.sort((a, b) => a.ply - b.ply);
@@ -141,6 +146,12 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   // The caller publishes completion only when the full report is persisted.
 
   const durationMs = Date.now() - startTime;
+  const stageMs = {
+    sweep: sweptAt - startTime,
+    verify: verifiedAt - sweptAt,
+    explain: explainedAt - verifiedAt,
+    summary: Date.now() - explainedAt,
+  };
 
   const report: GameAnalysisReport = {
     id: analysisId,
@@ -165,5 +176,6 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
     durationMs,
     cacheHitRate,
     momentsCount: completedMoments.length,
+    stageMs,
   };
 }

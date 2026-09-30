@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { PostHog } from 'posthog-node';
 import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
@@ -158,7 +159,8 @@ export async function processNextJob(): Promise<boolean> {
       .eq('id', analysis.id);
     if (completionError) throw completionError;
 
-    console.log(`[Worker] Analysis ${analysis.id} completed successfully in ${result.durationMs}ms with ${result.momentsCount} moments`);
+    const s = result.stageMs;
+    console.log(`[Worker] Analysis ${analysis.id} completed successfully in ${result.durationMs}ms with ${result.momentsCount} moments (sweep ${s.sweep}ms, verify ${s.verify}ms, explain ${s.explain}ms, summary ${s.summary}ms, cache ${Math.round(result.cacheHitRate * 100)}%)`);
 
     // 4. Emit PostHog Event
     posthog?.capture({
@@ -169,6 +171,7 @@ export async function processNextJob(): Promise<boolean> {
         duration_ms: result.durationMs,
         moments_count: result.momentsCount,
         cache_hit_rate: result.cacheHitRate,
+        stage_ms: result.stageMs,
       },
     });
 
@@ -240,19 +243,24 @@ export async function startWorker(): Promise<void> {
   await reclaimStaleLeases();
   reclaimTimer = setInterval(() => { void reclaimStaleLeases(); }, config.staleLeaseMinutes * 60_000);
   reclaimTimer.unref();
-  console.log(`[Worker] Background queue worker started with ${enginePool.totalCount} engine instances.`);
+  console.log(`[Worker] Background queue worker started: ${config.workerConcurrency} job loop(s) sharing ${enginePool.totalCount} engine instances.`);
 
-  while (isRunning) {
-    try {
-      const processed = await processNextJob();
-      if (!processed) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+  // Jobs spend much of their time waiting on the LLM, so a few loops share the
+  // Stockfish pool well. Claims are compare-and-swap, so loops never take the
+  // same row.
+  // ponytail: loops race for the oldest pending row and the loser idles 1 s;
+  // claim with SKIP LOCKED in a Postgres function if the backlog grows large.
+  await Promise.all(Array.from({ length: config.workerConcurrency }, async () => {
+    while (isRunning) {
+      try {
+        const processed = await processNextJob();
+        if (!processed) await sleep(1000);
+      } catch (err) {
+        console.error('[Worker] Loop exception:', err);
+        await sleep(2000);
       }
-    } catch (err) {
-      console.error('[Worker] Loop exception:', err);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
-  }
+  }));
 }
 
 export function stopWorker(): void {
