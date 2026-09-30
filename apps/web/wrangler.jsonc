@@ -15,7 +15,7 @@
   "observability": {
     "enabled": true
   },
-  "workers_dev": true,
+  "workers_dev": false,
   "vars": {
     "NEXT_PUBLIC_API_URL": "https://api.getchessplain.com",
     "NEXT_PUBLIC_SITE_URL": "https://getchessplain.com",
