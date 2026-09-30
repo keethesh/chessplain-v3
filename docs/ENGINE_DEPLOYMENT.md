@@ -12,7 +12,7 @@ not claims about every host.
 
 ## Process model and initial sizing
 
-Multiple queue workers are safe: jobs are claimed by compare-and-swap, and only leases older than STALE_LEASE_MINUTES are reclaimed, so a replica that restarts does not steal work another replica is actively running. The remaining limit is CPU — ENGINE_POOL_SIZE × ENGINE_THREADS per replica must fit the host's cores. A second **API** process is not yet safe: the free-quota count-then-insert is serialized by an in-process lock (`withQuotaLock` in `src/http/server.ts`), so two API processes reopen the parallel-submit race. Move that lock to a Postgres advisory lock before scaling the API out.
+Within one process, WORKER_CONCURRENCY job loops (default 2) share the engine pool; jobs spend much of their time waiting on the LLM, so two loops overlap one game's LLM wait with another's Stockfish work. Multiple queue workers are safe: jobs are claimed by compare-and-swap, and only leases older than STALE_LEASE_MINUTES are reclaimed, so a replica that restarts does not steal work another replica is actively running. The remaining limit is CPU — ENGINE_POOL_SIZE × ENGINE_THREADS per replica must fit the host's cores. A second **API** process is not yet safe: the free-quota count-then-insert is serialized by an in-process lock (`withQuotaLock` in `src/http/server.ts`), so two API processes reopen the parallel-submit race. Move that lock to a Postgres advisory lock before scaling the API out.
 
 Start with:
 - ENGINE_POOL_SIZE=2 on a 2-vCPU VPS; 4 if at least 4 usable CPU cores are available.

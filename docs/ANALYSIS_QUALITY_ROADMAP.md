@@ -144,12 +144,16 @@ on every axis. n is small and mostly internal testing.
   swings were −0.42 to −0.60), not missed mistakes. Low yield is a threshold
   and product decision (item 6 below), not a bug.
 - **Latency:** worker runs with moments took 4.3–48 s; the 48 s cases are two
-  30 s LLM timeout windows. There is no per-stage timing (sweep, verify, LLM,
-  cache hits) in the journal, only a total, so tail latency cannot yet be
-  attributed. Add stage timing before a public launch.
+  30 s LLM timeout windows. Since 2026-09-30 each completed report logs
+  per-stage wall time (sweep, verify, explain, summary) and cache hit rate,
+  and sends them to PostHog. First production numbers (two reports run in
+  parallel, warm cache): sweep 0.1–0.2 s, verify 0.1 s, explain 3.5–4.1 s,
+  summary 2.4–2.6 s. The LLM stages dominate, and the summary runs only after
+  every explanation finishes.
 - **Grounding:** `validateMomentJson` checks shape, banned terms, word counts
   and first-person claims, but not causal claims against `chess-facts.ts`.
-  The latest benchmark still had 2 phantom-piece outputs in 49.
+  The 2026-09-30 benchmark rerun on the current prompt had 1 phantom-piece
+  output in 49 (the 2026-09-23 run had 2), within noise.
 - **Input safety:** PGN `White`/`Black` headers reached prompts and storage
   unbounded. `parsePgn` now strips control characters and caps them at 80
   characters (regression test in `test/pipeline.test.ts`).

@@ -13,19 +13,20 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Status (2026-09-30 audit):** an invite-only soft launch is possible once the
-owner gates in section 0 of the launch checklist are done. It is not ready to
-advertise. The main gaps are undeployed fixes, a live unlimited promotion code,
-public ports on the VPS, no monitoring, and an unresolved tax route for
-charging worldwide.
+**Status (2026-09-30):** live and ready for a public launch. Remaining owner
+items (uptime alerts, the relaunch email, the ICO fee) are in section 0 of the
+launch checklist.
 
 **Current code:** typecheck, **84 tests across 18 files**, and production
-builds of the engine, the web app and the Cloudflare Worker pass locally.
+builds of the engine, the web app and the Cloudflare Worker pass; CI is green.
 
-**Deployed:** engine commit `b00378f` (prompt `2026-09-24.1`) on the
-production VPS. The website serves an older build than `main`. The deployment
-verifier passes 25/25 checks. A real $0.50 checkout and a portal cancellation
-were exercised on 2026-09-26.
+**Deployed (2026-09-30):**
+- Engine commit `dcbe058` (prompt `2026-09-24.1`) on the production VPS,
+  listening on `127.0.0.1` behind Caddy, analysing two games at once. The
+  deployment verifier passes 25/25 checks.
+- Web Worker version `11c40c11`.
+- Checkout runs through Stripe Managed Payments (Onelink is the seller of
+  record and handles tax), with tax-inclusive prices.
 
 **LLM:** Production uses `openai/gpt-6-luna` through OpenRouter with
 `reasoning_effort: none`, chosen from a 49-position benchmark; see
