@@ -13,35 +13,30 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Current code:** typecheck, **73 tests across 16 files**, and production builds
-for both packages pass. The engine is deployed to the production VPS at
-engine commit `20830d6` (prompt `2026-09-24.1`); the deployed service is active.
+**Status (2026-09-30 audit):** an invite-only soft launch is possible once the
+owner gates in section 0 of the launch checklist are done. It is not ready to
+advertise. The main gaps are undeployed fixes, a live unlimited promotion code,
+public ports on the VPS, no monitoring, and an unresolved tax route for
+charging worldwide.
 
-**Live checks:** the deployment verifier passes 25/25 checks. The deployed
-pipeline was run against the Ne3 production game with no fallback prose, and
-the explanation covered the Qxg7 mate threat and why the f1 knight cannot
-escape. These checks do not prove every explanation correct or the full paid
-lifecycle.
+**Current code:** typecheck, **84 tests across 18 files**, and production
+builds of the engine, the web app and the Cloudflare Worker pass locally.
+
+**Deployed:** engine commit `b00378f` (prompt `2026-09-24.1`) on the
+production VPS. The website serves an older build than `main`. The deployment
+verifier passes 25/25 checks. A real $0.50 checkout and a portal cancellation
+were exercised on 2026-09-26.
 
 **LLM:** Production uses `openai/gpt-6-luna` through OpenRouter with
-`reasoning_effort: none`. The model was selected from a 49-position benchmark;
-see [`docs/ANALYSIS_QUALITY_ROADMAP.md`](docs/ANALYSIS_QUALITY_ROADMAP.md).
-The current OpenRouter credential expires on 2026-12-25 and must be replaced
-before then (`ssh london-ampere "chessplain-set-llm-key '<key>'"`).
+`reasoning_effort: none`, chosen from a 49-position benchmark; see
+[`docs/ANALYSIS_QUALITY_ROADMAP.md`](docs/ANALYSIS_QUALITY_ROADMAP.md). The
+OpenRouter credential expires on 2026-12-25; replace it before then with
+`ssh london-ampere "chessplain-set-llm-key '<key>'"`.
 
-**Cloudflare migration:** The frontend runs on Cloudflare Workers (100,000 free
-requests/day, unlimited static bandwidth). `getchessplain.com` and
-`www.getchessplain.com` are cut over and both return HTTP 200. Deploy updates
-with `pnpm --filter @chessplain/web deploy:worker`.
-
-**Sign-in:** passwordless magic links work end to end for any address since
-2026-09-24. Auth email goes out through Resend SMTP from
-`mail.getchessplain.com`, using the in-theme templates in `supabase/templates/`.
-
-**Before advertising:** verify the real subscription/portal lifecycle with a
-card, send a test to `support@getchessplain.com` (Cloudflare forwarding) from
-an outside address, replace the expiring OpenRouter key, and rotate the
-Supabase service-role key.
+**Web:** Next.js on Cloudflare Workers at `getchessplain.com`; deploy with
+`pnpm --filter @chessplain/web build:worker && pnpm --filter @chessplain/web deploy:worker`.
+Sign-in is passwordless: Continue with Google, or an email link sent through
+Resend from `mail.getchessplain.com`.
 
 Start with [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md) for current
 production evidence and the remaining steps. It distinguishes completed checks

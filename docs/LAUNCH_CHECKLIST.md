@@ -1,28 +1,37 @@
 # Launch checklist
 
-**Status: NOT ready to advertise.** The OpenRouter key was replaced on
-2026-09-26 after the old one was revoked (`401 User not found`); a real report
-then completed with 3 moments and 0 fallback phrases. The production API is
-deployed and live checkout creation works. The frontend runs on Cloudflare
-Workers and both custom domains are cut over. Passwordless sign-in works end to
-end for non-team addresses since 2026-09-24. A real subscription lifecycle test,
-an inbound support-mail test and credential rotation remain (sections 2 and 4).
+**Status (2026-09-30 audit): an invite-only soft launch is possible once the
+"before any users" gates in section 0 are done. Not ready to advertise (hard
+launch).** The core loop works in production: submission → report → share,
+sign-in, a real paid checkout and a portal cancellation. What blocks users is
+operational. Fixes on `main` are undeployed, including one webhook regression
+caught in review before deploy. An unlimited 100%-off-forever promotion code
+is live, and the engine port and two admin UIs on the VPS are public. There is
+no monitoring, and tax and consumer-law setup for charging worldwide is
+unresolved. Section 0 lists the gates in order;
+[`PRODUCT_REVIEW.md`](PRODUCT_REVIEW.md) holds the full audit.
 
-The current engine deployment was verified on 2026-09-26:
-engine commit `48a156d`, prompt `2026-09-24.1`, `openai/gpt-6-luna` through
-OpenRouter. Earlier rows retain dated evidence where it is still useful; do
-not treat old commit IDs or old provider settings below as current state.
-Do not confuse the API verifier's `READY` output with launch approval: it does
-not test the website, payment completion, premium access, or cancellation.
+Deployed state verified 2026-09-30: engine commit `b00378f`, prompt
+`2026-09-24.1`, `openai/gpt-6-luna` through OpenRouter (key: $10 limit, $0.002
+used, expires 2026-12-25). The website serves a build older than `main` (it
+lacks `61976ed`, `1d6b0cb` and the audit fixes), and `main` also carries
+undeployed engine fixes. Earlier rows retain dated evidence where it is still
+useful; do not treat old commit IDs or old provider settings below as current
+state. Do not confuse the API verifier's `READY` output with launch approval:
+it does not test the website, payment completion, premium access, or
+cancellation.
 
 ## Current evidence
 
 | Area | Evidence | Scope / remaining gap |
 |---|---|---|
-| Repository | Typecheck, 78/78 tests in 17 files, web production build passed (2026-09-26) | Current local/VPS verification; not proof of every production flow |
+| Repository | Typecheck, 84/84 tests in 18 files, engine, web and Worker builds passed locally (2026-09-30) | Includes undeployed fixes; rerun CI after pushing |
 | GitHub CI | CI green on `main` through `96d4dfb` (2026-09-26) | Rerun after further changes |
-| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, deployed engine commit `48a156d`, active | VPS tests 78/78. The username path lists the 10 most recent games and reviews the chosen one (verified live 2026-09-26, picking a loss created a report). Unknown usernames are rejected at submit (400). A signed-in resubmit of the same game returns the existing report (200, no quota), or re-queues it if it failed. Empty (0-moment) reports don't count against quota |
-| API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
+| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, deployed engine commit `b00378f`, active (2026-09-30) | `main` adds: engine binds `HOST` (default 127.0.0.1; Caddy proxies to `127.0.0.1:8080`), fail-fast LLM/service-key config, per-key quota lock, SSE connection caps, `model`/`prompt_version`/`error_message` recorded per row. The username path lists the 10 most recent games (verified live 2026-09-26). Unknown usernames are rejected at submit (400). A signed-in resubmit of the same game returns the existing report (200, no quota), or re-queues it if it failed. Empty (0-moment) reports don't count against quota |
+| Website deployment | `getchessplain.com` serves a build older than `main` (2026-09-30: live homepage still says "free reports", not the `1d6b0cb` copy) | Deploy with `pnpm --filter @chessplain/web build:worker && pnpm --filter @chessplain/web deploy:worker`; `workers_dev` is now `false`, so the workers.dev mirror stops after that deploy |
+| Production usage | 28 analyses ever (26 completed, 2 failed), 7 anonymous IPs and 2 signed-in submitters: internal testing only (2026-09-30) | No real-user evidence yet for completion rate, latency or retention |
+| Legacy accounts | 326 auth users from the previous version: 324 Google, 2 email; last sign-ins mostly Dec 2025–May 2026; 80 profiles carry a Chess.com username, 35 a Lichess one | Google sign-in restored on `/login` in `main`. Emailing them needs a lawful basis (see PRODUCT_REVIEW) |
+| API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings (2026-09-30) | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
 | Analysis works end-to-end | Deployed `runAnalysisPipeline` run on the Ne3 production game completed with 1 moment and **0 fallback phrases** | Direct pipeline verification bypassed HTTP quota; OpenRouter usage increased as expected |
 | Analysis quality | 49-position benchmark; prompt `2026-09-24.1`; current choice `openai/gpt-6-luna` | Benchmark judge scores are directional, not a guarantee |
 | Database | `analysis_errors.analysis_id` exists; signup trigger installed once; no auth users without profiles; migrations 7 and 8 recorded | Production retains 71 older migration-history entries absent from this repo; see migration warning below |
@@ -33,7 +42,13 @@ not test the website, payment completion, premium access, or cancellation.
 | Auth redirects | Site URL `https://getchessplain.com`; allow list is exactly `http://localhost:3000/**`, `https://getchessplain.com/**`, `https://www.getchessplain.com/**` (2026-09-24; obsolete Vercel preview entries removed) | Add a preview host here before testing sign-in on it |
 | Sign-in callback | `detectSessionInUrl: false` (`1915e69`, web `8316e1b9`): the client no longer exchanges `?code=` itself, so `/auth/callback` no longer shows "Let's try that link again" to a user it just signed in | Links still only complete in the requesting browser (PKCE); an email code fallback is not built |
 | Stripe live configuration | Existing live Stripe secret is installed on VPS; configured USD prices active | No secret values stored in this document |
-| Live Checkout | **Real paid checkout 2026-09-26:** owner account, monthly plan, promo `OWNERTEST-E355AF` ($9.49 off once), charged $0.50 USD live. Profile `premium` with matching `cus_…`/`sub_…`; subscription `active`, metadata `user_id` matches. **Cancelled via portal** the same day: `cancel_at_period_end=true`, `cancel_at` 2026-10-26, `customer.subscription.updated` delivered, profile still `premium` | Downgrade happens on `customer.subscription.deleted` at 2026-10-26 20:32 UTC. On 2026-10-27, check the profile is `free` |
+| Live Checkout | **Real paid checkout 2026-09-26:** owner account, monthly plan, promo `OWNERTEST-E355AF` ($9.49 off once), charged $0.50 USD live. Profile `premium` with matching `cus_…`/`sub_…`; subscription `active`, metadata `user_id` matches. **Cancelled via portal** the same day: `cancel_at_period_end=true`, `cancel_at` 2026-10-26, `customer.subscription.updated` delivered, profile still `premium` | Downgrade happens on `customer.subscription.deleted` at 2026-10-26 20:32 UTC. On 2026-10-27, check the profile is `free`. `main` fixes a review-caught regression where a completed checkout fell through into the subscription handler and returned 500 (`test/billing-webhook.test.ts`) |
+| Revenue and premium | **Zero paying customers.** Historical: two real subscribers in the previous version ($39.96 over 4 months; $9.99 once), both cancelled. Premium profiles: owner test, owner 100%-off comp, owner profile whose subscription 404s, the Feb 2026 ex-customer still `premium` (their `customer.subscription.deleted` went to the retired web endpoint and is still pending), one non-owner with no Stripe subscription | Reconcile the last two (section 0) |
+| Promotion codes | **`CAMARA…` is active: 100% off, forever, unlimited redemptions, no expiry, not customer-restricted**, and checkout sets `allow_promotion_codes` | Archive it before any public traffic (section 0) |
+| Tax | Stripe account GB individual, default GBP; prices USD `tax_behavior: unspecified`; Stripe Tax settings active with **no registrations**; checkout sets no `automatic_tax` | Owner decision: Merchant of Record vs registrations (PRODUCT_REVIEW) |
+| VPS exposure | UFW allows `8080/tcp` (engine, plaintext), `5001/tcp` (Dockge) and `51821/tcp` (WireGuard UI) from anywhere; 31 pending upgrades and a pending reboot; service runs without systemd hardening (2026-09-30) | Section 0 |
+| Web edge | `http://getchessplain.com` serves 200 without redirecting to HTTPS; `www` serves a duplicate 200; no security headers live | `main` adds HSTS, nosniff, Referrer-Policy, Permissions-Policy, X-Frame-Options and drops `x-powered-by`; redirects are Cloudflare settings |
+| Monitoring | None: no uptime check or alert on the engine, queue, LLM credit or Stripe webhook failures | Section 0 |
 | Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not paid entitlement updates |
 | Portal configuration | Live default configuration active; cancellation at period end exercised by a real customer (2026-09-26) | — |
 | Webhook routing | `checkout.session.completed`, `customer.subscription.created/updated`, `invoice.paid` for the test customer all show `pending_webhooks=0` (delivered) | — |
@@ -43,10 +58,49 @@ not test the website, payment completion, premium access, or cancellation.
 | Client IP | `TRUST_PROXY=127.0.0.1,::1`; loopback is trusted, arbitrary forwarded addresses are not | Reverify if the proxy topology changes |
 | Analytics (PostHog, EU) | Production page sends events (`POST eu.i.posthog.com/e/` → 200, 2026-09-26). Session replay, surveys, heatmaps and dead-click capture are disabled in `apps/web/lib/posthog.ts`; Do Not Track respected; opt-out toggle on `/privacy` persists across reloads | Relies on the UK PECR statistical-purposes exemption (DUAA 2025, in force 2026-02-05): stats only, clear information, simple opt-out, no banner. Re-enabling replay or surveys needs prior consent. Not legal advice |
 
-Earlier same-day acceptance evidence: real Stockfish/LLM gate 20/20, p50 13.89s;
+Earlier acceptance evidence (recorded 2026-09-09): real Stockfish/LLM gate 20/20, p50 13.89s;
 local viewport audit 30/30 page/width combinations; site and sample share images
-rendered as 1200×630 PNGs. These are recorded local results, not fresh checks of the
-blocked production website or a load test. Rerun the relevant gates after changes.
+rendered as 1200×630 PNGs. These are recorded local results, not production checks
+or a load test. Rerun the relevant gates after changes.
+
+## 0. Launch gates from the 2026-09-30 audit
+
+### Before any users (invite-only soft launch)
+
+1. **Archive promotion code `CAMARA…`** (Stripe → Product catalog → Coupons).
+   The owner's comped subscription keeps its discount. Issue future codes only
+   with `max_redemptions`, an expiry, or a customer restriction.
+2. **Close public ports:** `ssh london-ampere 'sudo ufw delete allow 8080/tcp;
+   sudo ufw delete allow 5001/tcp; sudo ufw delete allow 51821/tcp; sudo ufw
+   status'`. Re-allow the admin UIs only from the VPN range if needed.
+3. **Patch and reboot** the VPS (`sudo apt update && sudo apt upgrade`, then
+   `sudo reboot`); confirm `systemctl is-active chessplain-engine caddy`.
+4. **Deploy the engine**, then the web (engine first; the API stays backward
+   compatible). Verify: verifier 25/25; one real report completes with
+   `model` and `prompt_version` populated; `ss -tlnp` shows the engine on
+   `127.0.0.1:8080`; `https://getchessplain.com/login` reaches Google; live
+   HTML carries the security headers and the new titles.
+5. **Cloudflare:** turn on Always Use HTTPS and redirect `www` to the apex.
+6. **Monitoring:** an external uptime check (e.g. UptimeRobot, free) on
+   `https://api.getchessplain.com/healthz` and `https://getchessplain.com/`,
+   alerting by email. Calendar reminders for the OpenRouter key on 2026-11-25
+   and 2026-12-18.
+7. **Support and Stripe profile:** send a test to `support@getchessplain.com`
+   from an outside address; set the public support email in Stripe; add the
+   privacy and terms URLs to the billing portal configuration.
+8. **Reconcile premium:** set the Feb 2026 ex-customer to `free` (their
+   subscription is cancelled) and decide whether the non-owner premium profile
+   without a subscription is an intentional grant.
+
+### Before advertising (hard launch)
+
+- Tax route (Merchant of Record vs Stripe Tax with registrations) and the
+  consumer-law information at checkout.
+- Legal identity on the privacy page, ICO data protection fee, a retention and
+  deletion policy, and a minimum-age rule.
+- Queue capacity (the worker runs one game at a time) and per-stage timing;
+  rerun the 49-position benchmark on the current prompt.
+- Pass the soft-launch gates in `PRODUCT_REVIEW.md` with real users.
 
 ## 1. Cloudflare Custom Domain Cutover (`getchessplain.com`) — DONE
 
@@ -55,7 +109,8 @@ The frontend runs on **Cloudflare Workers** using
 
 - `https://getchessplain.com` and `https://www.getchessplain.com` both serve
   the worker directly and return HTTP 200 (reverified 2026-09-23).
-- Live worker URL (still reachable directly): `https://chessplain-web.oxide-website.workers.dev`
+- Live worker URL: `https://chessplain-web.oxide-website.workers.dev`, reachable until
+  the next deploy (`workers_dev: false` in `apps/web/wrangler.jsonc` removes it).
 - Cloudflare's current plan provides 100,000 free edge requests/day and
   unlimited static asset bandwidth.
 
@@ -76,7 +131,7 @@ To deploy code updates in the future, run from the monorepo root:
 ```bash
 pnpm --filter @chessplain/web deploy:worker
 ```
-## 2. Finish the live money path — OWNER CARD REQUIRED
+## 2. Finish the live money path — DONE except the 2026-10-27 downgrade check
 
 The VPS now has a working live key and its own live webhook signing secret.
 There is no need to paste another key into a chat. The active endpoint is:
@@ -166,8 +221,9 @@ manually test mobile submission, streaming completion, retry/reconnect, sharing,
 sign-in, checkout and portal navigation. Check the actual social preview URLs.
 Automated layout checks do not establish usability in every in-app browser.
 
-Only advertise after the website, real paid lifecycle, quota, support and
-credential gates above are resolved. The launch goal remains open until then.
+Only advertise after the section 0 gates, the paid lifecycle downgrade check,
+support and credential gates above are resolved. The launch goal remains open
+until then.
 
 ## Operational notes
 

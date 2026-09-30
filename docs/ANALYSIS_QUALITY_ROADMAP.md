@@ -121,6 +121,38 @@ would have used to make it:
   the fast sweep (`nodes 15000`) and only verified deeply afterward. A
   real mistake the shallow pass missed at that depth never reaches
   verification and never gets flagged.
+- **Resolved 2026-09-30: the Quiet drift fallback skipped depth-20 checking.**
+  `verify.ts` exempted `Quiet drift` from its swing floor, so shallow noise
+  was published as a lesson (two stored reports flagged a move whose depth-20
+  swing was −0.32). Verification now re-applies each candidate's own floor at
+  depth 20: −1.0 for normal candidates, `MIN_QUIET_DRIFT_SWING` (−0.75) for
+  the fallback. Regression tests: `test/verify-drops-best-move.test.ts`.
+
+## Production corpus audit (2026-09-30)
+
+All 26 completed production reports were replayed with chess.js and scored
+0–3 per moment on correctness, relevance, clarity and actionability. Averages:
+2.50 / 2.54 / 2.96 / 2.88. Every stored move and refutation line is legal.
+Defects are mostly historical (pre-current prompt and pre-fix selection):
+downstream claims beyond the stored 3-ply line (13.cxd5 "mate", 27.Qa3 "rook
+loss"), one report of four fallback cards from the September LLM outage, and
+the Quiet drift noise above. The two reports on prompt `2026-09-24.1` scored 3
+on every axis. n is small and mostly internal testing.
+
+- **Yield:** moments per report were 0×4, 1×11, 2×6, 3×3, 4×2. The four empty
+  reports are genuine (a two-ply resignation and clean Black games whose worst
+  swings were −0.42 to −0.60), not missed mistakes. Low yield is a threshold
+  and product decision (item 6 below), not a bug.
+- **Latency:** worker runs with moments took 4.3–48 s; the 48 s cases are two
+  30 s LLM timeout windows. There is no per-stage timing (sweep, verify, LLM,
+  cache hits) in the journal, only a total, so tail latency cannot yet be
+  attributed. Add stage timing before a public launch.
+- **Grounding:** `validateMomentJson` checks shape, banned terms, word counts
+  and first-person claims, but not causal claims against `chess-facts.ts`.
+  The latest benchmark still had 2 phantom-piece outputs in 49.
+- **Input safety:** PGN `White`/`Black` headers reached prompts and storage
+  unbounded. `parsePgn` now strips control characters and caps them at 80
+  characters (regression test in `test/pipeline.test.ts`).
 
 ## Benchmark — harness built (2026-09-23)
 
@@ -267,6 +299,7 @@ production turns into a retry, then fallback prose). The `config.ts` default
    `openai/gpt-6-luna` with no reasoning through OpenRouter.
 6. **Fix selection thresholds** — still open: win-probability swing instead of
    raw pawns, multi-PV `engineAgrees`, and selecting/validating at aligned depth.
+   Rerun the 49-position benchmark on the current prompt before changing them.
 7. **Benchmark the summary prompt** — still open; the game-level summary may
    justify a stronger model.
 8. **Revisit `probable_thought` v2** — ask the player what they were going for

@@ -1,94 +1,252 @@
 # Chessplain: product and launch assessment
 
-Reviewed against the repository on 6 September 2026. Existing strategy documents were treated as hypotheses. No production analytics, customer revenue, VPS benchmarks, Stripe account, or live database was inspected.
+Audit of 30 September 2026 covering idea, business, architecture, backend,
+frontend, SEO, legal and operations. It supersedes the 6 September review.
+Evidence: code on `main`, read-only queries against production Supabase and
+Stripe, the live site, the VPS, and the public sources linked below. Ordered
+launch gates and production state live in
+[LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md); this document holds the reasoning.
+Nothing here is legal or tax advice.
 
-**This assessment predates three shipped changes: quota enforcement (2026-09-17),
-the Cloudflare Workers migration with a completed custom-domain cutover
-(2026-09-23), and a full visual/UX redesign around a "Forensic Match Report"
-identity with a new headline and guided debrief flow (see
-[`apps/web/DESIGN.md`](../apps/web/DESIGN.md) and
-[`apps/web/PRODUCT.md`](../apps/web/PRODUCT.md) for current state).** The
-monetization mechanics, positioning arguments, and open risks below are
-otherwise still current as of 2026-09-23 — none of those three changes altered
-what the customer pays for, the competitive argument, or the material risks
-list. Treat "current source behavior" claims about the pre-redesign UI as
-historical; treat monetization/positioning/risk analysis as live.
+## Verdict
 
-For the complete implementation inventory as of the original review, including
-design and user-flow changes, see [CHANGES_2026-09-06.md](archive/CHANGES_2026-09-06.md)
-(archive — describes the pre-redesign UI). For current documentation entry
-points, see [README.md](README.md).
+- **Soft launch (invite-only, 20–75 players you can talk to): yes**, once the
+  checklist's section 0 gates are done. That takes about a day of owner work.
+- **Hard launch (public posts, Product Hunt, creators, paid acquisition): not
+  yet.** Nothing has been proven with real users. Charging worldwide lacks a
+  tax and consumer-law setup. The queue runs one game at a time, and nothing
+  alerts when something breaks.
+- **The idea:** the job is real (players who cannot turn an engine line into a
+  reason and a habit), but demand, retention and willingness to pay are
+  unproven for this version. The previous version converted 2 of ~324 sign-ups
+  to paid (~0.6%), and both cancelled.
 
-## Product decision
+## What production data says (2026-09-30)
 
-Make the promise: **understand one important decision, check its consequence on the board, and carry one useful question into the next game.**
+| Signal | Value | Reading |
+|---|---|---|
+| Reports ever | 28 (26 completed, 2 failed), 7 anonymous IPs, 2 signed-in submitters | Internal testing only; no real-user funnel yet |
+| Moments per completed report | 0×4, 1×11, 2×6, 3×3, 4×2 | Most games yield one lesson; empty reports were genuinely clean games |
+| Report quality (26 replayed) | correctness 2.50, relevance 2.54, clarity 2.96, actionability 2.88 of 3 | Current prompt scored 3/3/3/3 on both reports that used it (n=2) |
+| Worker time with moments | 4.3–48 s; 48 s = two 30 s LLM timeouts | No per-stage timing yet |
+| Accounts | 326 (324 Google, 2 email); active Dec 2025–May 2026 | An existing audience, see below |
+| Revenue | Zero paying customers today; historically $39.96 + $9.99 from two customers | The live "subscriber" is the owner's 100%-off comp |
+| LLM spend | $0.002 of the $10 key limit; ≈ $0.0013 per 3-moment report | Cost is not a constraint |
 
-The first audience to test is adult casual rapid players who already review some games but struggle to turn engine output into action. The documented 600–1200 rating band is a starting hypothesis, not a verified audience boundary. A player's intention is not observable from moves alone; reports describe what the move was going for from the board, never the player's thoughts (shipped 2026-09-23, prompt `2026-09-23.3`).
+## Product and positioning
 
-Five questions remain open:
-- Problem: do players struggle to understand reviews often enough to return? Interview players after actual completed reports.
-- Audience: which rating and time-control groups can explain the lesson back in their own words?
-- Solution fit: does a short report plus playable consequence help more than the tools they already use?
-- Feature value: is the next-game habit useful, or merely pleasant wording? Ask about the next game a week later.
-- Competition: would they choose this over their existing review subscription or free analysis?
+Promise: a short, board-checkable debrief of the decision that changed your
+game — what it allowed, and one question to ask next game. First segment to
+test: adult Chess.com/Lichess **rapid** players around 600–1500 who already
+open Game Review but cannot turn the evaluation into a cause. Players ask for
+exactly this ([r/chessbeginners](https://www.reddit.com/r/chessbeginners/comments/1horzn2/how_exactly_am_i_supposed_to_analyze_lost_games/),
+[r/chessbeginners](https://www.reddit.com/r/chessbeginners/comments/14w5ja6/why_are_enginesgame_reviews_so_inconsistent/),
+[Lichess forum](https://lichess.org/forum/general-chess-discussion/how-do-you-analyze-games)).
+That validates the confusion, not payment.
 
-## What the code establishes
+Say "the moment that mattered", not "the moments that decided it": 15 of 26
+reports had at most one moment. Never claim to be the only tool that explains
+*why*, to read minds, to be instant, or to be private.
 
-The app has username/PGN submission, a database-backed async analysis pipeline, Stockfish position evaluation, LLM explanations, link-accessible reports, email authentication, and Stripe integration. Those capabilities do not establish reliable production operation or willingness to pay.
+## Competition (checked 2026-09-30; prices vary by region)
 
-The old sample was internally inconsistent. The new sample is an explicitly illustrative, legally replayed short mating example. It demonstrates the interaction; it is not proof that the live engine generates correct explanations.
+| Alternative | Price / free tier | Approach | Where Chessplain can win |
+|---|---|---|---|
+| [Chess.com](https://support.chess.com/en/articles/8562418-what-does-each-level-of-premium-membership-get-me) | Free: one full Game Review a day; Platinum: unlimited; Diamond adds Coach explanations and Insights | Native, move labels, coach voice | One decision, checkable consequence, next-game habit; no account; works from any PGN |
+| [Lichess](https://lichess.org/features) | Free | Raw Stockfish, eval graph, Learn from Mistakes | Human synthesis instead of engine access |
+| [Aimchess](https://aimchess.com/) | Free: one 40-game report a month; $7.99/mo or $57.99/yr | Aggregate weaknesses, training plans | Faster single-game debrief |
+| [DecodeChess](https://decodechess.com/pricing-plans/) | Paid subscription/credits | Engine-to-human explanation of plans and threats | Brevity and editorial focus |
+| [Sensei Chess](https://senseichess.com/) | Currently free | AI coach with Chess.com + Lichess sync | Single-game simplicity; Sensei wins on sync and history |
 
-The design now puts the form in the first screen and uses an actual sample board. Reports concentrate on one selected moment. Players can replay the chosen move, follow its continuation, and compare the proposed alternative. PGN users explicitly choose their side.
+## Pricing and packaging
 
-## Positioning and competition
+Premium today ($9.99/month, $99.99/year) only removes the weekly quota. Next to
+free Lichess, Chess.com's free daily review and a $7.99 Aimchess, "more of the
+same" is a weak paid reason.
 
-"Other products only grade moves" is not defensible. Chess.com documents explanations and coach feedback in Game Review:
-https://support.chess.com/en/articles/8584089-how-does-game-review-work
-https://www.chess.com/news/view/chesscom-releases-new-game-review
+- Keep the current prices as a provisional test; do not change them before
+  30–50 activated users.
+- Prefer a **free-only soft launch**: it removes the tax question until you
+  choose a billing route.
+- After evidence, test one variable at a time: credit packs (e.g. $4.99 for 5)
+  if repeat use is weak, or a durable premium feature (saved history, recurring
+  patterns across games) if repeat use is strong. Do not build either first.
+- Never issue unrestricted or "forever" promotion codes again.
 
-Compete on a narrower experience: fewer points to absorb, precise consequences that can be checked, and a useful next-game action. Lichess analysis, existing paid game-review tools, videos, and simply playing another game are alternatives. No proprietary technical moat or competitor weakness was verified.
+## Unit economics
 
-Retire accuracy-score antagonism as the main promise. A player can value both scores and explanations. Avoid saying every game has one decisive turning point: draws, wins, quiet games, and multiple missed chances do not fit that narrative.
+- LLM: ≈ $0.0013 per 3-moment report; a maximal free user (≈ 8.7 reviews a
+  month) costs ≈ $0.011 a month.
+- Stripe UK: 1.5% + 20p for UK cards, 2.5% + 20p for EEA cards
+  ([pricing](https://stripe.com/gb/pricing)); international and currency
+  conversion add more. Budget $0.60–0.80 per $9.99 charge.
+- Fixed costs: the VPS is Oracle Cloud hardware and may be Always Free
+  [INFERENCE — confirm in the OCI console]; the Supabase plan is unconfirmed;
+  Cloudflare Workers is on the free plan (10 ms CPU per request); Resend
+  free tier.
+- Contribution is roughly $7.5 per $9.99 subscriber after fees and a VAT-inclusive
+  price. Break-even = monthly fixed cash cost ÷ 7.5 (e.g. $30 → 4 subscribers).
 
-## Monetization
+## The existing asset: 326 accounts
 
-The existing $9.99/month and $99.99/year prices remain starting offers. They are not validated prices. No revenue forecast is justified by this checkout.
+324 signed up with Google, so `/login` now offers Continue with Google again
+(the provider was still enabled in Supabase). 80 profiles carry a Chess.com
+username and 35 a Lichess one. Their old reports were deleted with the v2
+tables.
 
-**What the customer is paying for:** more game reviews. Free users receive two reports per rolling seven days, counted by network in production when quotas are enabled. Signed-in users whose profile is premium bypass that weekly allowance. Both use the same analysis and explanation pipeline. Paid access does not currently add stronger chess analysis, extra coaching features, a private library, or queue priority.
+Under PECR, marketing email needs consent or the soft opt-in. The soft opt-in
+applies only if the address came from a sale or negotiation for one and an
+opt-out was offered at collection and in every message
+([ICO](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guide-to-pecr/electronic-and-telephone-marketing/)).
+Nothing shows the v2 sign-up offered one. So send **one neutral account
+notice**: what changed, what happened to their data, the new privacy policy.
+Put no promotion in it, and include a link to opt in to launch updates. Market
+only to those who opt in.
 
-**Why a subscription is being offered:** the hypothesis is recurring use by players who want to review games regularly after experiencing a useful free report. Hosting the engine on the owner's 24GB VPS supports delivery, but the service also has external LLM, database, payment, and support costs. Pricing is for the review service, not a separate engine licence or VPS rental.
+## Go-to-market: soft to hard
 
-**Where the amounts came from:** the monthly and annual offers predated this frontend update and were retained. They were not derived from verified unit economics, competitor pricing research, or a user-approved new pricing experiment. Confirm that the actual Stripe amounts/currency/intervals match the page before accepting payments.
+Channels in order of expected return for a solo founder: opted-in legacy
+users; value-first answers in r/chessbeginners, r/chess and chess Discords
+(follow each community's self-promotion rules; ask moderators first); small
+creators (1k–50k) with tracked codes that are customer-restricted and
+time-limited; then SEO guides. Product Hunt and Show HN come last; they are not
+where chess players are.
 
-**Decision status:** preserve the accountless free first experience. Treat the paid offer as provisional until reliable reports, repeat use, report costs, and willingness to pay are demonstrated. An existing pricing page and connected checkout are not evidence that the product is ready to charge customers.
+| Week | Scope | Gate to continue |
+|---|---|---|
+| 0 | Checklist section 0; 20 internal/friendly reports incl. Black side, draws, clean games | No P0 billing/privacy incident |
+| 1 | 20–30 invited players, a short conversation after each report | ≥ 15 useful reports; ≥ 8 players can state the lesson back |
+| 2 | 50–75 invitees, 3 value-first community posts | ≥ 35 completed; ≥ 25% of activated players return within 7 days |
+| 3 | 100–200 visits via communities/creators | ≥ 50 completed; ≥ 20% D7 return; organic shares |
+| 4 | Hard-launch decision | ≥ 95% usable completion over 50+ reports; < 5% factual complaints; ≥ 25% D7; ≥ 3 real payers or 10 explicit commitments |
 
-The paid loop now signs users in before checkout, derives entitlement identity server-side, includes account tokens in game submission, and exposes Stripe's customer portal. Unsupported "instant results", priority queue, and permanent history claims were removed from pricing. A report library is not implemented.
+Stop scaling acquisition if D7 return stays under 20% after 50 reports, or if
+more than 10% of reports draw factual disputes.
 
-At 100 monthly subscribers, sticker-price gross revenue would be $999/month, before fees, tax, refunds, VPS, LLM usage, database costs, and support. This is arithmetic, not a customer forecast. Contribution per subscriber is:
-subscription receipts - payment fees - reports per subscriber × marginal report cost - allocated infrastructure/support.
+Lichess username import: add it before hard launch if more than 20% of
+activated players come from Lichess or PGN paste causes visible friction. PGN
+paste already works.
 
-Do not sell unlimited automated throughput. The page says no weekly report quota for personal use, subject to fair use; the API still has hourly abuse limits. Measure actual usage before changing quotas or price.
+## Architecture
 
-## Validation sequence
+The design is boring and right for a soft launch. It runs a Fastify API and an
+in-process worker on one VPS, with a Postgres table as the queue
+(compare-and-swap claims, stale-lease recovery) and SSE progress. The web app
+is Next.js on Cloudflare Workers; Supabase handles auth and Stripe handles
+billing.
 
-1. Prove reliability on a staging stack: successful anonymous submission through completed readable report; Black-side import; re-open after completion; retry; exhausted allowance; email return; paid entitlement and cancellation.
-2. Invite a small cohort to review real games. Ask: "What will you check next game?" and "Show me where the report proved that." Record specific comprehension failures.
-3. Track completed usable reports / accepted submissions, time to first lesson and complete report (p50/p95), fallback frequency, disputed factual claims, return within 7 days, and paid conversion after a successful report.
-4. Only then compare positioning or price. The former hero A/B variants mixed acquisition copy before the core value was established. The new version has a stable editorial_v1 identifier; do not pool it with old hero tests.
-5. Acquisition: share useful, consented game explanations where players already ask for help. Track visits → submitted games → useful reports → return visits. Historical signup/comment estimates in old docs do not prove acquisition economics.
+Before a hard launch:
 
-## Material remaining risks
+1. **Capacity.** The worker processes one game at a time. At 24–48 s per
+   moment-bearing game that is ≈ 75–150 reports an hour; a 1,000-submission
+   spike would queue for hours. The cheapest fix is 2–3 concurrent job loops
+   sharing the Stockfish pool. Claims are already compare-and-swap, and the
+   LLM share of a job is I/O-bound.
+2. **Observability.** Log per-stage timing and cache hits; add uptime and
+   queue-age alerts.
+3. **Single host.** One VPS is one point of failure. The host config
+   (systemd, Caddy, firewall, Stockfish binary) lives only on the box and in
+   `ENGINE_DEPLOYMENT.md`.
+4. **Quota lock** is in-process: fine for one API process (see
+   `ENGINE_DEPLOYMENT.md`).
 
-- **Capacity:** one application worker processes one game at a time. Pool size parallelizes positions within a game. Increasing RAM or launching multiple app instances does not safely multiply throughput: restart recovery currently requeues all in-progress jobs. See ENGINE_DEPLOYMENT.md.
-- **Engine lifecycle:** dead or slow UCI processes, depth-20 tail latency, and unbounded waiting need fault-injection testing. Health is not a guarantee of complete database/LLM availability.
-- **Factual trust:** legal board replay verifies moves, not every generated causal statement. Quiet positional explanations and inferred intentions need human evaluation. Rejected verification candidates are no longer forcibly relabeled as verified; unavailable prose is explicitly disclosed.
-- **Fallback economics:** a technically completed report may contain fallback text when LLM service fails. That can still consume allowance. Track and decide whether to refund such reports before charging broadly.
-- **Public links:** both report IDs and share URLs are bearer access to the game. There is no private-report access control or expiring link. Anonymous report claiming does not prove the claimant was the submitter. Do not market private storage; introduce a separate owner capability before private libraries.
-- **Quotas:** IP-based free usage can collide behind NAT and count-check/insertion is not atomic. Add a database transaction or reservation if concurrent abuse is observed; do not promise per-person anonymity enforcement.
-- **Billing:** exercise webhook retries, missing profiles, out-of-order subscription changes, duplicate checkout, cancellation, and failed payments in Stripe test mode. Profile schema/trigger provisioning must exist; current migrations assume an older profiles table.
-- **Privacy and operations:** confirm LLM provider data handling, contact/deletion workflow, retention, and refund operations. Existing legal pages are not evidence those operations exist.
-- **External dependencies:** database schema, auth redirects/email delivery, provider credit limits, Stripe price configuration, Stockfish executable, reverse proxy buffering, and production origin settings all need staging verification.
+Security review: no critical findings. Fixed on `main`:
 
-## Scope of verification
+- open redirect through the sign-in `next` parameter
+- free-quota race (parallel submits got ~30 reports instead of 2)
+- unbounded SSE connections
+- the public share endpoint returning internal ids
+- claims of other people's anonymous reports
+- unvalidated `hero_variant`
+- no rate limit on the Chess.com listing route
+- stale CORS origins
+- raw Stripe errors returned to clients
+- unbounded PGN player names reaching prompts
 
-Local builds/type checks and deterministic regression tests establish compilation and selected behavior, not live production reliability. No deployment, real subscription, test email, or customer-game submission was performed in this task. Public source links above support only the limited competition and engine-configuration observations.
+Remaining: free-tier farming through new accounts (accept for now) and no
+enforced CSP.
+
+## Legal, tax and compliance
+
+- **Tax.** B2C digital services sold to EU consumers owe VAT in the
+  customer's country from the first sale; a UK business registers for the
+  non-Union OSS ([HMRC](https://www.gov.uk/guidance/the-vat-rules-if-you-supply-digital-services-to-private-consumers)).
+  The UK £90k threshold covers only UK sales. Stripe Tax is active but has
+  no registrations, and checkout does not calculate tax. Options:
+  - A Merchant of Record handles tax worldwide:
+    [Stripe Managed Payments](https://docs.stripe.com/payments/managed-payments/eligibility)
+    (least code change if eligible), [Paddle](https://www.paddle.com/pricing),
+    [Lemon Squeezy](https://www.lemonsqueezy.com/pricing) or
+    [Polar](https://polar.sh/docs/merchant-of-record/fees). Each costs a few
+    percent more per sale.
+  - Keep Stripe, register (OSS and others) and file returns.
+
+  At this volume a Merchant of Record is the boring choice.
+- **Consumer law.** UK consumers have a 14-day right to cancel online services
+  ([CCR 2013](https://www.legislation.gov.uk/uksi/2013/3134/part/3)). The
+  terms' existing full refund within 14 days of any charge covers it, and the
+  terms now say so. The subscription rules in the DMCC Act (renewal reminders,
+  easy exit) are expected from January 2027; build them before then.
+- **Data protection.**
+  - The privacy page now lists every processor and states that data is kept
+    until a deletion request.
+  - Still owner items: the controller's legal name and address; the ICO data
+    protection fee (likely tier 1,
+    [self-assessment](https://ico.org.uk/for-organisations/data-protection-fee/self-assessment-or-faqs-data-protection-fee/));
+    a retention policy and a deletion routine.
+  - Decide a minimum age. Chess has many minors
+    ([Children's Code](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/services-covered-by-this-code/)).
+- **Chess.com.** Use the public API as documented, send a descriptive
+  User-Agent, and never imply endorsement; see the
+  [PubAPI](https://support.chess.com/en/articles/9650547-what-is-the-pubapi-and-how-do-i-use-it)
+  and the [user agreement](https://www.chess.com/legal/user-agreement).
+
+## UX and SEO
+
+Heuristic scores:
+- Acquisition, account and billing surfaces: 30/40.
+- Report, board and share surfaces: 33/40.
+- No dark patterns found.
+
+Strengths: the board is the primary surface, keyboard stepping works, controls
+are 44 px, the empty and failed states offer recovery, and no sign-up is
+needed for first value.
+
+Fixed on `main`:
+- Google sign-in, and recovery copy for cancelled and expired sign-in links.
+- The quota-exhausted path now returns the player to the form after sign-in.
+- Pricing sends players to the shared sign-in page.
+- The 404 page's sample link was dead.
+- The error page and the empty report overclaimed.
+- Reports now carry a fallibility note, and shared pages disclose that anyone
+  with the link can see player names.
+- A cancelled native share no longer copies the link.
+
+Still open:
+- Report-specific help on engine uncertainty.
+- Guidance while analysis is stalled.
+- Announcing network drops.
+
+SEO fixed on `main`:
+- Client routes had inherited the homepage's title, description and canonical.
+- User reports are now noindex, with crawl access kept so the tag is seen.
+- Added JSON-LD, `llms.txt` and a cleaner sitemap; design prototypes are no
+  longer publicly served.
+
+Still open:
+- HTTP→HTTPS and www→apex redirects (Cloudflare).
+- Core Web Vitals, measured after deploy (the PageSpeed API quota ran out
+  during the audit).
+- Content: one genuinely useful guide per intent (chess game review, why did I
+  lose, explain chess mistakes, Chess.com game review alternative), each linked
+  to the sample and the form. No thin keyword pages.
+
+## Material risks
+
+- **Explanations can be wrong.** Validation checks form, not causal claims; the
+  latest benchmark had 2 phantom-piece outputs in 49. Rerun it on the current
+  prompt before a hard launch.
+- **Public links.** Reports and share links are readable by anyone with the
+  URL and include opponent names. That is disclosed, but it is not private.
+- **One host, one worker, no alerts** — see Architecture.
+- **Credential expiry.** The OpenRouter key expires 2026-12-25.

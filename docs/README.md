@@ -12,7 +12,7 @@ production operation.
 | --- | --- |
 | [Product](../apps/web/PRODUCT.md) | Purpose, audience hypotheses, capabilities, pricing entitlement, constraints. **Wins when documents disagree about product intent.** |
 | [Design system](../apps/web/DESIGN.md) | Implemented colors, typography, layouts, controls, responsive behavior, accessibility. |
-| [Product and launch assessment](PRODUCT_REVIEW.md) | Positioning, competition, monetization rationale, validation sequence, remaining risks. |
+| [Product and launch assessment](PRODUCT_REVIEW.md) | The 2026-09-30 audit: verdict, production data, positioning, competition, pricing, unit economics, go-to-market gates, architecture, legal/tax, UX/SEO, risks. |
 | [Launch checklist](LAUNCH_CHECKLIST.md) | Ordered pre-launch steps with current VPS and Cloudflare Workers evidence, remaining account-owner actions, and known limits. **Start here when deploying.** |
 | [Engine deployment](ENGINE_DEPLOYMENT.md) | VPS deployment recipe, current production topology, resource sizing, environment, auth/billing prerequisites, and staging acceptance checks. |
 | [Implementation plans](../plans/README.md) | Closed implementation plans retained as historical records; not current launch status. |
@@ -22,8 +22,9 @@ production operation.
 ## Archive
 
 `archive/` holds finished-state records: the September change log, the local
-verification record, the original v3 rebuild execution plan, and the August
-strategy document. They are history, not instructions — do not execute
+verification record, the original v3 rebuild execution plan, the August
+strategy document, and two early HTML design prototypes (removed from the
+public site). They are history, not instructions — do not execute
 infrastructure or migration steps because an archived plan lists them.
 
 ## Convention

@@ -12,7 +12,7 @@ not claims about every host.
 
 ## Process model and initial sizing
 
-Multiple replicas are safe: jobs are claimed by compare-and-swap, and only leases older than STALE_LEASE_MINUTES are reclaimed, so a replica that restarts does not steal work another replica is actively running. The remaining limit is CPU — ENGINE_POOL_SIZE × ENGINE_THREADS per replica must fit the host's cores.
+Multiple queue workers are safe: jobs are claimed by compare-and-swap, and only leases older than STALE_LEASE_MINUTES are reclaimed, so a replica that restarts does not steal work another replica is actively running. The remaining limit is CPU — ENGINE_POOL_SIZE × ENGINE_THREADS per replica must fit the host's cores. A second **API** process is not yet safe: the free-quota count-then-insert is serialized by an in-process lock (`withQuotaLock` in `src/http/server.ts`), so two API processes reopen the parallel-submit race. Move that lock to a Postgres advisory lock before scaling the API out.
 
 Start with:
 - ENGINE_POOL_SIZE=2 on a 2-vCPU VPS; 4 if at least 4 usable CPU cores are available.
@@ -42,6 +42,7 @@ Use the actual installed absolute node path in the service below. Create an unpr
 Set /etc/chessplain/engine.env, readable only by the service user/root:
 ```dotenv
 NODE_ENV=production
+HOST=127.0.0.1
 PORT=8080
 WEB_ORIGIN=https://getchessplain.com
 TRUST_PROXY=loopback
@@ -52,6 +53,7 @@ ENGINE_HASH_MB=512
 SYZYGY_PATH=
 DISABLE_QUOTA=false
 SUPABASE_URL=<staging-or-production-project-url>
+SUPABASE_ANON_KEY=<project-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<server-only-key>
 LLM_API_BASE=<approved-provider-base-url>
 LLM_API_KEY=<provider-key>
@@ -64,7 +66,7 @@ POSTHOG_KEY=<project-key>
 POSTHOG_HOST=https://eu.i.posthog.com
 ```
 
-Use 2 engines for a 2-vCPU host. Do not put service-role or payment secrets in NEXT_PUBLIC_* variables. Billing can be unconfigured while analysis runs; the LLM and database still need working credentials.
+Use 2 engines for a 2-vCPU host. Do not put service-role or payment secrets in NEXT_PUBLIC_* variables. The engine refuses to start without SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, LLM_API_BASE, LLM_API_KEY and LLM_MODEL. Billing can be unconfigured while analysis runs (leave every STRIPE_* empty); setting STRIPE_SECRET_KEY requires the webhook secret and both price IDs. HOST defaults to 127.0.0.1, so the API is reachable only through the local reverse proxy.
 
 ## systemd service
 
@@ -100,7 +102,7 @@ These memory bounds are conservative starting values for the example 4 × 512 Mi
 
 ## Reverse proxy
 
-Terminate TLS at nginx/Caddy and firewall port 8080 from public access. TRUST_PROXY=loopback is correct only when the direct proxy connection is local. For another trusted proxy use its exact IP/CIDR; never blindly trust arbitrary forwarded headers.
+Terminate TLS at nginx/Caddy and keep port 8080 closed to the public (production's Caddy proxies to `127.0.0.1:8080`; the engine binds 127.0.0.1 by default, so an open firewall rule no longer exposes it, but close the rule anyway). TRUST_PROXY=loopback is correct only when the direct proxy connection is local. For another trusted proxy use its exact IP/CIDR; never blindly trust arbitrary forwarded headers.
 
 In the existing TLS server block for api.getchessplain.com:
 ```nginx
