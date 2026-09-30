@@ -23,7 +23,7 @@ export default function NotFound() {
         <Link className="primary-button" href="/#analyze">
           Review a game <ArrowRight size={16} />
         </Link>
-        <Link className="secondary-button" href="/r/demo-sample">
+        <Link className="secondary-button" href="/report/demo">
           Read a sample review
         </Link>
       </div>

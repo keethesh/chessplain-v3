@@ -225,7 +225,7 @@ export default function HomePage() {
                 <div className="form-error" role="alert">
                   <p id="form-error-message">{error}</p>
                   {quotaReached && (
-                    <Link href={quotaReached === 'anonymous' ? '/login' : '/pricing'}>
+                    <Link href={quotaReached === 'anonymous' ? '/login?next=%2F%23analyze' : '/pricing'}>
                       {quotaReached === 'anonymous' ? 'Sign in for your own free reviews' : 'See Premium'} <ArrowRight size={14} />
                     </Link>
                   )}

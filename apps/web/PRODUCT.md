@@ -22,7 +22,7 @@ Prioritize explanations of ideas and consequences over move grades. The historic
 
 ## Operating Context
 
-- First value must be accessible without an account. The landing page provides both submission and a sample review at `/report/demo`. Accounts are optional and passwordless (`/login`, email magic link; the same link signs up a new user); a signed-in user's free allowance is counted per account instead of per network.
+- First value must be accessible without an account. The landing page provides both submission and a sample review at `/report/demo`. Accounts are optional and passwordless (`/login`: Continue with Google, or an email magic link; either signs up a new user). Google was restored on 2026-09-30 because 324 of the 326 accounts from the previous version signed up with it. A signed-in user's free allowance is counted per account instead of per network.
 - Submission opens `/report/[id]`; analysis is asynchronous. The engine queue processes games serially. Completion time and concurrent-user capacity have not been measured on the reported 24GB VPS, so no sub-20-second or paid-speed guarantee is justified.
 - Reports and share views are accessible to anyone with their links. Do not call them private, owner-only, or confidential. Submitted game and player names can appear in the report.
 - Source includes PostHog event hooks, including `landing_viewed`, `game_submitted`, and sample/billing actions. The homepage uses a single `editorial_v1` identifier. Production delivery to PostHog (EU) is verified; analytics is statistics-only (no session replay, surveys or heatmaps) with an opt-out on `/privacy`, as the UK PECR statistical exemption requires. A/B/E experiments and a measured production funnel are not established.

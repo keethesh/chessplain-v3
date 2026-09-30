@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Check, ArrowRight, LoaderCircle } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
@@ -12,15 +12,14 @@ export default function PricingPage() {
   const [interval, setInterval] = useState<'month' | 'year'>('month');
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState<'checkout' | 'portal' | 'email' | null>(null);
+  const [busy, setBusy] = useState<'checkout' | 'portal' | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
     captureEvent('paywall_viewed');
     const query = new URLSearchParams(window.location.search);
+    if (query.get('interval') === 'year') setInterval('year');
     if (query.get('checkout') === 'success') setNotice('You’ve returned from checkout. Subscription activation may take a moment. You can now try reviewing a game.');
     if (query.get('checkout') === 'cancelled') setNotice('Checkout was cancelled. You can still use your free reviews.');
     let active = true;
@@ -28,18 +27,6 @@ export default function PricingPage() {
     const { data } = supabase.auth.onAuthStateChange((_event, session) => { if (active) { setSession(session); setAuthReady(true); } });
     return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
-
-  async function sendLink(event: FormEvent) {
-    event.preventDefault();
-    if (busy) return;
-    setBusy('email'); setError('');
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin + '/auth/callback?next=/pricing' } });
-      if (error) throw error;
-      setSent(true);
-    } catch (error) { setError(error instanceof Error ? error.message : 'Couldn’t send your sign-in link. Please try again.'); }
-    finally { setBusy(null); }
-  }
 
   async function billing(action: 'checkout' | 'portal') {
     if (busy || !session) return;
@@ -81,34 +68,13 @@ export default function PricingPage() {
               {busy === 'portal' ? 'Opening billing…' : 'Manage existing subscription'}
             </button>
           </div>
-        ) : sent ? (
-          <div role="status" className="rounded-md bg-[var(--w-surface-subtle)] p-4 text-sm leading-relaxed text-left">
-            <p className="font-semibold text-[var(--w-accent)] mb-1">Check your inbox</p>
-            <p className="text-xs text-[var(--w-ink2)]">We sent a one-click sign-in link to <strong>{email}</strong>. Open it in this browser to finish subscribing.</p>
-          </div>
         ) : (
-          <form onSubmit={sendLink} className="space-y-3 text-left">
-            <label className="block text-xs font-semibold text-[var(--w-ink2)]" htmlFor="auth-email">
-              Enter your email to continue to checkout
-            </label>
-            <input
-              id="auth-email"
-              className="email-input w-full"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              disabled={busy === 'email'}
-            />
-            <button className="primary-button w-full justify-center" disabled={busy === 'email'}>
-              {busy === 'email' ? <><LoaderCircle className="spin" size={16} />Sending link…</> : <>Continue to checkout <ArrowRight size={16} /></>}
-            </button>
-            <p className="text-xs text-[var(--w-ink3)] text-center">
-              Passwordless sign-in. Your subscription links securely to this email.
-            </p>
-          </form>
+          <div className="space-y-3">
+            <Link className="primary-button w-full justify-center" href={`/login?next=${encodeURIComponent(`/pricing?interval=${interval}`)}`}>
+              Sign in to continue <ArrowRight size={16} />
+            </Link>
+            <p className="text-xs text-[var(--w-ink2)] text-center">Use Google or an email sign-in link. You’ll return here to open Stripe checkout.</p>
+          </div>
         )}
         {error && <p className="form-error mt-4" role="alert">{error}</p>}
       </section>
@@ -120,7 +86,7 @@ export default function PricingPage() {
       <div className="space-y-4 text-left">
         <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">Can I cancel at any time?</h3>
-          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Yes. You can cancel with one click in the Stripe customer portal whenever you want. You retain premium access until the end of your paid billing period.</p>
+          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Yes. Manage or cancel your subscription in the Stripe customer portal whenever you want. You retain premium access until the end of your paid billing period.</p>
         </div>
         <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">Do I need an account for the free tier?</h3>
@@ -128,11 +94,11 @@ export default function PricingPage() {
         </div>
         <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">How does billing work?</h3>
-          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">All payments are handled securely through Stripe. Subscriptions renew automatically each month or year until cancelled.</p>
+          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Prices are in US dollars. Payments are handled securely through Stripe. Subscriptions renew automatically each month or year until cancelled.</p>
         </div>
       </div>
     </div>
 
-    <div className="max-w-3xl mx-auto mt-10 text-center"><Link className="text-link" href="/report/demo">Read a sample before deciding <ArrowRight size={15} /></Link><p className="text-xs text-[var(--w-ink2)] mt-4 leading-relaxed">Free reviews are counted by network. Reviews are accessible to anyone with the link.<br />Paid reviews still take time to process and are subject to fair use. <Link href="/terms" className="underline">Terms</Link></p></div>
+    <div className="max-w-3xl mx-auto mt-10 text-center"><Link className="text-link" href="/report/demo">Read a sample before deciding <ArrowRight size={15} /></Link><p className="text-xs text-[var(--w-ink2)] mt-4 leading-relaxed">Anonymous free reviews are counted by network; signed-in reviews are counted by account. Reviews are accessible to anyone with the link.<br />Paid reviews still take time to process and are subject to fair use. <Link href="/terms" className="underline">Terms</Link></p></div>
   </div>;
 }

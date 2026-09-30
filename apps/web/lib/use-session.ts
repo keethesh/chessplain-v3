@@ -21,5 +21,11 @@ export function useSession() {
 
 /** Only same-origin paths, so a crafted `next` cannot redirect off-site. */
 export function safeNextPath(value: string | null | undefined): string {
-  return value && /^\/(?!\/)/.test(value) && !value.includes('\\') ? value : '/';
+  if (!value || typeof window === 'undefined' || /[\u0000-\u001f\u007f]/.test(value)) return '/';
+  try {
+    const url = new URL(value, window.location.origin);
+    return url.origin === window.location.origin && url.pathname.startsWith('/') ? url.pathname + url.search + url.hash : '/';
+  } catch {
+    return '/';
+  }
 }

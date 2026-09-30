@@ -30,6 +30,22 @@ export default function LoginPage() {
     } finally { setBusy(false); }
   }
 
+  async function signInWithGoogle() {
+    if (busy) return;
+    setBusy(true); setError('');
+    const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      });
+      if (error) throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'We couldn’t start Google sign-in. Please try again.');
+      setBusy(false);
+    }
+  }
+
   async function signOut() {
     setBusy(true);
     await supabase.auth.signOut();
@@ -59,7 +75,11 @@ export default function LoginPage() {
       ) : (
         <>
           <h1 className="t-heading">Sign in or create an account.</h1>
-          <p className="login-lede">Enter your email and we’ll send you a link. No password. If you’re new, the same link creates your account.</p>
+          <p className="login-lede">Use Google, or enter your email and we’ll send you a link. No password. If you’re new, either option creates your account.</p>
+          <button type="button" className="secondary-button w-full justify-center" onClick={signInWithGoogle} disabled={busy}>
+            {busy ? <><LoaderCircle size={16} className="spin" />Opening Google…</> : <>Continue with Google <ArrowRight size={16} /></>}
+          </button>
+          <div className="login-divider" aria-hidden="true"><span>or use email</span></div>
           <form onSubmit={sendLink} className="login-form">
             <label htmlFor="login-email" className="block text-sm font-semibold">Email</label>
             <input id="login-email" className="email-input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required disabled={busy} autoFocus />

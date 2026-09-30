@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -987,6 +986,9 @@ input, textarea {
 .login-lede strong { color: var(--w-ink1); }
 .login-form { display: grid; gap: 12px; }
 .login-form .primary-button { justify-self: start; }
+.login-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--w-ink3); font-size: 12px; }
+.login-divider::before, .login-divider::after { content: ''; flex: 1; border-top: 1px solid var(--w-border); }
+.login-divider span { white-space: nowrap; }
 .login-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .login-perks { display: grid; gap: 10px; margin: 36px 0 0; padding: 20px 0 0; border-top: 1px solid var(--w-border); list-style: none; font-size: 14px; line-height: 1.5; color: var(--w-ink2); }
 .login-perks li { display: flex; gap: 10px; align-items: flex-start; }

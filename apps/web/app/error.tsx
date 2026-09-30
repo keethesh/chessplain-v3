@@ -24,8 +24,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <div className="page-width py-16 max-w-2xl">
       <h1 className="t-display mb-5">Something went wrong on this page.</h1>
       <p className="t-body text-[var(--w-ink2)] mb-7">
-        This is on us, not on your game. Trying again usually works. Nothing you submitted has been lost, and a
-        review that was already running will still be at its own link.
+        Try again, or return to the homepage. If your review had already opened, you can find its link
+        under recent reviews on this browser’s homepage.
       </p>
       <div className="flex flex-wrap gap-3">
         <button className="primary-button" onClick={reset}>
