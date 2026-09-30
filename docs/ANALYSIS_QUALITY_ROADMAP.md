@@ -146,10 +146,11 @@ on every axis. n is small and mostly internal testing.
 - **Latency:** worker runs with moments took 4.3–48 s; the 48 s cases are two
   30 s LLM timeout windows. Since 2026-09-30 each completed report logs
   per-stage wall time (sweep, verify, explain, summary) and cache hit rate,
-  and sends them to PostHog. First production numbers (two reports run in
-  parallel, warm cache): sweep 0.1–0.2 s, verify 0.1 s, explain 3.5–4.1 s,
-  summary 2.4–2.6 s. The LLM stages dominate, and the summary runs only after
-  every explanation finishes.
+  and sends them to PostHog. First production numbers, 2026-09-30: a new game
+  took 19.8 s (sweep 0.7 s, verify 10.3 s, explain 4.1 s, summary 4.6 s;
+  cache 13%), so depth-20 verification dominates new games. Re-runs with a
+  warm cache took 6–7 s, where the LLM stages dominate and the summary runs
+  only after every explanation finishes.
 - **Grounding:** `validateMomentJson` checks shape, banned terms, word counts
   and first-person claims, but not causal claims against `chess-facts.ts`.
   The 2026-09-30 benchmark rerun on the current prompt had 1 phantom-piece

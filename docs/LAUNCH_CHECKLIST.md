@@ -11,7 +11,9 @@ reasoning.
 
 Deployed state verified 2026-09-30:
 - Engine commit `dcbe058`, prompt `2026-09-24.1`, `openai/gpt-6-luna` through
-  OpenRouter (key: $10 limit, expires 2026-12-25).
+  OpenRouter (key: $10 limit, $0.35 used, expires 2026-12-25). The OpenRouter
+  **account** held only $3.07 of credit on 2026-09-30, and that balance, not
+  the key limit, is what runs out first.
 - Web Worker version `11c40c11` (includes `a1f7ded`).
 
 Earlier rows keep dated evidence where it is still useful; don't treat old
@@ -25,7 +27,7 @@ completion, premium access, or cancellation.
 |---|---|---|
 | Repository | Typecheck, 84/84 tests in 18 files, engine, web and Worker builds passed (2026-09-30) | — |
 | GitHub CI | Green on `main` at `dcbe058` (2026-09-30) | Rerun after further changes |
-| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, commit `dcbe058`, active; VPS test run 84/84 (2026-09-30). Listens on `127.0.0.1:8080` only (Caddy proxies to it); 2 job loops share 4 engines. Two owner reports re-queued at once completed in 6.1 s and 7.0 s with 4 and 3 moments, 0 fallback phrases, `model` and `prompt_version` recorded; per-stage timing is in the journal | The username path lists the 10 most recent games. Unknown usernames are rejected at submit (400). A signed-in resubmit of the same game returns the existing report (200, no quota), or re-queues it if it failed. Empty (0-moment) reports don't count against quota |
+| Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, commit `dcbe058`, active; VPS test run 84/84 (2026-09-30). Listens on `127.0.0.1:8080` only (Caddy proxies to it); 2 job loops share 4 engines. Two owner reports re-queued at once completed in 6.1 s and 7.0 s (warm cache). A new game submitted through the live API as the test account: listing 200, submit 201, progress stream live, completed in 19.8 s with 4 moments, 0 fallback phrases, `model` and `prompt_version` recorded (sweep 0.7 s, verify 10.3 s, explain 4.1 s, summary 4.6 s; cache 13%) | The username path lists the 10 most recent games. Unknown usernames are rejected at submit (400). A signed-in resubmit of the same game returns the existing report (200, no quota), or re-queues it if it failed. Empty (0-moment) reports don't count against quota. About 360 new reports/hour at ~20 s each with 2 loops (estimate) |
 | Website deployment | Worker version `11c40c11` (2026-09-30): per-route titles and canonicals, security headers (HSTS with `includeSubDomains`, nosniff, Referrer-Policy, Permissions-Policy, `X-Frame-Options: DENY`), no `x-powered-by`, Google sign-in reaches `accounts.google.com` via the Supabase callback, prototypes return 404, the workers.dev mirror returns 404 | Deploy with `pnpm --filter @chessplain/web build:worker && pnpm --filter @chessplain/web deploy:worker`; "No targets deployed" is expected because the custom domains are attached in the Cloudflare dashboard |
 | Production usage | 28 analyses before launch (26 completed, 2 failed), 7 anonymous IPs and 2 signed-in submitters: internal testing only (2026-09-30) | No real-user evidence yet for completion rate, latency or retention |
 | Legacy accounts | 326 auth users from the previous version: 324 Google, 2 email; 321 real, confirmed accounts. All 321 were already Resend contacts from the March 2026 relaunch email ("It's your turn.", sent 6–8 March to about 229 people in three batches) | Resend segment `relaunch-2026-10` holds the 320 still subscribed (verified contact by contact, 2026-09-30). Draft broadcast "Relaunch, October 2026" is ready to send. 5 Resend contacts no longer have an account and were left out |
@@ -77,24 +79,47 @@ Done 2026-09-30:
 - Uptime monitoring and calendar reminders (owner).
 - Relaunch email drafted in Resend (see below).
 
-Open:
+Open, before launch:
 
-1. **Send the relaunch email:** Resend → Broadcasts → "Relaunch, October
+1. **OpenRouter credit:** add credit and turn on auto top-up (openrouter.ai →
+   Credits → Enable auto top up; card only). Reports fail when the account
+   balance hits zero, and `/healthz` stays green, so UptimeRobot won't notice.
+2. **One real purchase through Managed Payments** (section 2, steps 1–5), from a
+   non-premium account signed in with Google. This also covers Google sign-in
+   end to end; only the redirect to Google has been verified.
+3. **Supabase keys:** the legacy service-role JWT was pasted into an earlier
+   chat (section 4). Create a secret key and a publishable key (Settings → API
+   Keys), switch the engine and web to them, verify, then disable the legacy
+   keys.
+4. **Send the relaunch email:** Resend → Broadcasts → "Relaunch, October
    2026" (segment `relaunch-2026-10`, 320 contacts). Send yourself a test,
    then Send. The test shows "Hi there" because it has no contact; real sends
    use the first names (307 of 320 have one). The Resend account is on the
    free plan, which allows 3 segments.
-2. **Stripe public support email:** Settings → Business → Public details
+5. **Stripe public support email:** Settings → Business → Public details
    (still unset on 2026-09-30). `support@` routing to the owner's inbox is
    verified in Cloudflare Email Routing.
-3. **Deferred by the owner:**
-   - The ICO data protection fee, until there is revenue. The fee is not tied
-     to revenue: it applies now; non-payment risks a £400 fixed penalty for
-     tier 1 (up to £4,350).
-   - The Supabase custom domain for the Google sign-in screen, while no paid
-     advertising is planned.
-   - Controller name and postal address on the privacy page, and a retention
-     and deletion policy: add both before any paid advertising.
+
+Launch week:
+
+- **Backups:** check the Supabase plan (Settings → Billing). Free projects
+  have no restorable backups; Supabase recommends `supabase db dump`. A
+  nightly dump to the VPS needs the database password stored as a file.
+- **Known limit:** Resend's free plan sends at most 100 transactional emails a
+  day. Supabase allows 100 sign-in emails an hour, so on a busy day email
+  sign-in stops at Resend's cap. Google sign-in is unaffected; Resend Pro
+  lifts the cap.
+- **Search Console:** submit `https://getchessplain.com/sitemap.xml`.
+
+Deferred by the owner:
+
+- The ICO data protection fee, until there is revenue. The fee is not tied to
+  revenue: it applies now; non-payment risks a £400 fixed penalty for tier 1
+  (up to £4,350).
+- The Supabase custom domain for the Google sign-in screen, while no paid
+  advertising is planned.
+- Controller name and postal address on the privacy page, and a retention and
+  deletion policy: add both before any paid advertising.
 
 ## 1. Cloudflare Custom Domain Cutover (`getchessplain.com`) — DONE
 
@@ -193,15 +218,17 @@ also now per visitor.
   Routing (MX `route{1,2,3}.mx.cloudflare.net`). Send a test from an outside
   address and confirm it arrives before relying on it. Cloudflare routing is
   inbound only; replying as support@ needs "Send mail as" through Resend SMTP.
-- Rotate the Supabase service-role and LLM credentials previously pasted into the
-  conversation. Coordinate replacements across the VPS and local tooling before
-  revocation; never print replacement secrets or commit them.
+- The LLM key was replaced on 2026-09-26. The Supabase service-role key pasted
+  into an earlier conversation is still live: both Supabase keys are legacy
+  JWTs, so rotating one alone means rotating the JWT secret. Use the new API
+  keys instead (section 0, item 3). Never print replacement secrets or commit
+  them.
 - Live Stripe credentials transferred in this session were not printed. Privileged
   keys must remain server-side. Do not indiscriminately rotate unrelated keys.
 
-- Delete the sign-in test account `keethesh15+cptest@gmail.com` (Supabase ->
-  Authentication -> Users). Its profile row is removed by the `ON DELETE CASCADE` on
-  `profiles.id`; any analyses it owned become anonymous (`ON DELETE SET NULL`).
+- Keep the test account `keethesh15+cptest@gmail.com` (free tier). It is the
+  signed-in account for production verification: sessions are minted with
+  `admin.generateLink` + `verifyOtp`, with no email sent.
 
 ## 5. Final deployed checks
 
@@ -217,9 +244,7 @@ manually test mobile submission, streaming completion, retry/reconnect, sharing,
 sign-in, checkout and portal navigation. Check the actual social preview URLs.
 Automated layout checks do not establish usability in every in-app browser.
 
-Only advertise after the section 0 gates, the paid lifecycle downgrade check,
-support and credential gates above are resolved. The launch goal remains open
-until then.
+Section 0 lists what is left before launch.
 
 ## Operational notes
 

@@ -13,9 +13,10 @@ This is a pnpm monorepo:
 
 ## Where things stand
 
-**Status (2026-09-30):** live and ready for a public launch. Open owner items:
-send the relaunch email (drafted in Resend) and set Stripe's public support
-email; see section 0 of the launch checklist.
+**Status (2026-09-30):** live and ready for a public launch once the short
+"before launch" list in section 0 of the launch checklist is done: OpenRouter
+credit, one real purchase, new Supabase keys, the relaunch email, and Stripe's
+support email.
 
 **Current code:** typecheck, **84 tests across 18 files**, and production
 builds of the engine, the web app and the Cloudflare Worker pass; CI is green.

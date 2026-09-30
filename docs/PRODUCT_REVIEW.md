@@ -22,9 +22,10 @@ holds the reasoning. Nothing here is legal or tax advice.
   - two games analysed at once
   - benchmark rerun on the current prompt
 
-  Open owner items: send the relaunch email (drafted in Resend) and set
-  Stripe's public support email. The ICO fee and the Supabase custom domain
-  are deferred (see the checklist).
+  Open owner items before launch: OpenRouter credit, one real purchase through
+  Managed Payments, new Supabase API keys, the relaunch email and Stripe's
+  support email (checklist section 0). The ICO fee and the Supabase custom
+  domain are deferred.
 - **The idea:** the job is real (players who cannot turn an engine line into a
   reason and a habit), and people have paid for it. The previous version had
   paying subscribers even though it barely worked: 2 customers and 5 charges
@@ -40,10 +41,10 @@ holds the reasoning. Nothing here is legal or tax advice.
 | Reports ever | 28 (26 completed, 2 failed), 7 anonymous IPs, 2 signed-in submitters | Internal testing only; no real-user funnel yet |
 | Moments per completed report | 0×4, 1×11, 2×6, 3×3, 4×2 | Most games yield one lesson; empty reports were genuinely clean games |
 | Report quality (26 replayed) | correctness 2.50, relevance 2.54, clarity 2.96, actionability 2.88 of 3 | Current prompt scored 3/3/3/3 on both reports that used it (n=2) |
-| Time per report | After the 2026-09-30 deploy: 6.1–7.0 s for two reports run in parallel (sweep 0.1–0.2 s and verify 0.1 s from cache, explain 3.5–4.1 s, summary 2.4–2.6 s). Earlier: 4.3–48 s, where 48 s = two 30 s LLM timeouts | The LLM stages dominate |
+| Time per report | New game after the 2026-09-30 deploy: 19.8 s (sweep 0.7 s, verify 10.3 s, explain 4.1 s, summary 4.6 s). Re-runs with a warm cache: 6–7 s. Earlier: 4.3–48 s, where 48 s = two 30 s LLM timeouts | For new games the depth-20 verify dominates; for cached ones the LLM does |
 | Accounts | 326 (324 Google, 2 email); active Dec 2025–May 2026 | An existing audience, see below |
 | Revenue | No paying customers today; the active subscriptions are the owner's own | Previous version: paid despite not working (see Verdict) |
-| LLM spend | $0.002 of the $10 key limit; ≈ $0.0013 per 3-moment report | Cost is not a constraint |
+| LLM spend | $0.35 of the $10 key limit (mostly the 2026-09-30 benchmark and its judge model); ≈ $0.0013 per 3-moment report. The OpenRouter account itself had $3.07 left | Cost per report is not a constraint; the account balance is |
 
 ## Product and positioning
 
@@ -185,8 +186,9 @@ Cloudflare Workers; Supabase handles auth and Stripe handles billing.
 
 1. **Capacity.** The worker ran one game at a time: ≈ 75–150 reports an hour
    on the old timings. Since 2026-09-30, `WORKER_CONCURRENCY` job loops
-   (default 2) share the 4-engine Stockfish pool. Measured: two reports
-   completed in parallel in 6–7 s. Raise it with cores if the queue backs up.
+   (default 2) share the 4-engine Stockfish pool. Measured: a new game takes
+   ~20 s, about half of it depth-20 verification, so ≈ 360 new reports an
+   hour (estimate). Raise it with cores if the queue backs up.
 2. **Observability.** Each report logs per-stage timing and cache hit rate.
    UptimeRobot watches the API health endpoint and the site (owner-configured);
    there is no alert yet on queue age, LLM credit or webhook failures.
