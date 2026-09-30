@@ -6,8 +6,10 @@ import { SUPPORT_EMAIL } from '../layout';
 import { AnalyticsOptOut } from '../../components/AnalyticsOptOut';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy. Chessplain',
+  title: 'Privacy Policy | Chessplain',
   description: 'What Chessplain collects, how it is used, and how to have it deleted.',
+  alternates: { canonical: '/privacy' },
+  robots: { index: true, follow: true },
 };
 
 export default function PrivacyPage() {
@@ -24,55 +26,102 @@ export default function PrivacyPage() {
       <h1 className="t-display text-3xl sm:text-4xl mb-6 text-[var(--w-ink1)]">Privacy Policy</h1>
       <div className="flex flex-col gap-6 t-body text-[var(--w-ink1)] leading-relaxed">
         <p>
-          Your privacy is important to us. This policy outlines what data we collect and how we use it.
+          This policy explains how Chessplain processes information when you use the website,
+          sign in, submit a game, view a report, or subscribe.
         </p>
 
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
-          <h2 className="t-section text-lg font-bold mb-2">1. Information We Collect</h2>
+          <h2 className="t-section text-lg font-bold mb-2">1. Who controls your data</h2>
+          <p className="text-sm text-[var(--w-ink2)]">
+            Chessplain is operated by an individual based in the United Kingdom, who is the controller
+            of your data. For privacy questions, requests, or complaints, email{' '}
+            <a className="underline text-[var(--w-accent)]" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+          </p>
+        </div>
+
+        <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
+          <h2 className="t-section text-lg font-bold mb-2">2. Information we collect</h2>
           <ul className="list-disc pl-5 space-y-1.5 text-sm text-[var(--w-ink2)]">
-            <li>Public chess games and usernames submitted for analysis.</li>
-            <li>IP addresses for rate limiting and anonymous quota enforcement.</li>
-            <li>Email address if you choose to receive sign-in links or subscribe. Report links are accessible to anyone who has them.</li>
-            <li>Usage analytics (via PostHog) to improve the product experience.</li>
+            <li>Account information, including your email address and, if you choose it, Google sign-in information.</li>
+            <li>Submitted game information, including PGNs, usernames, player names, move data, and the report and share link produced from it.</li>
+            <li>IP addresses stored with anonymous submissions and source games for quota enforcement, abuse prevention, and service operation.</li>
+            <li>Billing and subscription information handled by Stripe. We do not receive or store your full card number.</li>
+            <li>Limited product statistics from PostHog, such as pages viewed, games submitted, and clicks. PostHog uses a random identifier in first-party cookie/local storage; analytics is not used for advertising.</li>
           </ul>
         </div>
 
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
-          <h2 className="t-section text-lg font-bold mb-2">2. How We Use Data</h2>
-          <p className="text-sm text-[var(--w-ink2)]">
-            We use submitted games solely to compute engine evaluations and generate explanations. We do not sell your personal data to third parties.
+          <h2 className="t-section text-lg font-bold mb-2">3. Why we use it</h2>
+          <ul className="list-disc pl-5 space-y-1.5 text-sm text-[var(--w-ink2)]">
+            <li>To provide accounts, analyse submitted games, generate reports, and operate share links (service performance and steps before a contract).</li>
+            <li>To process subscriptions, prevent fraud and abuse, enforce quotas, and keep the service secure (contract, legal obligations, and legitimate interests where applicable).</li>
+            <li>To understand aggregate product use and improve Chessplain. PostHog is configured for statistics only, with no session recording, surveys, heatmaps, or advertising.</li>
+            <li>To respond to support, privacy, and billing requests and meet accounting or legal obligations.</li>
+          </ul>
+          <p className="text-sm text-[var(--w-ink2)] mt-3">
+            We do not sell personal data. Reports and share links are public to anyone who has the link
+            and may include player and opponent names; do not submit information you do not have the right
+            to share.
           </p>
         </div>
 
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
-          <h2 className="t-section text-lg font-bold mb-2">3. Third-Party Services</h2>
-          <p className="text-sm text-[var(--w-ink2)]">
-            We use Stripe for payment processing, Supabase for authentication and database services, and PostHog for product analytics. Game positions, selected moves, and contextual game information are sent to the configured AI provider to generate written explanations.
+          <h2 className="t-section text-lg font-bold mb-2">4. Services we use</h2>
+          <p className="text-sm text-[var(--w-ink2)]">We use the following providers to run Chessplain:</p>
+          <ul className="list-disc pl-5 space-y-1.5 text-sm text-[var(--w-ink2)] mt-2">
+            <li><strong>Supabase</strong> for authentication and database hosting, including accounts, PGNs, reports, and IP addresses.</li>
+            <li><strong>Cloudflare</strong> for website hosting and email routing, and <strong>Resend</strong> for sending authentication email through SMTP.</li>
+            <li><strong>Stripe</strong> for Checkout, subscription payments, invoices, and the billing portal.</li>
+            <li><strong>PostHog (EU hosting)</strong> for statistics-only product analytics. You can opt out below.</li>
+            <li><strong>Google</strong> if you choose Google OAuth sign-in.</li>
+            <li><strong>Chess.com&apos;s public API</strong> when you request a public Chess.com game by username.</li>
+            <li><strong>OpenRouter and its configured OpenAI model provider</strong> for written explanations. For a moment, Chessplain sends the position FEN, played/best/refutation moves, chess context, phase, and opponent name. For a game summary, it sends player/opponent names, result, move count, time control, and generated moment text. It does not send your account email in these prompts.</li>
+          </ul>
+          <p className="text-sm text-[var(--w-ink2)] mt-3">
+            Some of these providers process information outside the UK, including in the United States.
+            Email us for details of the safeguards that apply to a particular provider.
           </p>
         </div>
 
         <div id="analytics" className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
-          <h2 className="t-section text-lg font-bold mb-2">4. Analytics and Cookies</h2>
+          <h2 className="t-section text-lg font-bold mb-2">5. Analytics and cookies</h2>
           <p className="text-sm text-[var(--w-ink2)]">
-            We use PostHog, hosted in the EU, only to count and understand how Chessplain is used (pages viewed,
-            games submitted, clicks) so we can improve it. It stores a random identifier in a first-party cookie and
-            local storage. If you sign in, events are linked to your account ID, not your email. We do not record
-            sessions, use analytics for advertising, or track you on other sites. Sign-in uses its own storage to keep
-            you signed in. Browsers sending Do Not Track are not tracked.
+            PostHog is hosted in the EU and configured for statistics-only measurement. It can record
+            page views and product events such as submissions and clicks using a random identifier in
+            first-party cookie/local storage. We do not use it for advertising, cross-site tracking,
+            session recording, surveys, or heatmaps. Sign-in uses separate authentication storage.
+            Browsers sending Do Not Track are not tracked. You can opt out at any time:
           </p>
           <AnalyticsOptOut />
         </div>
 
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
-          <h2 className="t-section text-lg font-bold mb-2">5. Contact & Deletion</h2>
+          <h2 className="t-section text-lg font-bold mb-2">6. Retention and deletion</h2>
           <p className="text-sm text-[var(--w-ink2)]">
-            You may request complete deletion of your account and game history at any time by emailing{' '}
-            <a className="underline text-[var(--w-accent)]" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We
-            aim to reply within a few days, and deletion is permanent once actioned.
+            There is no automatic deletion yet. Accounts, PGNs, reports, analysis records, and the IP
+            addresses stored with submissions are kept until you ask us to delete them.
+          </p>
+          <p className="text-sm text-[var(--w-ink2)] mt-3">
+            You may request access, correction, restriction, objection, portability, or erasure by
+            emailing <a className="underline text-[var(--w-accent)]" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+            We will verify the request, apply any applicable legal exceptions, and handle deletion manually
+            where possible. Some records may need to be retained for legal, security, fraud-prevention,
+            or accounting purposes.
           </p>
         </div>
 
-        <p className="t-caption text-[var(--w-ink3)] mt-2">Last updated: September 26, 2026</p>
+        <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
+          <h2 className="t-section text-lg font-bold mb-2">7. Your rights and complaints</h2>
+          <p className="text-sm text-[var(--w-ink2)]">
+            Depending on where you live and the applicable law, you may have rights to access, correct,
+            erase, restrict, object to, or receive a copy of your personal data, and to withdraw consent
+            where processing relies on consent. You can complain to the UK Information Commissioner&apos;s
+            Office at{' '}
+            <a className="underline text-[var(--w-accent)]" href="https://ico.org.uk/make-a-complaint/" rel="noreferrer">ico.org.uk/make-a-complaint</a>.
+          </p>
+        </div>
+
+        <p className="t-caption text-[var(--w-ink3)] mt-2">Last updated: September 30, 2026</p>
       </div>
     </div>
   );
