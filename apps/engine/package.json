@@ -27,7 +27,7 @@
     "openai": "^4.86.1",
     "pino": "^9.6.0",
     "posthog-node": "^4.5.1",
-    "stripe": "^17.7.0"
+    "stripe": "^22.6.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

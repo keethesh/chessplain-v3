@@ -21,8 +21,10 @@ const fastify = Fastify({
   },
 });
 
+// Managed Payments (Stripe as merchant of record, handling VAT/GST/sales tax)
+// needs API version 2025-03-31.basil or later.
 const stripe = config.stripeSecretKey ? new Stripe(config.stripeSecretKey, {
-  apiVersion: '2025-02-24.acacia',
+  apiVersion: '2026-08-26.dahlia',
 }) : null;
 
 const quotaLocks = new Map<string, Promise<void>>();
@@ -546,7 +548,9 @@ async function bootstrap() {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
-        payment_method_types: ['card'],
+        // Stripe (sold through Onelink) is merchant of record and remits tax.
+        // It also picks payment methods, so payment_method_types is not allowed.
+        managed_payments: { enabled: true },
         allow_promotion_codes: true,
         line_items: [
           {
