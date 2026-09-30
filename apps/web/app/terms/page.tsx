@@ -26,7 +26,9 @@ export default function TermsPage() {
       <div className="flex flex-col gap-6 t-body text-[var(--w-ink1)] leading-relaxed">
         <p>
           Welcome to Chessplain. By accessing or using our website and services, you agree to these
-          terms. If you are a consumer, nothing here limits rights that cannot lawfully be excluded.
+          terms. You must be at least 13 years old to use Chessplain, and under-18s need a parent or
+          guardian&apos;s permission to subscribe. If you are a consumer, nothing here limits rights
+          that cannot lawfully be excluded.
         </p>
 
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
@@ -52,15 +54,20 @@ export default function TermsPage() {
         <div className="card-box p-6 bg-[var(--w-surface)] border border-[var(--w-border)]">
           <h2 className="t-section text-lg font-bold mb-2">3. Subscriptions and billing</h2>
           <p className="text-sm text-[var(--w-ink2)]">
-            Paid plans are priced in US dollars: $9.99 per month or $99.99 per year. Your bank may
-            apply currency conversion. The selected plan renews automatically at the same interval
-            until cancelled. Stripe processes payment and provides the billing portal; we do not store
-            your full card number.
+            Paid plans are priced in US dollars: $9.99 per month or $99.99 per year. Checkout may
+            offer your local currency, and it shows your total, including any tax due where you live,
+            before you pay. The selected plan renews automatically at the same interval until
+            cancelled.
           </p>
           <p className="text-sm text-[var(--w-ink2)] mt-3">
-            You can cancel through the Stripe billing portal. Cancellation normally stops the next
-            renewal and leaves access available until the end of the current paid period. Paid analyses
-            still take time to process and are subject to fair use.
+            Purchases are sold through Onelink, Stripe&apos;s merchant-of-record service. Onelink is the
+            seller on your receipt, collects any VAT or sales tax, and appears on your statement as
+            LINK.COM* CHESSPLAIN PREMIUM. We do not receive or store your full card number.
+          </p>
+          <p className="text-sm text-[var(--w-ink2)] mt-3">
+            You can cancel with Manage subscription on the pricing page or at link.com. Cancellation
+            stops the next renewal and leaves access available until the end of the current paid
+            period. Paid analyses still take time to process and are subject to fair use.
           </p>
         </div>
 
@@ -69,8 +76,8 @@ export default function TermsPage() {
           <p className="text-sm text-[var(--w-ink2)]">
             We offer a full refund on request within 14 days of any subscription charge. Email{' '}
             <a className="underline text-[var(--w-accent)]" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>{' '}
-            promptly and include the account email and charge date. This is in addition to any
-            non-excludable statutory rights.
+            promptly and include the account email and charge date; Onelink support can also handle
+            refunds for purchases it sold. This is in addition to any non-excludable statutory rights.
           </p>
           <p className="text-sm text-[var(--w-ink2)] mt-3">
             If you are a UK consumer, you also have a legal right to cancel within 14 days of

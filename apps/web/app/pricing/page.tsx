@@ -86,7 +86,7 @@ export default function PricingPage() {
       <div className="space-y-4 text-left">
         <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">Can I cancel at any time?</h3>
-          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Yes. Manage or cancel your subscription in the Stripe customer portal whenever you want. You retain premium access until the end of your paid billing period.</p>
+          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Yes. Cancel with Manage subscription on this page or at link.com whenever you want. You keep premium access until the end of your paid billing period.</p>
         </div>
         <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">Do I need an account for the free tier?</h3>
@@ -94,7 +94,7 @@ export default function PricingPage() {
         </div>
         <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">How does billing work?</h3>
-          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Prices are in US dollars. Payments are handled securely through Stripe. Subscriptions renew automatically each month or year until cancelled.</p>
+          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Prices are in US dollars. Checkout can show your local currency and shows your total, including any tax where you live, before you pay. Purchases are sold through Onelink, Stripe&apos;s merchant-of-record service, so your receipt and bank statement show Onelink (LINK.COM). Subscriptions renew automatically each month or year until cancelled.</p>
         </div>
       </div>
     </div>
