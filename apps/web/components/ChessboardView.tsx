@@ -52,19 +52,29 @@ export function ChessboardView({
   }));
   const turn = fen.split(' ')[1] === 'w' ? 'White' : 'Black';
   let positionLabel = `${turn} to move`;
+  let piecePlacement = '';
   try {
     const game = new Chess(fen);
     if (game.isCheckmate()) positionLabel = `${turn} is checkmated`;
     else if (game.isCheck()) positionLabel += ', in check';
     else if (game.isDraw()) positionLabel = 'Drawn position';
+    // Screen readers get the position itself, not just whose move it is.
+    const pieces = game.board().flat().filter((p): p is NonNullable<typeof p> => p !== null);
+    const list = (color: 'w' | 'b') => {
+      const own = pieces.filter(p => p.color === color);
+      const major = own.filter(p => p.type !== 'p').map(p => p.type.toUpperCase() + p.square);
+      const pawns = own.filter(p => p.type === 'p').map(p => p.square);
+      return [...major, pawns.length ? `pawns ${pawns.join(' ')}` : ''].filter(Boolean).join(', ');
+    };
+    piecePlacement = `White: ${list('w')}. Black: ${list('b')}.`;
   } catch {
     // Keep the side-to-move label if a partial analysis FEN is not parseable.
   }
 
 
   return (
-    <div className="w-full select-none overflow-hidden rounded-xl bg-[var(--w-surface)]" style={{ maxWidth: boardWidth }}>
-      <div className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${positionLabel}.`}>
+    <div className="w-full select-none overflow-hidden rounded-md bg-[var(--w-surface)]" style={{ maxWidth: boardWidth }}>
+      <div className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${positionLabel}. ${piecePlacement}`}>
         <Chessboard
           options={{
             position: fen,

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Chess } from 'chess.js';
-import { LoaderCircle, Check, RefreshCw } from 'lucide-react';
+import { LoaderCircle, Check, RefreshCw, Pause, Play } from 'lucide-react';
 import { ChessboardView } from './ChessboardView';
 
 interface AnalysisWaitStateProps {
@@ -58,12 +58,19 @@ function OperaGameLoop() {
   const frames = useMemo(replay, []);
   const [ply, setPly] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
-  useEffect(() => setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
+  const [paused, setPaused] = useState(false);
   useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setReducedMotion(reduced);
+    // Reduced motion: hold the opening position until the reader opts in.
+    if (reduced) setPaused(true);
+  }, []);
+  useEffect(() => {
+    if (paused) return;
     const atEnd = ply === frames.length - 1;
     const timer = setTimeout(() => setPly(atEnd ? 0 : ply + 1), atEnd ? END_HOLD_MS : MOVE_MS);
     return () => clearTimeout(timer);
-  }, [ply, frames.length]);
+  }, [ply, frames.length, paused]);
 
   const frame = frames[ply];
   const caption = CAPTIONS[Object.keys(CAPTIONS).map(Number).filter(n => n <= ply).at(-1) ?? 0];
@@ -76,6 +83,10 @@ function OperaGameLoop() {
         <span className="opera-move">{frame.label}</span>
         <span key={caption} className="opera-caption">{caption}</span>
       </figcaption>
+      <button type="button" className="text-link" onClick={() => setPaused(p => !p)}>
+        {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
+        {paused ? 'Play replay' : 'Pause replay'}
+      </button>
     </figure>
   );
 }

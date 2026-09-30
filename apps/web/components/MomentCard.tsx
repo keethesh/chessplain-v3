@@ -42,7 +42,7 @@ export function MomentCard({ moment, index, isActive = true, onSelect, stage = '
   if (onSelect && !isActive) {
     return (
       <article aria-label={`Moment ${index + 1}: ${moment.concept_name}`} className="min-w-0">
-        <button onClick={onSelect} className="focus-ring w-full rounded-xl border border-[var(--w-border)] p-5 text-left hover:bg-[var(--w-surface-subtle)]">
+        <button onClick={onSelect} className="focus-ring w-full rounded-md border border-[var(--w-border)] p-5 text-left hover:bg-[var(--w-surface-subtle)]">
           <span className="t-caption text-[var(--w-ink2)]">Move {moment.move_number} · {playedMove}</span>
           <span className="mt-1 block t-section">{moment.concept_name}</span>
         </button>

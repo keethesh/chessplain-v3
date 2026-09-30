@@ -202,14 +202,14 @@ function ReportSession({ id }: { id: string }) {
       setEmailSent(true);
       captureEvent('email_saved', { report_id: id });
     } catch (error) {
-      setEmailError(error instanceof Error ? error.message : 'We couldn’t send the email. Please try again.');
+      setEmailError(error instanceof Error ? error.message : 'Unable to send the email. Check the address and try again.');
     } finally { setEmailBusy(false); }
   }
 
   if (loadError || report?.status === 'failed') return <div className="page-width py-16 max-w-2xl">
-    <h1 className="t-display mb-5">{loadError ? 'We couldn’t open this review.' : 'This game couldn’t be reviewed.'}</h1>
+    <h1 className="t-display mb-5">{loadError ? 'Unable to open this review.' : 'This game couldn’t be reviewed.'}</h1>
     <p className="t-body text-[var(--w-ink2)] mb-7">{loadError || 'The analysis did not finish. You can submit the game again; failed analyses do not use your free allowance.'}</p>
-    <div className="flex flex-wrap gap-3">{loadError ? <button className="primary-button" onClick={() => setRetry(n => n + 1)}>Check again</button> : <Link className="primary-button" href="/#analyze">Try the game again</Link>}<Link className="secondary-button" href="/report/demo">Read a sample</Link></div>
+    <div className="flex flex-wrap gap-3">{loadError ? <button className="primary-button" onClick={() => setRetry(n => n + 1)}>Check again</button> : <Link className="primary-button" href="/#analyze">Try the game again</Link>}<Link className="secondary-button" href="/report/demo">Read the sample review</Link></div>
   </div>;
 
   const complete = report?.status === 'completed';

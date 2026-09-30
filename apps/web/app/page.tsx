@@ -36,6 +36,8 @@ export default function HomePage() {
   const [games, setGames] = useState<ChessComGameSummary[] | null>(null);
   const [pickingUrl, setPickingUrl] = useState<string | null>(null);
   const submitting = useRef(false);
+  const [errorField, setErrorField] = useState<'username' | 'pgn' | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const sample = DEMO_REPORT.moments[0];
   const sampleBoard = new Chess(sample.fen_before);
   const samplePlayed = sampleBoard.move(sample.played);
@@ -62,7 +64,8 @@ export default function HomePage() {
       router.push('/report/' + response.id);
     } catch (err) {
       setQuotaReached(err instanceof ApiError && err.status === 402 ? (signedIn ? 'signed-in' : 'anonymous') : null);
-      setError(err instanceof Error ? err.message : 'We could not submit your game. Please try again.');
+      setErrorField(null);
+      setError(err instanceof Error ? err.message : 'Unable to submit the game. Check your connection and try again.');
       submitting.current = false;
       setIsLoading(false);
       setPickingUrl(null);
@@ -72,20 +75,21 @@ export default function HomePage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (submitting.current) return;
-    setError(null);
+    setError(null); setErrorField(null);
     setQuotaReached(null);
     if (method === 'pgn') {
-      if (!pgn.trim()) return setError('Paste the moves from a completed game.');
+      if (!pgn.trim()) { setErrorField('pgn'); return setError('Paste the moves from a completed game.'); }
       return startReview({ pgn: pgn.trim(), player_color: color, hero_variant: 'editorial_v1' }, 'pgn');
     }
-    if (!username.trim()) return setError('Enter your Chess.com username to see your recent games.');
+    if (!username.trim()) { setErrorField('username'); return setError('Enter your Chess.com username to see your recent games.'); }
     submitting.current = true;
     setIsLoading(true);
     try {
       setGames(await listChessComGames(username.trim()));
       captureEvent('games_listed');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'We could not reach Chess.com. Please try again.');
+      setErrorField('username');
+      setError(err instanceof Error ? err.message : 'Unable to reach Chess.com. Check your connection and try again.');
     } finally {
       submitting.current = false;
       setIsLoading(false);
@@ -106,7 +110,7 @@ export default function HomePage() {
           <h1>Find the move that <span className="hero-mark">looked right</span> but <em>changed everything.</em></h1>
           <p className="hero-lede">See what your move allowed, why it mattered, and what to notice next time. No engine report card. Just the turning point.</p>
           <div className="submit-panel" id="analyze">
-            <div className="method-tabs" aria-label="Choose how to add your game">
+            <div className="method-tabs" role="group" aria-label="Choose how to add your game">
               <button
                 type="button"
                 aria-pressed={method === 'username'}
@@ -176,8 +180,8 @@ export default function HomePage() {
                       onChange={e => setUsername(e.target.value)}
                       placeholder="e.g. your_chess_username"
                       disabled={isLoading}
-                      aria-describedby="source-help"
-                      aria-invalid={!!error}
+                      aria-describedby={errorField === 'username' ? 'source-help form-error-message' : 'source-help'}
+                      aria-invalid={errorField === 'username'}
                     />
                     <p id="source-help" className="field-help">Pick any of your 10 most recent games. No Chess.com password needed.</p>
                   </div>
@@ -194,8 +198,8 @@ export default function HomePage() {
                       onChange={e => setPgn(e.target.value)}
                       placeholder="1. e4 e5 2. Nf3 Nc6…"
                       disabled={isLoading}
-                      aria-describedby="pgn-help"
-                      aria-invalid={!!error}
+                      aria-describedby={errorField === 'pgn' ? 'pgn-help form-error-message' : 'pgn-help'}
+                      aria-invalid={errorField === 'pgn'}
                     />
                     <p id="pgn-help" className="field-help">Open a finished game on Chess.com or Lichess, choose Share or Export, then copy the PGN.</p>
                   </div>
@@ -218,7 +222,7 @@ export default function HomePage() {
               )}
               {error && (
                 <div className="form-error" role="alert">
-                  <p>{error}</p>
+                  <p id="form-error-message">{error}</p>
                   {quotaReached && (
                     <Link href={quotaReached === 'anonymous' ? '/login' : '/pricing'}>
                       {quotaReached === 'anonymous' ? 'Sign in for your own free reviews' : 'See Premium'} <ArrowRight size={14} />
@@ -240,20 +244,25 @@ export default function HomePage() {
                 </button>
               )}
               <p className="form-reassurance">
-                <Check size={14} /> 2 free reports every 7 days. No signup required.
+                <Check size={14} /> 2 free reviews every 7 days. No signup required.
               </p>
             </form>
           </div>
           {recentReviews.length > 0 && (
-            <div className="recent-reviews-panel mt-6 rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4 text-left shadow-[var(--shadow-sm)]">
+            <div className="recent-reviews-panel mt-6 rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4 text-left shadow-[var(--shadow-sm)]">
               <div className="flex items-center justify-between mb-2.5 text-xs text-[var(--w-ink2)]">
                 <span className="font-semibold uppercase tracking-wider">Your recent reviews</span>
                 <button
                   type="button"
-                  onClick={() => { clearRecentReviews(); setRecentReviews([]); }}
-                  className="text-[var(--w-ink3)] hover:text-[var(--w-ink1)] underline"
+                  aria-label={confirmClear ? 'Confirm clearing recent reviews' : 'Clear recent reviews'}
+                  onClick={() => {
+                    if (!confirmClear) return setConfirmClear(true);
+                    clearRecentReviews(); setRecentReviews([]); setConfirmClear(false);
+                  }}
+                  onBlur={() => setConfirmClear(false)}
+                  className="inline-flex min-h-11 items-center px-2 text-[var(--w-ink2)] hover:text-[var(--w-ink1)] underline"
                 >
-                  Clear
+                  {confirmClear ? 'Clear list?' : 'Clear'}
                 </button>
               </div>
               <div className="space-y-1.5">
@@ -261,7 +270,7 @@ export default function HomePage() {
                   <Link
                     key={rev.id}
                     href={`/report/${rev.id}`}
-                    className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[var(--w-surface-subtle)] text-sm transition-colors"
+                    className="flex items-center justify-between p-2.5 rounded hover:bg-[var(--w-surface-subtle)] text-sm transition-colors"
                   >
                     <div className="min-w-0 pr-2">
                       <p className="font-medium truncate text-[var(--w-ink1)] leading-snug">
@@ -282,12 +291,12 @@ export default function HomePage() {
             href="/report/demo"
             onClick={() => captureEvent('sample_game_clicked', { source: 'hero' })}
           >
-            Take a look at a sample first <ArrowRight size={15} />
+            See a sample review first <ArrowRight size={15} />
           </Link>
         </div>
-        <aside className="sample-preview" aria-label="Preview of an illustrative turning-point analysis">
+        <aside className="sample-preview" aria-label="Preview of a sample turning-point review">
           <div className="sample-masthead">
-            <span>ILLUSTRATIVE ANALYSIS</span>
+            <span>SAMPLE REVIEW</span>
             <span>3… Nf6? / 4. Qxf7#</span>
           </div>
           <div className="sample-board">
@@ -302,7 +311,7 @@ export default function HomePage() {
           </div>
           <div className="sample-controls">
             <span>Move {sample.move_number} · {showMove ? 'White to move' : 'Black to move'}</span>
-            <button type="button" aria-pressed={showMove} onClick={() => setShowMove(!showMove)}>
+            <button type="button" onClick={() => setShowMove(!showMove)}>
               {showMove ? 'Reset position' : 'Show the move'} <ChevronRight size={15} />
             </button>
           </div>
@@ -314,7 +323,7 @@ export default function HomePage() {
             </div>
           </div>
           <Link href="/report/demo" className="sample-read">
-            Explore this review <ArrowRight size={16} />
+            Explore the sample review <ArrowRight size={16} />
           </Link>
         </aside>
       </section>

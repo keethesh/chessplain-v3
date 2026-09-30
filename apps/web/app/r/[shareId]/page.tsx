@@ -83,7 +83,7 @@ export default async function SharedReportPage({ params }: PageProps) {
               className="rounded-lg border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-2.5 text-sm font-semibold text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] transition-colors flex items-center gap-1.5"
             >
               <BookOpen className="w-4 h-4" />
-              <span>View sample demo</span>
+              <span>Read the sample review</span>
             </Link>
           </div>
         </div>

@@ -144,7 +144,7 @@ Controls use compact 4px corners. Analysis panels use 6px corners. Board squares
 - **Stage text:** each debrief stage shows only its own text (idea and what it missed; why the alternative works; the habit). The full explanation stays behind "Read the full explanation".
 
 ### Analysis Wait State
-- A 300px board replays Morphy's Opera Game (Paris 1858) on a loop with short captions, beside the stage stepper and one rotating habit. Motion is piece movement only; reduced motion disables piece animation and caption fades.
+- A 300px board replays Morphy's Opera Game (Paris 1858) on a loop with short captions, beside the stage stepper and one rotating habit. Motion is piece movement only, with a visible Pause/Play replay control. Reduced motion holds the opening position until the reader chooses to play, and disables piece animation and caption fades.
 
 ## Do's and Don'ts
 

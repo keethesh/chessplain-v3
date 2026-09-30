@@ -61,9 +61,12 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
   const complete = report.status === 'completed';
   const lessonStage: LessonStage = showAlternative ? 'alternative' : step === 0 ? 'before' : step === 1 ? 'played' : step === steps.length - 1 ? 'takeaway' : 'played';
   const nextLabel = step === 0 ? 'Show what changed' : step >= steps.length - 1 ? 'Line complete' : 'Continue';
+  // Move focus to the lesson heading only when the reader picks another moment,
+  // not on every Back/Continue press, which would drop them off the stepper.
   useEffect(() => {
     if (hasInteracted) stageHeadingRef.current?.focus();
-  }, [hasInteracted, activeIndex, step, showAlternative]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex]);
   useEffect(() => setFocusSquare(null), [activeIndex, step, showAlternative]);
   // Board outlines only for squares the visible text names; the colour map
   // also covers the full explanation so a square keeps one colour everywhere.
@@ -136,7 +139,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
       {(isDemo || !isOwner) && (
         <div className="report-notice mb-5 flex flex-col justify-between gap-3 border-b border-[var(--w-border)] pb-4 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-semibold">{isDemo ? 'Illustrative review' : 'Shared game review'}</p>
+            <p className="text-sm font-semibold">{isDemo ? 'Sample review' : 'Shared game review'}</p>
             <p className="mt-1 max-w-lg text-sm text-[var(--w-ink2)]">{isDemo ? 'Explore one turning point and the lesson it reveals.' : 'Explore the key moments, then review a game of your own.'}</p>
           </div>
           <Link href="/#analyze" className="primary-button min-h-11 shrink-0">Review your game <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
@@ -156,33 +159,33 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
         <section aria-label="Explore the key moments" className="report-analysis border-t border-[var(--w-border)] pt-6">
           <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm text-[var(--w-ink2)]">{moments.length === 1 ? 'One moment to learn from' : `${moments.length} moments to learn from`}</p>
-            <div className="flex flex-wrap gap-2" aria-label="Choose a moment">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Choose a moment">
               {moments.map((moment, index) => (
-                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded-lg border px-4 text-sm font-medium transition-all active:scale-[0.98] ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played.replace(/^\d+\.+\s*/, '')}</button>
+                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded border px-4 text-sm font-medium transition-[background-color,color,transform] active:scale-[0.98] ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played.replace(/^\d+\.+\s*/, '')}</button>
               ))}
             </div>
           </div>
           <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
-            <div id="board-view" className="min-w-0 lg:sticky lg:top-8 scroll-mt-6">
+            <div id="board-view" className="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+16px)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p aria-live="polite" className="text-sm font-medium">{activeStep?.label}</p>
-                <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)] active:scale-[0.98] transition-transform" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
+                <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)] active:scale-[0.98] transition-transform" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
               </div>
               {activeStep && <ChessboardView fen={activeStep.fen} orientation={orientation} boardWidth={520} arrows={activeArrows} highlightSquares={highlightedSquares} markedSquares={markedSquares} focusSquare={focusSquare} />}
-              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg" aria-label="Step through the played line" role="group" tabIndex={0} onKeyDown={event => {
+              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2" aria-label="Step through the played line" role="group" onKeyDown={event => {
                 if (event.altKey || event.ctrlKey || event.metaKey) return;
                 if (event.key === 'ArrowRight') { event.preventDefault(); selectStage(Math.min(steps.length - 1, step + 1)); }
                 if (event.key === 'ArrowLeft') { event.preventDefault(); selectStage(Math.max(0, step - 1)); }
               }}>
-                <button disabled={step === 0 && !showAlternative} onClick={() => selectStage(Math.max(0, step - 1))} className="focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--w-border)] bg-[var(--w-surface)] px-2 text-sm text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] disabled:cursor-not-allowed disabled:opacity-40 sm:gap-2 sm:px-3"><ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" /><span>Back</span></button>
-                <span aria-live="polite" className="text-center text-xs tabular-nums text-[var(--w-ink2)]">{showAlternative ? 'Alternative' : `${Math.min(step + 1, steps.length)} / ${steps.length}`}</span>
-                <button disabled={step >= steps.length - 1} onClick={() => selectStage(Math.min(steps.length - 1, step + 1))} className="focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg bg-[var(--w-accent)] px-2 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] disabled:cursor-not-allowed disabled:opacity-40 sm:gap-2 sm:px-3"><span className="truncate text-[var(--w-on-accent)]">{nextLabel}</span><ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--w-on-accent)]" /></button>
+                <button disabled={step === 0 && !showAlternative} onClick={() => selectStage(Math.max(0, step - 1))} className="focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1 rounded border border-[var(--w-border)] bg-[var(--w-surface)] px-2 text-sm text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] disabled:cursor-not-allowed disabled:opacity-40 sm:gap-2 sm:px-3"><ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" /><span>Back</span></button>
+                <span className="text-center text-xs tabular-nums text-[var(--w-ink2)]">{showAlternative ? 'Alternative' : `${Math.min(step + 1, steps.length)} / ${steps.length}`}</span>
+                <button disabled={step >= steps.length - 1} onClick={() => selectStage(Math.min(steps.length - 1, step + 1))} className="focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1 rounded bg-[var(--w-accent)] px-2 py-1 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] disabled:cursor-not-allowed disabled:opacity-40 sm:gap-2 sm:px-3"><span className="text-center leading-tight text-[var(--w-on-accent)]">{nextLabel}</span><ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--w-on-accent)]" /></button>
               </div>
               {alternative && <button type="button" aria-pressed={showAlternative} onClick={() => selectStage(step, !showAlternative)} className="focus-ring text-link underline mt-3">{showAlternative ? 'Return to the played line' : 'Compare alternative: ' + current.best_move}</button>}
               {current.refutation_line && <p className="mt-4 break-words text-sm leading-relaxed text-[var(--w-ink2)]"><span className="font-medium">The continuation:</span> <span className="t-notation">{current.refutation_line}</span></p>}
               <a href="#lesson-explanation" className="lg:hidden mt-3 inline-flex min-h-11 items-center gap-1 text-sm text-[var(--w-accent)] font-medium underline">Read lesson explanation ↓</a>
             </div>
-            <div id="lesson-explanation" className="min-w-0 pt-1 lg:pt-3 scroll-mt-6">
+            <div id="lesson-explanation" className="min-w-0 pt-1 lg:pt-3">
               <MomentCard moment={current} index={activeIndex} stage={lessonStage} headingRef={stageHeadingRef} squareColors={squareColors} onFocusSquare={setFocusSquare} />
               <a href="#board-view" className="lg:hidden mt-6 inline-flex min-h-11 items-center gap-1 text-sm text-[var(--w-accent)] font-medium underline">↑ Back to chessboard</a>
             </div>
