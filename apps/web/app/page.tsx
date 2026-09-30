@@ -38,6 +38,7 @@ export default function HomePage() {
   const submitting = useRef(false);
   const [errorField, setErrorField] = useState<'username' | 'pgn' | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const invalidField = error ? errorField : null;
   const sample = DEMO_REPORT.moments[0];
   const sampleBoard = new Chess(sample.fen_before);
   const samplePlayed = sampleBoard.move(sample.played);
@@ -180,8 +181,8 @@ export default function HomePage() {
                       onChange={e => setUsername(e.target.value)}
                       placeholder="e.g. your_chess_username"
                       disabled={isLoading}
-                      aria-describedby={errorField === 'username' ? 'source-help form-error-message' : 'source-help'}
-                      aria-invalid={errorField === 'username'}
+                      aria-describedby={invalidField === 'username' ? 'source-help form-error-message' : 'source-help'}
+                      aria-invalid={invalidField === 'username'}
                     />
                     <p id="source-help" className="field-help">Pick any of your 10 most recent games. No Chess.com password needed.</p>
                   </div>
@@ -198,8 +199,8 @@ export default function HomePage() {
                       onChange={e => setPgn(e.target.value)}
                       placeholder="1. e4 e5 2. Nf3 Nc6…"
                       disabled={isLoading}
-                      aria-describedby={errorField === 'pgn' ? 'pgn-help form-error-message' : 'pgn-help'}
-                      aria-invalid={errorField === 'pgn'}
+                      aria-describedby={invalidField === 'pgn' ? 'pgn-help form-error-message' : 'pgn-help'}
+                      aria-invalid={invalidField === 'pgn'}
                     />
                     <p id="pgn-help" className="field-help">Open a finished game on Chess.com or Lichess, choose Share or Export, then copy the PGN.</p>
                   </div>
@@ -254,7 +255,6 @@ export default function HomePage() {
                 <span className="font-semibold uppercase tracking-wider">Your recent reviews</span>
                 <button
                   type="button"
-                  aria-label={confirmClear ? 'Confirm clearing recent reviews' : 'Clear recent reviews'}
                   onClick={() => {
                     if (!confirmClear) return setConfirmClear(true);
                     clearRecentReviews(); setRecentReviews([]); setConfirmClear(false);
@@ -262,7 +262,7 @@ export default function HomePage() {
                   onBlur={() => setConfirmClear(false)}
                   className="inline-flex min-h-11 items-center px-2 text-[var(--w-ink2)] hover:text-[var(--w-ink1)] underline"
                 >
-                  {confirmClear ? 'Clear list?' : 'Clear'}
+                  {confirmClear ? 'Confirm clear' : 'Clear'}
                 </button>
               </div>
               <div className="space-y-1.5">
@@ -356,7 +356,7 @@ export default function HomePage() {
               Do I need an account?
               <span className="faq-icon" aria-hidden="true">+</span>
             </summary>
-            <p>No. You get two free reports every seven days without signing up. Free usage is counted by network, so people on a shared connection may share the allowance. <Link href="/login" className="underline">Signing in</Link> gives you your own two free reports each week.</p>
+            <p>No. You get two free reviews every seven days without signing up. Free usage is counted by network, so people on a shared connection may share the allowance. <Link href="/login" className="underline">Signing in</Link> gives you your own two free reviews each week.</p>
           </details>
           <details>
             <summary>

@@ -31,6 +31,6 @@ Prioritize explanations of ideas and consequences over move grades. The historic
 
 1. **The chessboard is the primary learning surface.** Explanations support the board, not the reverse.
 2. **One lesson per game is enough.** Do not overwhelm players with every micro-inaccuracy.
-3. **No signup barrier for first value.** Two free reports every 7 days without authentication.
+3. **No signup barrier for first value.** Two free reviews every 7 days without authentication.
 4. **Honest engine humility.** Explanations describe probable intentions and objective continuations, not mind-reading.
 5. **Evidence before claims.** Treat audience, retention, willingness to pay, and learning impact as hypotheses until tested.

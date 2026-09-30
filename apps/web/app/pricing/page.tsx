@@ -22,7 +22,7 @@ export default function PricingPage() {
     captureEvent('paywall_viewed');
     const query = new URLSearchParams(window.location.search);
     if (query.get('checkout') === 'success') setNotice('You’ve returned from checkout. Subscription activation may take a moment. You can now try reviewing a game.');
-    if (query.get('checkout') === 'cancelled') setNotice('Checkout was cancelled. You can still use your free reports.');
+    if (query.get('checkout') === 'cancelled') setNotice('Checkout was cancelled. You can still use your free reviews.');
     let active = true;
     supabase.auth.getSession().then(({ data, error }) => { if (active) { setSession(data.session); setAuthReady(true); if (error) setError('Please sign in again to continue.'); } }).catch(() => { if (active) { setAuthReady(true); setError('Couldn’t check your account. Refresh to try again.'); } });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => { if (active) { setSession(session); setAuthReady(true); } });
@@ -59,9 +59,9 @@ export default function PricingPage() {
     <div className="pricing-heading"><h1>Make understanding<br />part of your game.</h1><p>Start with two free reviews. If the lessons help, make room for more.</p>
       <div className="billing-choice" aria-label="Billing interval"><button aria-pressed={interval === 'month'} disabled={!!busy} onClick={() => setInterval('month')}>Monthly</button><button aria-pressed={interval === 'year'} disabled={!!busy} onClick={() => setInterval('year')}>Yearly</button></div>
     </div>
-    {notice && <div className="max-w-3xl mx-auto mb-6 p-5 rounded-xl bg-[var(--w-accent-soft)] text-sm leading-relaxed" role="status">{notice} <Link href="/#analyze" className="underline">Review a game</Link></div>}
+    {notice && <div className="max-w-3xl mx-auto mb-6 p-5 rounded-md bg-[var(--w-accent-soft)] text-sm leading-relaxed" role="status">{notice} <Link href="/#analyze" className="underline">Review a game</Link></div>}
     <div className="pricing-grid">
-      <section className="price-plan"><h2>A place to start</h2><p>No account. No card.</p><div className="price-value">$0</div><p>2 reports every 7 days</p>
+      <section className="price-plan"><h2>A place to start</h2><p>No account. No card.</p><div className="price-value">$0</div><p>2 reviews every 7 days</p>
         <ul>{['Plain-English explanations of key moments', 'An interactive board to check the ideas', 'One practical habit for your next game', 'A link you can revisit or share'].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
         <Link className="secondary-button" href="/#analyze">Review a game free <ArrowRight size={16} /></Link>
       </section>
@@ -71,7 +71,7 @@ export default function PricingPage() {
           <p role="status" className="text-sm text-[var(--w-ink2)]">Checking your account…</p>
         ) : session ? (
           <div className="space-y-3">
-            <div className="rounded-lg bg-[var(--w-surface-subtle)] p-2.5 text-xs text-[var(--w-ink1)]">
+            <div className="rounded bg-[var(--w-surface-subtle)] p-2.5 text-xs text-[var(--w-ink1)]">
               <span className="font-semibold text-[var(--w-accent)]">✓ Signed in</span> as {session.user.email}
             </div>
             <button className="primary-button w-full justify-center" disabled={!!busy} onClick={() => billing('checkout')}>
@@ -82,7 +82,7 @@ export default function PricingPage() {
             </button>
           </div>
         ) : sent ? (
-          <div role="status" className="rounded-lg bg-[var(--w-surface-subtle)] p-4 text-sm leading-relaxed text-left">
+          <div role="status" className="rounded-md bg-[var(--w-surface-subtle)] p-4 text-sm leading-relaxed text-left">
             <p className="font-semibold text-[var(--w-accent)] mb-1">Check your inbox</p>
             <p className="text-xs text-[var(--w-ink2)]">We sent a one-click sign-in link to <strong>{email}</strong>. Open it in this browser to finish subscribing.</p>
           </div>
@@ -118,21 +118,21 @@ export default function PricingPage() {
     <div className="max-w-2xl mx-auto mt-14 pt-10 border-t border-[var(--w-border)]">
       <h2 className="t-heading text-2xl mb-6 text-center">Common questions</h2>
       <div className="space-y-4 text-left">
-        <div className="rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
+        <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">Can I cancel at any time?</h3>
           <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Yes. You can cancel with one click in the Stripe customer portal whenever you want. You retain premium access until the end of your paid billing period.</p>
         </div>
-        <div className="rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
+        <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">Do I need an account for the free tier?</h3>
           <p className="text-xs leading-relaxed text-[var(--w-ink2)]">No account or credit card needed. You can review 2 games every 7 days directly on the homepage.</p>
         </div>
-        <div className="rounded-xl border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
+        <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
           <h3 className="font-semibold text-sm mb-1">How does billing work?</h3>
           <p className="text-xs leading-relaxed text-[var(--w-ink2)]">All payments are handled securely through Stripe. Subscriptions renew automatically each month or year until cancelled.</p>
         </div>
       </div>
     </div>
 
-    <div className="max-w-3xl mx-auto mt-10 text-center"><Link className="text-link" href="/report/demo">Read a sample before deciding <ArrowRight size={15} /></Link><p className="text-xs text-[var(--w-ink2)] mt-4 leading-relaxed">Free reports are counted by network. Reports are accessible to anyone with the link.<br />Paid reports still take time to process and are subject to fair use. <Link href="/terms" className="underline">Terms</Link></p></div>
+    <div className="max-w-3xl mx-auto mt-10 text-center"><Link className="text-link" href="/report/demo">Read a sample before deciding <ArrowRight size={15} /></Link><p className="text-xs text-[var(--w-ink2)] mt-4 leading-relaxed">Free reviews are counted by network. Reviews are accessible to anyone with the link.<br />Paid reviews still take time to process and are subject to fair use. <Link href="/terms" className="underline">Terms</Link></p></div>
   </div>;
 }

@@ -74,13 +74,13 @@ export default async function SharedReportPage({ params }: PageProps) {
           <div className="flex justify-center gap-3">
             <Link
               href="/"
-              className="rounded-lg bg-[var(--w-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] transition-all shadow-sm"
+              className="rounded bg-[var(--w-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] transition-all shadow-sm"
             >
               Analyze your own game
             </Link>
             <Link
               href="/report/demo"
-              className="rounded-lg border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-2.5 text-sm font-semibold text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] transition-colors flex items-center gap-1.5"
+              className="rounded border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-2.5 text-sm font-semibold text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] transition-colors flex items-center gap-1.5"
             >
               <BookOpen className="w-4 h-4" />
               <span>Read the sample review</span>
