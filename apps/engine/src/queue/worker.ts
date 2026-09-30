@@ -4,6 +4,7 @@ import { supabase } from '../db/supabase.js';
 import { recordAnalysisError } from '../db/errors.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { runAnalysisPipeline } from '../analysis/pipeline.js';
+import { PROMPT_VERSION } from '../analysis/prompts.js';
 import { EloBand } from '../types.js';
 import { parsePgn } from '../analysis/pgn.js';
 
@@ -63,6 +64,9 @@ export async function processNextJob(): Promise<boolean> {
       attempts: (analysis.attempts || 0) + 1,
       next_attempt_at: null,
       locked_at: new Date().toISOString(),
+      model: config.llmModel,
+      prompt_version: PROMPT_VERSION,
+      error_message: null,
     })
     .eq('id', analysis.id)
     .eq('status', 'pending')
@@ -149,6 +153,7 @@ export async function processNextJob(): Promise<boolean> {
         summary: result.report.summary,
         completed_at: new Date().toISOString(),
         locked_at: null,
+        error_message: null,
       })
       .eq('id', analysis.id);
     if (completionError) throw completionError;
@@ -180,6 +185,7 @@ export async function processNextJob(): Promise<boolean> {
       .update({
         status: shouldRetry ? 'pending' : 'failed',
         locked_at: null,
+        error_message: errorMsg.slice(0, 4000),
         // ponytail: linear backoff (60s per prior attempt); go exponential if the
         // LLM gateway needs longer recovery windows
         next_attempt_at: shouldRetry ? new Date(Date.now() + attempts * 60_000).toISOString() : null,

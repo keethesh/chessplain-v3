@@ -30,13 +30,14 @@ function required(name: string): string {
 
 export const config = {
   port: parseInt(process.env.PORT || '8080', 10),
+  host: process.env.HOST || '127.0.0.1',
   nodeEnv: process.env.NODE_ENV || 'development',
   supabaseUrl: required('SUPABASE_URL'),
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  supabaseServiceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
   supabaseAnonKey: required('SUPABASE_ANON_KEY'),
-  llmApiBase: process.env.LLM_API_BASE || 'https://crof.ai/v1',
-  llmApiKey: process.env.LLM_API_KEY || '',
-  llmModel: process.env.LLM_MODEL || 'deepseek-v4-flash-0731',
+  llmApiBase: required('LLM_API_BASE'),
+  llmApiKey: required('LLM_API_KEY'),
+  llmModel: required('LLM_MODEL'),
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   stripePriceMonthly: process.env.STRIPE_PRICE_MONTHLY || '',
@@ -60,3 +61,7 @@ export const config = {
   // which behind Caddy is loopback for every visitor — see parseTrustProxy.
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 };
+
+if (config.stripeSecretKey) {
+  for (const name of ['STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY']) required(name);
+}

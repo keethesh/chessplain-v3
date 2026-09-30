@@ -9,7 +9,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // on every machine and in CI alike.
 vi.mock('dotenv', () => ({ default: { config: () => ({ parsed: {} }) } }));
 
-const REQUIRED = { SUPABASE_URL: 'https://test.supabase.co', SUPABASE_ANON_KEY: 'test-anon-key' };
+const REQUIRED = {
+  SUPABASE_URL: 'https://test.supabase.co',
+  SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+  SUPABASE_ANON_KEY: 'test-anon-key',
+  LLM_API_BASE: 'https://test.invalid/v1',
+  LLM_API_KEY: 'test-llm-key',
+  LLM_MODEL: 'test-model',
+};
 
 describe('config', () => {
   let saved: NodeJS.ProcessEnv;
@@ -22,11 +29,18 @@ describe('config', () => {
     await expect(import('../src/config.js')).rejects.toThrow(/SUPABASE_URL is required/);
   });
 
-  it('throws when SUPABASE_ANON_KEY is missing', async () => {
+  it('throws when SUPABASE_SERVICE_ROLE_KEY is missing', async () => {
     process.env = { ...saved, ...REQUIRED };
-    delete process.env.SUPABASE_ANON_KEY;
-    await expect(import('../src/config.js')).rejects.toThrow(/SUPABASE_ANON_KEY is required/);
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    await expect(import('../src/config.js')).rejects.toThrow(/SUPABASE_SERVICE_ROLE_KEY is required/);
   });
+
+  it('throws when LLM credentials are missing', async () => {
+    process.env = { ...saved, ...REQUIRED };
+    delete process.env.LLM_API_KEY;
+    await expect(import('../src/config.js')).rejects.toThrow(/LLM_API_KEY is required/);
+  });
+
 
   it('does not embed a project-identifying default for optional analytics or billing', async () => {
     process.env = { ...saved, ...REQUIRED };

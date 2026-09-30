@@ -25,19 +25,42 @@ const stripe = config.stripeSecretKey ? new Stripe(config.stripeSecretKey, {
   apiVersion: '2025-02-24.acacia',
 }) : null;
 
+const quotaLocks = new Map<string, Promise<void>>();
+const streamsByIp = new Map<string, number>();
+let activeStreams = 0;
+
+// ponytail: this single-process lock closes the check-then-insert race; move
+// the critical section to a Postgres function with pg_advisory_xact_lock when
+// the API runs more than one process.
+async function withQuotaLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  const previous = quotaLocks.get(key) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  const tail = previous.then(() => current);
+  quotaLocks.set(key, tail);
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (quotaLocks.get(key) === tail) quotaLocks.delete(key);
+  }
+}
+
 async function bootstrap() {
   // 1. Plugins
   await fastify.register(cors, {
-    // Allowlist: prod web origin (apex + www) + vercel previews + local dev
+    // Bearer auth is used; no cookies are sent cross-origin.
     origin: [
       config.webOrigin,
       'https://www.getchessplain.com',
-      /\.vercel\.app$/,
-      /^https?:\/\/localhost(:\d+)?$/,
-      /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+      ...(config.nodeEnv === 'production' ? [] : [
+        /^https?:\/\/localhost(:\d+)?$/,
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+      ]),
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: true,
+    credentials: false,
   });
 
   await fastify.register(rateLimit, {
@@ -72,8 +95,9 @@ async function bootstrap() {
     };
   });
 
-  // Recent standard games for a Chess.com player, so they can choose which one to review.
-  fastify.get('/api/chesscom/:username/games', async (request, reply) => {
+  fastify.get('/api/chesscom/:username/games', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const { username } = request.params as { username: string };
     if (!/^[a-zA-Z0-9_-]{3,25}$/.test(username)) {
       return reply.status(400).send({ error: 'invalid_input', message: 'Enter a valid Chess.com username.' });
@@ -117,6 +141,7 @@ async function bootstrap() {
       if ((body.pgn !== undefined && (typeof body.pgn !== 'string' || body.pgn.length > 100_000)) ||
           (body.chesscom_username !== undefined && (typeof body.chesscom_username !== 'string' || !/^[a-zA-Z0-9_-]{3,25}$/.test(body.chesscom_username))) ||
           (body.player_color !== undefined && !['white', 'black'].includes(body.player_color)) ||
+          (body.hero_variant !== undefined && (typeof body.hero_variant !== 'string' || !/^[a-z0-9_]{1,32}$/.test(body.hero_variant))) ||
           (body.chesscom_game_url !== undefined && (typeof body.chesscom_game_url !== 'string' || body.chesscom_game_url.length > 200))) {
         return reply.status(400).send({ error: 'invalid_input', message: 'Enter a valid Chess.com username or a PGN under 100 KB, and choose your side.' });
       }
@@ -201,91 +226,94 @@ async function bootstrap() {
       const externalId = chesscomGame?.gameUrl ?? null;
       let sourceGameId: string | undefined;
       let failedAnalysisId: string | undefined;
-      if (userId && externalId) {
-        const { data: existing } = await supabase.from('source_games').select('id, game_analyses(id, share_id, status)')
-          .eq('user_id', userId).eq('source', 'chesscom').eq('external_id', externalId).maybeSingle();
-        sourceGameId = existing?.id;
-        // PostgREST embeds a one-to-one relation as an object, one-to-many as an array.
-        const prior = [existing?.game_analyses].flat()[0] as { id: string; share_id: string; status: string } | null | undefined;
-        if (prior && prior.status !== 'failed') {
-          return reply.status(200).send({ id: prior.id, share_id: prior.share_id, status: prior.status });
-        }
-        failedAnalysisId = prior?.id;
-      }
 
-      // Check quota for free/anon users (2 reports in 7 days).
-      // Signed-in users are counted by user_id: an IP key punishes everyone
-      // behind shared NAT for a stranger's usage, and resets when they change
-      // network. Anonymous users have no identifier but the IP.
+      // Free/anon users get 2 reports in 7 days. Signed-in users are counted by
+      // user_id: an IP key punishes everyone behind shared NAT for a stranger's
+      // usage, and resets when they change network. Anonymous users have no
+      // identifier but the IP.
       // ponytail: exemption is env-gated, not IP-matched — the old 127.0.0.1 check
       // was spoofable via X-Forwarded-For with trustProxy enabled. If NAT collisions
       // bite on the anonymous path, use the plan's fallback (email OTP before report 2).
       const quotaEnforced = config.nodeEnv === 'production' && !config.disableQuota;
       const quotaKey = userId ? { column: 'user_id', value: userId } : (clientIp ? { column: 'ip', value: clientIp } : null);
-      if (!isPremium && quotaKey && quotaEnforced) {
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        const { count, error: countErr } = await supabase
-          .from('game_analyses')
-          .select('id', { count: 'exact', head: true })
-          .eq(quotaKey.column, quotaKey.value)
-          .neq('status', 'failed') // abandoned/failed runs don't consume quota
-          .or('status.neq.completed,moments.neq.[]') // nor do reports with nothing to review
-          .gte('created_at', sevenDaysAgo);
 
-        if (countErr) return reply.status(503).send({ error: 'quota_unavailable', message: 'We could not check your report allowance. Please try again shortly.' });
-        if (typeof count === 'number' && count >= 2) {
-          // Anonymous users are counted by IP, and mobile traffic shares
-          // carrier-grade NAT addresses — so a first-time visitor can land here
-          // having never run a report. Signing in moves them onto a per-account
-          // allowance, so lead with that rather than only offering to charge them.
-          return reply.status(402).send({
-            error: 'quota_exceeded',
-            can_sign_in: !userId,
-            message: userId
-              ? 'You have used your 2 free reports for this week. Premium removes the limit.'
-              : 'That is 2 free reports from your network this week. Sign in to get your own free reports, or go Premium for no limit.',
-          });
+      const createReport = async () => {
+        if (userId && externalId) {
+          const { data: existing } = await supabase.from('source_games').select('id, game_analyses(id, share_id, status)')
+            .eq('user_id', userId).eq('source', 'chesscom').eq('external_id', externalId).maybeSingle();
+          sourceGameId = existing?.id;
+          // PostgREST embeds a one-to-one relation as an object, one-to-many as an array.
+          const prior = [existing?.game_analyses].flat()[0] as { id: string; share_id: string; status: string } | null | undefined;
+          if (prior && prior.status !== 'failed') {
+            return reply.status(200).send({ id: prior.id, share_id: prior.share_id, status: prior.status });
+          }
+          failedAnalysisId = prior?.id;
         }
-      }
 
-      if (failedAnalysisId) {
-        // Re-queue the failed report in place; created_at resets so quota counts it this week.
-        const { data: requeued, error: requeueErr } = await supabase.from('game_analyses')
-          .update({ status: 'pending', attempts: 0, next_attempt_at: null, locked_at: null, created_at: new Date().toISOString() })
-          .eq('id', failedAnalysisId)
-          .select('id, share_id, status')
-          .single();
-        if (requeueErr || !requeued) {
-          fastify.log.error(requeueErr, 'Failed to re-queue game_analyses');
-          return reply.status(500).send({ error: 'Database error re-queuing game analysis' });
+        if (!isPremium && quotaKey && quotaEnforced) {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const { count, error: countErr } = await supabase
+            .from('game_analyses')
+            .select('id', { count: 'exact', head: true })
+            .eq(quotaKey.column, quotaKey.value)
+            .neq('status', 'failed') // abandoned/failed runs don't consume quota
+            .or('status.neq.completed,moments.neq.[]') // nor do reports with nothing to review
+            .gte('created_at', sevenDaysAgo);
+
+          if (countErr) return reply.status(503).send({ error: 'quota_unavailable', message: 'We could not check your report allowance. Please try again shortly.' });
+          if (typeof count === 'number' && count >= 2) {
+            // Anonymous users are counted by IP, and mobile traffic shares
+            // carrier-grade NAT addresses — so a first-time visitor can land here
+            // having never run a report. Signing in moves them onto a per-account
+            // allowance, so lead with that rather than only offering to charge them.
+            return reply.status(402).send({
+              error: 'quota_exceeded',
+              can_sign_in: !userId,
+              message: userId
+                ? 'You have used your 2 free reports for this week. Premium removes the limit.'
+                : 'That is 2 free reports from your network this week. Sign in to get your own free reports, or go Premium for no limit.',
+            });
+          }
         }
-        return reply.status(201).send({ id: requeued.id, share_id: requeued.share_id, status: requeued.status });
-      }
 
-      if (!sourceGameId) {
-        const { data: sourceGame, error: sourceErr } = await supabase
-          .from('source_games')
-          .insert({
+        if (failedAnalysisId) {
+          // Re-queue the failed report in place; created_at resets so quota counts it this week.
+          const { data: requeued, error: requeueErr } = await supabase.from('game_analyses').update({
+            status: 'pending', attempts: 0, next_attempt_at: null, locked_at: null,
+            error_message: null, created_at: new Date().toISOString(),
+          }).eq('id', failedAnalysisId).select('id, share_id, status').single();
+          if (requeueErr || !requeued) {
+            fastify.log.error(requeueErr, 'Failed to re-queue game_analyses');
+            return reply.status(500).send({ error: 'Database error re-queuing game analysis' });
+          }
+          return reply.status(201).send({ id: requeued.id, share_id: requeued.share_id, status: requeued.status });
+        }
+
+        if (!sourceGameId) {
+          const { data: sourceGame, error: sourceErr } = await supabase.from('source_games').insert({
             user_id: userId,
             ip: clientIp,
             pgn: body.pgn ?? chesscomGame?.pgn,
             source: body.chesscom_username ? 'chesscom' : 'pgn',
             external_id: externalId,
             metadata: body.chesscom_username ? { chesscom_username: body.chesscom_username } : { player_color: body.player_color || 'white' },
-          })
-          .select('id')
-          .single();
-
-        if (sourceErr || !sourceGame) {
-          fastify.log.error(sourceErr, 'Failed to insert source_games');
-          return reply.status(500).send({ error: 'Database error creating source game' });
+          }).select('id').single();
+          // A concurrent submit of the same game by the same user can win the
+          // production-only UNIQUE (user_id, source, external_id); reuse its row.
+          if (sourceErr?.code === '23505' && userId && externalId) {
+            const { data: existing } = await supabase.from('source_games').select('id')
+              .eq('user_id', userId).eq('source', 'chesscom').eq('external_id', externalId).maybeSingle();
+            sourceGameId = existing?.id;
+          } else {
+            sourceGameId = sourceGame?.id;
+          }
+          if (!sourceGameId) {
+            fastify.log.error(sourceErr, 'Failed to insert source_games');
+            return reply.status(500).send({ error: 'Database error creating source game' });
+          }
         }
-        sourceGameId = sourceGame.id;
-      }
 
-      const { data: analysis, error: analysisErr } = await supabase
-        .from('game_analyses')
-        .insert({
+        const { data: analysis, error: analysisErr } = await supabase.from('game_analyses').insert({
           user_id: userId,
           source_game_id: sourceGameId,
           ip: clientIp,
@@ -293,20 +321,25 @@ async function bootstrap() {
           hero_variant: body.hero_variant,
           elo_band: chesscomGame?.eloBand,
           status: 'pending',
-        })
-        .select('id, share_id, status')
-        .single();
+        }).select('id, share_id, status').single();
+        if (analysisErr || !analysis) {
+          // Same race on the production-only UNIQUE (source_game_id): return the winner's report.
+          if (analysisErr?.code === '23505') {
+            const { data: existing } = await supabase.from('game_analyses')
+              .select('id, share_id, status').eq('source_game_id', sourceGameId).maybeSingle();
+            if (existing) return reply.status(200).send(existing);
+          }
+          fastify.log.error(analysisErr, 'Failed to insert game_analyses');
+          return reply.status(500).send({ error: 'Database error creating game analysis' });
+        }
+        return reply.status(201).send({ id: analysis.id, share_id: analysis.share_id, status: analysis.status });
+      };
 
-      if (analysisErr || !analysis) {
-        fastify.log.error(analysisErr, 'Failed to insert game_analyses');
-        return reply.status(500).send({ error: 'Database error creating game analysis' });
-      }
-
-      return reply.status(201).send({
-        id: analysis.id,
-        share_id: analysis.share_id,
-        status: analysis.status,
-      });
+      // Count-then-insert must not interleave for one quota key, or parallel
+      // submits all pass the count and get ~30 reports instead of 2.
+      return !isPremium && quotaKey && quotaEnforced
+        ? withQuotaLock(`${quotaKey.column}:${quotaKey.value}`, createReport)
+        : createReport();
     }
   );
 
@@ -335,7 +368,7 @@ async function bootstrap() {
     const { data: analysis, error } = await supabase
       .from('game_analyses')
       // Explicit column list: never expose submitter ip/user_id on public report endpoints
-      .select('id, source_game_id, status, share_id, hero_variant, elo_band, moments, summary, created_at, completed_at, source_games(id, pgn, player_color, white_player, black_player)')
+      .select('status, share_id, hero_variant, elo_band, moments, summary, created_at, completed_at, source_games(pgn, player_color, white_player, black_player)')
       .eq('share_id', shareId)
       .single();
 
@@ -349,11 +382,20 @@ async function bootstrap() {
   // 6. GET /api/reports/:id/events (SSE Stream)
   fastify.get('/api/reports/:id/events', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const streamsForIp = streamsByIp.get(request.ip) ?? 0;
+    if (streamsForIp >= 4 || activeStreams >= 100) {
+      return reply.status(429).send({ error: 'stream_limit', message: 'Too many open report streams. Close another review tab; polling will continue.' });
+    }
+    streamsByIp.set(request.ip, streamsForIp + 1);
+    activeStreams++;
+    const lifetime = setTimeout(() => { reply.raw.end(); }, 10 * 60_000);
+    lifetime.unref();
 
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
       'Access-Control-Allow-Origin': '*',
     });
 
@@ -419,9 +461,12 @@ async function bootstrap() {
     }, 500);
 
     reply.raw.on('close', () => {
-      if (!isFinished) {
-        clearInterval(interval);
-      }
+      clearInterval(interval);
+      clearTimeout(lifetime);
+      const remaining = (streamsByIp.get(request.ip) ?? 1) - 1;
+      if (remaining > 0) streamsByIp.set(request.ip, remaining);
+      else streamsByIp.delete(request.ip);
+      activeStreams--;
     });
   });
 
@@ -454,6 +499,8 @@ async function bootstrap() {
       .from('game_analyses')
       .update({ user_id: userId })
       .eq('id', id)
+      .eq('ip', request.ip)
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60_000).toISOString())
       .is('user_id', null)
       .select('id');
 
@@ -519,9 +566,8 @@ async function bootstrap() {
 
       return reply.send({ url: session.url });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Stripe error';
       fastify.log.error(err, 'Failed to create Stripe Checkout session');
-      return reply.status(500).send({ error: msg });
+      return reply.status(500).send({ error: 'Checkout could not be opened. Please try again shortly.' });
     }
   });
 
@@ -590,12 +636,13 @@ async function bootstrap() {
           .select('id');
         if (error) throw error;
         if (!updated || updated.length === 0) {
-          // No profiles row for this user: the signup trigger is missing (see
-          // migration 20260831000008). The customer has paid and has no access.
+          // Retry so a transient missing profile/trigger does not permanently
+          // lose the upgrade after Stripe has taken payment.
           fastify.log.error(
             { userId, sessionId: session.id },
-            'Stripe checkout completed but no profiles row matched — customer paid without being upgraded'
+            'Stripe checkout completed but no profiles row matched'
           );
+          return reply.status(500).send({ error: 'Webhook could not update the account' });
         }
         break;
       }
@@ -643,8 +690,8 @@ async function bootstrap() {
   // 10. Start HTTP server and background worker
   try {
     await enginePool.init();
-    await fastify.listen({ port: config.port, host: '0.0.0.0' });
-    console.log(`[HTTP] Server listening on http://0.0.0.0:${config.port}`);
+    await fastify.listen({ port: config.port, host: config.host });
+    console.log(`[HTTP] Server listening on ${config.host}:${config.port}`);
 
     // Start background queue worker in the same process.
     //

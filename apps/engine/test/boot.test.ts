@@ -32,7 +32,11 @@ describe('engine boot', () => {
   });
 
   it('imports the queue worker when POSTHOG_KEY is unset', async () => {
-    process.env = { ...saved, SUPABASE_URL: 'https://test.supabase.co', SUPABASE_ANON_KEY: 'test-anon-key' };
+    process.env = {
+      ...saved, SUPABASE_URL: 'https://test.supabase.co', SUPABASE_ANON_KEY: 'test-anon-key',
+      SUPABASE_SERVICE_ROLE_KEY: 'test-service-key', LLM_API_BASE: 'https://test.invalid/v1',
+      LLM_API_KEY: 'test-llm-key', LLM_MODEL: 'test-model',
+    };
     delete process.env.POSTHOG_KEY;
 
     await expect(import('../src/queue/worker.js')).resolves.toBeDefined();
@@ -43,6 +47,10 @@ describe('engine boot', () => {
       ...saved,
       SUPABASE_URL: 'https://test.supabase.co',
       SUPABASE_ANON_KEY: 'test-anon-key',
+      SUPABASE_SERVICE_ROLE_KEY: 'test-service-key',
+      LLM_API_BASE: 'https://test.invalid/v1',
+      LLM_API_KEY: 'test-llm-key',
+      LLM_MODEL: 'test-model',
       POSTHOG_KEY: 'phc_test_key_not_real',
     };
 

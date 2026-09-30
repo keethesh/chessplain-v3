@@ -9,6 +9,9 @@ const state = vi.hoisted(() => ({
   signedIn: false,
   quotaCount: 0,
   quotaBuilders: [] as Array<{ log: Array<[string, unknown[]]> }>,
+  // game_analyses rows inserted during the test; the quota count sees them,
+  // like the real table does.
+  insertedAnalyses: 0,
 }));
 
 // server.ts builds a module-private Fastify instance and starts listening
@@ -44,7 +47,7 @@ vi.mock('../src/db/supabase.js', () => {
     const select = log.find(e => e[0] === 'select');
     // The quota query is the only one selecting with { count: 'exact', head: true }
     if (table === 'game_analyses' && (select?.[1]?.[1] as { count?: string } | undefined)?.count === 'exact') {
-      return { count: state.quotaCount, error: null };
+      return { count: state.quotaCount + state.insertedAnalyses, error: null };
     }
     if (table === 'profiles') return { data: { subscription_tier: 'free' }, error: null };
     if (table === 'source_games') return { data: { id: 'source-1' }, error: null };
@@ -64,6 +67,7 @@ vi.mock('../src/db/supabase.js', () => {
           builder[method] = (...args: unknown[]) => { log.push([method, args]); return builder; };
         }
         builder.then = (onFulfilled: (value: unknown) => unknown, onRejected: (reason: unknown) => unknown) => {
+          if (table === 'game_analyses' && log.some(e => e[0] === 'insert')) state.insertedAnalyses++;
           const result = resultFor(table, log);
           if (result.count !== undefined) state.quotaBuilders.push(builder);
           return Promise.resolve(result).then(onFulfilled, onRejected);
@@ -119,6 +123,7 @@ describe('free-report quota keying', () => {
     state.signedIn = false;
     state.quotaCount = 0;
     state.quotaBuilders.length = 0;
+    state.insertedAnalyses = 0;
   });
 
   async function run(signedIn: boolean) {
@@ -145,5 +150,12 @@ describe('free-report quota keying', () => {
     expect(quotaLog).toContainEqual(['neq', ['status', 'failed']]);
     expect(quotaLog.find(e => e[0] === 'gte')?.[1][0]).toBe('created_at');
     expect(reply.statusCode).toBe(201);
+  });
+
+  it('never lets parallel anonymous submits exceed the free allowance', async () => {
+    const handler = await reportsHandler();
+    const replies = [fakeReply(), fakeReply(), fakeReply()];
+    await Promise.all(replies.map(reply => handler(fakeRequest(false), reply)));
+    expect(replies.map(r => r.statusCode).sort()).toEqual([201, 201, 402]);
   });
 });

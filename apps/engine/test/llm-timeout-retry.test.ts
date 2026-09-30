@@ -67,7 +67,11 @@ describe('LLM timeout retry', () => {
     // by design. Set them so the suite does not depend on a developer's local
     // apps/engine/.env — without this it passes on a laptop and fails in CI.
     vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-key');
     vi.stubEnv('SUPABASE_ANON_KEY', 'test-anon-key');
+    vi.stubEnv('LLM_API_BASE', 'https://test.invalid/v1');
+    vi.stubEnv('LLM_API_KEY', 'test-llm-key');
+    vi.stubEnv('LLM_MODEL', 'test-model');
   });
 
   afterEach(() => {
