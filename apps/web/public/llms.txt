@@ -1,0 +1,23 @@
+# Chessplain
+
+> Chessplain is a web app for chess game review. It identifies the few moments that changed a finished game, explains the consequence in plain language, and lets the player explore the position on a board.
+
+## Product
+
+- Review a public Chess.com game by username and choose from the 10 most recent standard games.
+- Paste a PGN from Chess.com or another source and choose the side to review.
+- Receive a short report with selected moments, engine-checked continuations, explanations, and one practical lesson.
+- The first two reviews every seven days are free; Premium is $9.99/month or $99.99/year, subject to fair use.
+- No account is required for the first review. Passwordless sign-in (Google or an email link) is available.
+
+## Public pages
+
+- [Chessplain home](https://getchessplain.com/): start a chess game review or read the sample.
+- [Sample review](https://getchessplain.com/r/demo-sample): see the report experience.
+- [Pricing](https://getchessplain.com/pricing): current plans and billing.
+- [Privacy policy](https://getchessplain.com/privacy)
+- [Terms of service](https://getchessplain.com/terms)
+
+## Important limits
+
+Reports may include submitted player names and game data. Anyone with a shared report link can open it. Chessplain explanations are educational, can be wrong, and should be checked against the interactive board.

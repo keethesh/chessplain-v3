@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { DEMO_REPORT } from '../../../lib/demo-report';
 import Link from 'next/link';
+import { SITE_URL } from '../../layout';
 import { getReportByShareId } from '../../../lib/api';
 import { ShareViewTracker } from '../../../components/ShareViewTracker';
 import { SharedReportInteractiveView } from '../../../components/SharedReportInteractiveView';
@@ -26,8 +27,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!report) {
     return {
-      title: 'Report not found. Chessplain',
+      title: 'Report not found | Chessplain',
       description: 'This review link is no longer available. Review one of your own games instead.',
+      alternates: { canonical: `/r/${shareId}` },
       robots: { index: false, follow: true },
     };
   }
@@ -40,16 +42,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     'The moments that decided this game, explained and playable on the board.';
 
   return {
-    title: `${headline}. Chessplain`,
+    title: `${headline} | Chessplain`,
     description: description.length > 200 ? `${description.slice(0, 197)}…` : description,
     alternates: { canonical: `/r/${shareId}` },
+    robots: shareId === 'demo-sample' ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       type: 'article',
       title: headline,
       description: description.length > 200 ? `${description.slice(0, 197)}…` : description,
       url: `/r/${shareId}`,
+      images: [{ url: `${SITE_URL}/r/${shareId}/opengraph-image`, width: 1200, height: 630, alt: 'A Chessplain game review' }],
     },
-    twitter: { card: 'summary_large_image', title: headline },
+    twitter: {
+      card: 'summary_large_image',
+      title: headline,
+      description: description.length > 200 ? `${description.slice(0, 197)}…` : description,
+      images: [{ url: `${SITE_URL}/r/${shareId}/opengraph-image`, width: 1200, height: 630, alt: 'A Chessplain game review' }],
+    },
   };
 }
 

@@ -7,10 +7,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        // A private report URL is only unguessable, not access-controlled, so it
-        // must not end up in a search index. Sharing is the /r/<shareId> route,
-        // which is deliberately public and indexable.
-        disallow: ['/report/', '/auth/'],
+        // Permit crawling so search engines can see the reports' noindex tags.
+        // A robots.txt block alone cannot prevent a linked URL being indexed.
+        disallow: [],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
