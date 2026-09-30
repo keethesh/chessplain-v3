@@ -28,7 +28,7 @@ completion, premium access, or cancellation.
 | Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, commit `dcbe058`, active; VPS test run 84/84 (2026-09-30). Listens on `127.0.0.1:8080` only (Caddy proxies to it); 2 job loops share 4 engines. Two owner reports re-queued at once completed in 6.1 s and 7.0 s with 4 and 3 moments, 0 fallback phrases, `model` and `prompt_version` recorded; per-stage timing is in the journal | The username path lists the 10 most recent games. Unknown usernames are rejected at submit (400). A signed-in resubmit of the same game returns the existing report (200, no quota), or re-queues it if it failed. Empty (0-moment) reports don't count against quota |
 | Website deployment | Worker version `11c40c11` (2026-09-30): per-route titles and canonicals, security headers (HSTS with `includeSubDomains`, nosniff, Referrer-Policy, Permissions-Policy, `X-Frame-Options: DENY`), no `x-powered-by`, Google sign-in reaches `accounts.google.com` via the Supabase callback, prototypes return 404, the workers.dev mirror returns 404 | Deploy with `pnpm --filter @chessplain/web build:worker && pnpm --filter @chessplain/web deploy:worker`; "No targets deployed" is expected because the custom domains are attached in the Cloudflare dashboard |
 | Production usage | 28 analyses before launch (26 completed, 2 failed), 7 anonymous IPs and 2 signed-in submitters: internal testing only (2026-09-30) | No real-user evidence yet for completion rate, latency or retention |
-| Legacy accounts | 326 auth users from the previous version: 324 Google, 2 email; 321 real, confirmed addresses exported for the relaunch email (outside the repo) | One relaunch email with one-click unsubscribe (owner decision; see PRODUCT_REVIEW) |
+| Legacy accounts | 326 auth users from the previous version: 324 Google, 2 email; 321 real, confirmed accounts. All 321 were already Resend contacts from the March 2026 relaunch email ("It's your turn.", sent 6–8 March to about 229 people in three batches) | Resend segment `relaunch-2026-10` holds the 320 still subscribed (verified contact by contact, 2026-09-30). Draft broadcast "Relaunch, October 2026" is ready to send. 5 Resend contacts no longer have an account and were left out |
 | API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings (2026-09-30, after the deploy and again after the reboot) | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
 | Analysis works end-to-end | Deployed `runAnalysisPipeline` run on the Ne3 production game completed with 1 moment and **0 fallback phrases** | Direct pipeline verification bypassed HTTP quota; OpenRouter usage increased as expected |
 | Analysis quality | 49-position benchmark rerun 2026-09-30 on prompt `2026-09-24.1` with `openai/gpt-6-luna`: 49/49 valid, 1 phantom piece, within noise of the 2026-09-23 run (`apps/engine/benchmark/results/2026-09-30T12-25-48-803Z.md`) | Benchmark judge scores are directional, not a guarantee |
@@ -46,7 +46,7 @@ completion, premium access, or cancellation.
 | Tax | Stripe Managed Payments calculates, collects and remits tax as merchant of record; both prices set to `tax_behavior: inclusive` (2026-09-30) | Managed Payments fee: 3.5% of the total on top of card processing |
 | VPS exposure | UFW allows only 22, 80, 443 and 51820/udp (WireGuard VPN) from the internet; the 8080, 5001 and 51821 rules were removed on 2026-09-30. An outside probe finds 8080, 5001 and 51821 closed (Oracle's network security list already blocked them). 31 updates applied; rebooted into kernel `7.0.0-1012-oracle`; all 13 containers and services came back | Dockge and wg-easy publish on `0.0.0.0` through Docker, which bypasses UFW, so Oracle's security list is what keeps them private. Bind them to `127.0.0.1` or the VPN address to make that local too. systemd hardening for the engine is still open |
 | Web edge | `http://` → `https://` and `www` → apex are 301 redirects that keep path and query (Cloudflare Always Use HTTPS + redirect rule "www to apex", 2026-09-30) | — |
-| Monitoring | None yet: no uptime check or alert on the engine, queue, LLM credit or Stripe webhook failures | Section 0 |
+| Monitoring | UptimeRobot checks on the API health endpoint and the site, plus calendar reminders for the key expiry and the 2026-10-27 downgrade check (set up by the owner, 2026-09-30) | No alert yet on queue age, LLM credit or Stripe webhook failures |
 | Webhook signatures | Signed, deliberately unhandled probe returned 200; tampered signature returned 400 | Proves signature configuration, not paid entitlement updates |
 | Portal configuration | Live default configuration active; cancellation at period end exercised by a real customer (2026-09-26); privacy and terms links set (2026-09-30). Managed Payments subscriptions can also be managed at link.com | — |
 | Webhook routing | `checkout.session.completed`, `customer.subscription.created/updated`, `invoice.paid` for the test customer all show `pending_webhooks=0` (delivered) | — |
@@ -74,29 +74,27 @@ Done 2026-09-30:
 - Age rule in the terms.
 - Worker concurrency and stage timing.
 - Benchmark rerun.
+- Uptime monitoring and calendar reminders (owner).
+- Relaunch email drafted in Resend (see below).
 
 Open:
 
-1. **Monitoring:** an external uptime check (e.g. UptimeRobot, free) on
-   `https://api.getchessplain.com/healthz` and `https://getchessplain.com/`,
-   alerting by email.
-2. **Calendar:**
-   - 2026-10-27: check the owner test subscription downgraded to `free`.
-   - 2026-11-25 and 2026-12-18: replace the OpenRouter key before it
-     expires on 2026-12-25.
-3. **Relaunch email:** HTML and audience CSV in
-   `~/Downloads/chessplain-relaunch/`. The Resend broadcast editor has no
-   raw-HTML import, so create the broadcast as a draft through the Resend API
-   (full-access key), send a test, then press Send in the dashboard. It must
-   keep `{{{RESEND_UNSUBSCRIBE_URL}}}`.
-4. **Support:** send a test to `support@getchessplain.com` from an outside
-   address; set the public support email in Stripe (Settings → Business →
-   Public details).
-5. **ICO data protection fee** (likely tier 1).
-6. **Before paid advertising:** controller name and postal address on the
-   privacy page; a retention and deletion policy.
-7. **Google sign-in screen** shows the Supabase project domain; a Supabase
-   custom domain fixes it (paid add-on).
+1. **Send the relaunch email:** Resend → Broadcasts → "Relaunch, October
+   2026" (segment `relaunch-2026-10`, 320 contacts). Send yourself a test,
+   then Send. The test shows "Hi there" because it has no contact; real sends
+   use the first names (307 of 320 have one). The Resend account is on the
+   free plan, which allows 3 segments.
+2. **Stripe public support email:** Settings → Business → Public details
+   (still unset on 2026-09-30). `support@` routing to the owner's inbox is
+   verified in Cloudflare Email Routing.
+3. **Deferred by the owner:**
+   - The ICO data protection fee, until there is revenue. The fee is not tied
+     to revenue: it applies now; non-payment risks a £400 fixed penalty for
+     tier 1 (up to £4,350).
+   - The Supabase custom domain for the Google sign-in screen, while no paid
+     advertising is planned.
+   - Controller name and postal address on the privacy page, and a retention
+     and deletion policy: add both before any paid advertising.
 
 ## 1. Cloudflare Custom Domain Cutover (`getchessplain.com`) — DONE
 

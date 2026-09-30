@@ -22,8 +22,9 @@ holds the reasoning. Nothing here is legal or tax advice.
   - two games analysed at once
   - benchmark rerun on the current prompt
 
-  Remaining owner items (uptime alerts, the relaunch email, the ICO fee) are
-  in the checklist.
+  Open owner items: send the relaunch email (drafted in Resend) and set
+  Stripe's public support email. The ICO fee and the Supabase custom domain
+  are deferred (see the checklist).
 - **The idea:** the job is real (players who cannot turn an engine line into a
   reason and a habit), and people have paid for it. The previous version had
   paying subscribers even though it barely worked: 2 customers and 5 charges
@@ -111,17 +112,45 @@ provider was still enabled in Supabase). 80 profiles carry a Chess.com
 username and 35 a Lichess one. Their old reports were deleted with the v2
 tables.
 
-**Decision (owner, 2026-09-30):** send one relaunch email to the 321 real
-accounts, with a one-click unsubscribe. Honour every unsubscribe in all later
-product email. The privacy page discloses occasional product emails.
+**History:** the same list already got one relaunch email. "It's your turn."
+went out on 6–8 March 2026 to about 229 people in three batches, from
+`keethesh@mail.getchessplain.com`. It said Chessplain was "genuinely rebuilt,
+rebranded, and ready, for the first time", and then the backend was not up.
+2 contacts unsubscribed.
+
+**Decision (owner, 2026-09-30):** one relaunch email to current accounts, with
+a one-click unsubscribe. Honour every unsubscribe in all later product email;
+the privacy page discloses occasional product emails.
+
+**The email** (Resend draft "Relaunch, October 2026"):
+- **Audience:** segment `relaunch-2026-10`, the 320 current accounts still
+  subscribed.
+- **Sender:** same From and Reply-To as March.
+- **Subject:** "I relaunched Chessplain too early. It works now."
+- **Content:** it owns the March misfire instead of promising "rebuilt and
+  ready" a second time. One CTA to review a game.
+- **Measurement:** UTM-tagged links (`utm_campaign=relaunch-2026-10`); Resend
+  open and click tracking are off on the sending domain.
+
+Measure from PostHog and Resend:
+- **Visits and reviews:** from `relaunch-2026-10`. Useful if more than 5% of
+  recipients visit and more than half of those complete a review.
+- **Unsubscribes:** keep under 0.5%.
+- **Bounces:** keep under 2%.
+- **Replies:** read every one; they are the best signal this list gives.
+
+No follow-up email: this list has already had two relaunch emails.
 
 Risk accepted by the owner: under PECR, marketing email needs consent or the
 soft opt-in. The soft opt-in requires that an opt-out was offered when the
 address was collected
 ([ICO](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guide-to-pecr/electronic-and-telephone-marketing/)),
-and nothing shows the v2 sign-up offered one. A one-off, honest email with a
-working unsubscribe keeps that exposure small; repeated promotion without
-consent would not.
+and nothing shows the v2 sign-up offered one. An honest email with a working
+unsubscribe keeps that exposure small; repeated promotion without consent
+would not.
+
+5 Resend contacts no longer have an account. They were left out; if those
+accounts were deleted on request, delete the contacts too.
 
 ## Go-to-market: public launch
 
@@ -159,7 +188,8 @@ Cloudflare Workers; Supabase handles auth and Stripe handles billing.
    (default 2) share the 4-engine Stockfish pool. Measured: two reports
    completed in parallel in 6–7 s. Raise it with cores if the queue backs up.
 2. **Observability.** Each report logs per-stage timing and cache hit rate.
-   Alerting is still missing (owner item: uptime checks).
+   UptimeRobot watches the API health endpoint and the site (owner-configured);
+   there is no alert yet on queue age, LLM credit or webhook failures.
 3. **Single host.** One VPS is one point of failure. The host config
    (systemd, Caddy, firewall, Stockfish binary) lives only on the box and in
    `ENGINE_DEPLOYMENT.md`.
@@ -214,8 +244,11 @@ enforced CSP.
   - Deferred by the owner: a retention policy and deletion routine, and the
     controller's legal name and postal address. Add both before paid
     advertising.
-  - Still an owner item: the ICO data protection fee (likely tier 1,
-    [self-assessment](https://ico.org.uk/for-organisations/data-protection-fee/self-assessment-or-faqs-data-protection-fee/)).
+  - The ICO data protection fee (tier 1: £52 a year, £47 by direct debit) is
+    deferred by the owner until there is revenue. The fee does not depend on
+    revenue: it applies to anyone processing personal data digitally unless
+    exempt, and non-payment risks a £400 fixed penalty (up to £4,350)
+    ([ICO](https://ico.org.uk/for-organisations/data-protection-fee/data-protection-fee/penalties/)).
 - **Chess.com.** Use the public API as documented, send a descriptive
   User-Agent, and never imply endorsement; see the
   [PubAPI](https://support.chess.com/en/articles/9650547-what-is-the-pubapi-and-how-do-i-use-it)
@@ -245,9 +278,10 @@ Fixed and deployed:
 
 Still open:
 - **Google's sign-in screen says "continue to jgtxprfulkbtzkcvinph.supabase.co"**,
-  not Chessplain. Fixing it needs a Supabase custom domain (e.g.
-  `auth.getchessplain.com`, a paid add-on). Not a regression: the 324 existing
-  Google accounts signed up through the same screen.
+  not Chessplain. A Supabase custom domain (e.g. `auth.getchessplain.com`,
+  paid add-on) fixes it; deferred by the owner while no paid advertising is
+  planned. Not a regression: the 324 existing Google accounts signed up
+  through the same screen.
 - Report-specific help on engine uncertainty.
 - Guidance while analysis is stalled.
 - Announcing network drops.
