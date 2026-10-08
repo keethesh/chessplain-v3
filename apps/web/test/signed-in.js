@@ -1,6 +1,7 @@
 // Injected before every page load by viewport-audit.mjs (AUDIT_INIT) to lay out the
 // signed-in pages: a fake Supabase session plus canned /api/me and game-list responses.
-// Nothing reaches the engine. Long names test wrapping at 320px.
+// Nothing reaches the engine. Long names test wrapping at 320px. The runner replaces
+// the tier token below from AUDIT_TIER=free|exhausted|premium (default free).
 (() => {
   const now = Date.now();
   const iso = days => new Date(now - days * 86_400_000).toISOString();
@@ -10,8 +11,11 @@
   const token = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: user.id, exp, email: user.email, role: 'authenticated', aud: 'authenticated' })}.sig`;
   localStorage.setItem('sb-jgtxprfulkbtzkcvinph-auth-token', JSON.stringify({ access_token: token, token_type: 'bearer', expires_in: 86_400, expires_at: exp, refresh_token: 'x', user }));
 
+  const tier = '__AUDIT_TIER__';
   const me = {
-    email: user.email, tier: 'free', allowance: { limit: 2, used: 1, next_slot_at: null }, chesscom_username: 'a_long_chess_username',
+    email: user.email, tier: tier === 'premium' ? 'premium' : 'free',
+    allowance: tier === 'premium' ? null : tier === 'exhausted' ? { limit: 2, used: 2, next_slot_at: new Date(now + 5 * 86_400_000).toISOString() } : { limit: 2, used: 1, next_slot_at: null },
+    chesscom_username: 'a_long_chess_username',
     reviews: [
       { id: 'r1', share_id: 's1', status: 'completed', created_at: iso(1), headline: 'Two natural moves, each one already outnumbered.', moment_count: 2, game_url: 'https://www.chess.com/game/live/1', player_color: 'white', white_player: 'a_long_chess_username', black_player: 'an_opponent_with_a_long_name' },
       { id: 'r2', share_id: 's2', status: 'pending', created_at: iso(0), headline: null, moment_count: 0, game_url: null, player_color: null, white_player: null, black_player: null },

@@ -163,7 +163,8 @@ async function main() {
     }
   }
   if (process.env.AUDIT_INIT) {
-    await send('Page.addScriptToEvaluateOnNewDocument', { source: readFileSync(process.env.AUDIT_INIT, 'utf8') });
+    const source = readFileSync(process.env.AUDIT_INIT, 'utf8').replace('__AUDIT_TIER__', process.env.AUDIT_TIER ?? 'free');
+    await send('Page.addScriptToEvaluateOnNewDocument', { source });
   }
 
   const failures = [];
