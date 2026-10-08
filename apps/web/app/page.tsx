@@ -171,6 +171,11 @@ export default function HomePage() {
                         Change
                       </button>
                     </div>
+                    {left === 0 && (
+                      <p className="game-limit-note" role="status">
+                        No free reviews left this week{me?.allowance?.next_slot_at ? `. Your next one is ${resetsIn(me.allowance.next_slot_at)}` : ''}. <Link href="/pricing" className="underline">Upgrade</Link> for no weekly limit. Games you’ve reviewed still open.
+                      </p>
+                    )}
                     <ul className="game-list" aria-labelledby="game-list-label">
                       {games.map(game => {
                         const reviewId = reviewedByUrl.get(game.url);
@@ -179,7 +184,7 @@ export default function HomePage() {
                             <button
                               type="button"
                               className="game-row"
-                              disabled={isLoading}
+                              disabled={isLoading || (left === 0 && !reviewId)}
                               aria-busy={pickingUrl === game.url}
                               onClick={() => (reviewId ? router.push('/report/' + reviewId) : reviewGame(game.url))}
                             >
