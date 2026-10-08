@@ -9,12 +9,13 @@ redirects on, premium reconciled, two games analysed at once. Open owner
 items are in section 0; [`PRODUCT_REVIEW.md`](PRODUCT_REVIEW.md) holds the
 reasoning.
 
-Deployed state verified 2026-09-30:
-- Engine commit `dcbe058`, prompt `2026-09-24.1`, `openai/gpt-6-luna` through
-  OpenRouter (key: $10 limit, $0.35 used, expires 2026-12-25). The OpenRouter
-  **account** held only $3.07 of credit on 2026-09-30, and that balance, not
-  the key limit, is what runs out first.
-- Web Worker version `11c40c11` (includes `a1f7ded`).
+Deployed state verified 2026-10-08:
+- Engine commit `3fc50fb` (adds `GET /api/me`), prompt `2026-09-24.1`,
+  `openai/gpt-6-luna` through OpenRouter (key: $10 limit, expires 2026-12-25).
+  The OpenRouter **account** held only $3.07 of credit on 2026-09-30, and that
+  balance, not the key limit, is what runs out first.
+- Web Worker version `3416fefc` (signed-in home, `/account`, plan-aware pricing,
+  Opera Game sample).
 
 Earlier rows keep dated evidence where it is still useful; don't treat old
 commit IDs or provider settings below as current state. The API verifier's
@@ -25,7 +26,7 @@ completion, premium access, or cancellation.
 
 | Area | Evidence | Scope / remaining gap |
 |---|---|---|
-| Repository | Typecheck, 84/84 tests in 18 files, engine, web and Worker builds passed (2026-09-30) | — |
+| Repository | Typecheck, 89/89 tests in 19 files, engine, web and Worker builds passed; viewport audit clean signed out (30 combinations) and signed in (`AUDIT_INIT=apps/web/test/signed-in.js`, `/`, `/account`, `/pricing`) (2026-10-08) | — |
 | GitHub CI | Green on `main` at `dcbe058` (2026-09-30) | Rerun after further changes |
 | Engine deployment | `london-ampere`, `/home/ubuntu/chessplain-v3`, systemd `chessplain-engine`, commit `dcbe058`, active; VPS test run 84/84 (2026-09-30). Listens on `127.0.0.1:8080` only (Caddy proxies to it); 2 job loops share 4 engines. Two owner reports re-queued at once completed in 6.1 s and 7.0 s (warm cache). A new game submitted through the live API as the test account: listing 200, submit 201, progress stream live, completed in 19.8 s with 4 moments, 0 fallback phrases, `model` and `prompt_version` recorded (sweep 0.7 s, verify 10.3 s, explain 4.1 s, summary 4.6 s; cache 13%) | The username path lists the 10 most recent games. Unknown usernames are rejected at submit (400). A signed-in resubmit of the same game returns the existing report (200, no quota), or re-queues it if it failed. Empty (0-moment) reports don't count against quota. About 360 new reports/hour at ~20 s each with 2 loops (estimate) |
 | Website deployment | Worker version `11c40c11` (2026-09-30): per-route titles and canonicals, security headers (HSTS with `includeSubDomains`, nosniff, Referrer-Policy, Permissions-Policy, `X-Frame-Options: DENY`), no `x-powered-by`, Google sign-in reaches `accounts.google.com` via the Supabase callback, prototypes return 404, the workers.dev mirror returns 404 | Deploy with `pnpm --filter @chessplain/web build:worker && pnpm --filter @chessplain/web deploy:worker`; "No targets deployed" is expected because the custom domains are attached in the Cloudflare dashboard |
