@@ -43,17 +43,17 @@ export default async function ShareOpengraphImage({ params }: { params: Promise<
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          backgroundColor: '#f8f6f0',
+          backgroundColor: '#111310',
           padding: '68px 76px',
-          fontFamily: 'Georgia, serif',
+          fontFamily: 'Helvetica, Arial, sans-serif',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: '#1c2826', fontSize: 30 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: '#f0f1e9', fontSize: 30, fontWeight: 600 }}>
             <svg width="36" height="37" viewBox="0 0 29 30" fill="none">
               <path
                 d="M5 25h19M7 21h15L18 15V8H11v7l-4 6ZM10 8h9M14.5 2v6M11.5 5h6"
-                stroke="#2d5a3d"
+                stroke="#c9f36d"
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -61,16 +61,17 @@ export default async function ShareOpengraphImage({ params }: { params: Promise<
             </svg>
             <span>chessplain</span>
           </div>
-          <div style={{ fontSize: 24, color: '#4a5754' }}>Game review</div>
+          <div style={{ fontSize: 24, color: '#aab1a3' }}>Game review</div>
         </div>
 
         <div
           style={{
             display: 'flex',
             fontSize: headline.length > 60 ? 62 : 74,
-            lineHeight: 1.08,
-            color: '#1c2826',
-            letterSpacing: -1.5,
+            fontWeight: 600,
+            lineHeight: 1.06,
+            color: '#f0f1e9',
+            letterSpacing: -2.5,
             maxWidth: 1000,
           }}
         >
@@ -78,10 +79,10 @@ export default async function ShareOpengraphImage({ params }: { params: Promise<
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ width: 56, height: 3, backgroundColor: '#2d5a3d' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 25, color: '#4a5754' }}>
+          <div style={{ width: 56, height: 3, backgroundColor: '#c9f36d' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 25, color: '#aab1a3' }}>
             <span>{clamp(meta, 74)}</span>
-            <span style={{ color: '#2d5a3d' }}>getchessplain.com</span>
+            <span style={{ color: '#c9f36d' }}>getchessplain.com</span>
           </div>
         </div>
       </div>

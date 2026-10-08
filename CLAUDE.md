@@ -50,6 +50,8 @@ If every moment falls back to generic text, or credits run out, the pipeline thr
 
 **Web.** `apps/web/lib/supabase.ts` sets `detectSessionInUrl: false` on purpose: `/auth/callback` owns the code exchange, and letting the client do it too shows a sign-in error to a signed-in user. Square names in explanation text become colored chips linked to board highlights (`lib/squares.ts`, `components/SquareText.tsx`).
 
+**Signed-in experience.** The site is session-aware. `lib/use-session.ts` `useMe()` calls `GET /api/me` (plan, weekly allowance, reviews, recurring concepts, last-used Chess.com username; derived from `game_analyses`/`source_games`, no profile column). Signed-in visitors get a different home (`app/page.tsx`: remembered username, games already reviewed marked, allowance left), `/account` (`app/account/page.tsx`), plan-aware `/pricing`, and no sample or marketing sections. The sample at `/report/demo` is Morphy's Opera Game from Black's side (`lib/demo-report.ts`; evaluations from Stockfish 18 at depth 18-20, replay-checked in `engine/test/reliability.test.ts`).
+
 ## Constraints
 
 - **Production database, no staging.** A local engine pointed at production must run with `WORKER_ENABLED=false`, or it will consume real queued jobs.

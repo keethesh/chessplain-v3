@@ -11,13 +11,13 @@ export const metadata: Metadata = {
     title,
     description,
     url: '/pricing',
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little clarity, a better next game.' }],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little more understanding, every game.' }],
   },
   twitter: {
     card: 'summary_large_image',
     title,
     description,
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little clarity, a better next game.' }],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little more understanding, every game.' }],
   },
 };
 

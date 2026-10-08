@@ -146,3 +146,29 @@ export function createBillingPortal(token: string): Promise<{ url: string }> {
 export function claimReport(id: string, token: string): Promise<{ success: boolean; user_id: string }> {
   return request('/api/reports/' + encodeURIComponent(id) + '/claim', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
 }
+export interface MeReview {
+  id: string;
+  share_id: string;
+  status: string;
+  created_at: string;
+  headline: string | null;
+  moment_count: number;
+  game_url: string | null;
+  player_color: 'white' | 'black' | null;
+  white_player: string | null;
+  black_player: string | null;
+}
+
+export interface Me {
+  email: string | null;
+  tier: 'free' | 'premium';
+  /** null for premium. */
+  allowance: { limit: number; used: number; next_slot_at: string | null } | null;
+  chesscom_username: string | null;
+  reviews: MeReview[];
+  patterns: Array<{ concept: string; count: number }>;
+}
+
+export function getMe(token: string): Promise<Me> {
+  return request('/api/me', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
+}

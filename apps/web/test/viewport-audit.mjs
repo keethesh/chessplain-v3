@@ -7,10 +7,16 @@
  * than the device. 320px is the floor worth supporting (iPhone SE / small
  * Android in an in-app webview).
  *
- * Usage:
+ * Usage (Obscura, or headless Chrome with --remote-debugging-port=9222):
  *   obscura serve --port 9222 &
  *   node apps/web/test/viewport-audit.mjs http://127.0.0.1:3111
+ *
+ * Signed-in pass: AUDIT_INIT runs a script before every page load (fake session,
+ * mocked API); AUDIT_PAGES replaces the page list.
+ *   AUDIT_INIT=apps/web/test/signed-in.js AUDIT_PAGES=/,/account,/pricing node apps/web/test/viewport-audit.mjs …
  */
+
+import { readFileSync } from 'node:fs';
 
 const BASE = process.argv[2] || 'http://127.0.0.1:3111';
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
@@ -23,7 +29,7 @@ const VIEWPORTS = [
   { label: '1440px desktop', width: 1440, height: 900, mobile: false },
 ];
 
-const PAGES = ['/', '/pricing', '/r/demo-sample', '/privacy', '/terms', '/a-broken-shared-link'];
+const PAGES = process.env.AUDIT_PAGES?.split(',') ?? ['/', '/pricing', '/r/demo-sample', '/privacy', '/terms', '/a-broken-shared-link'];
 
 // Anything below this is unreadable body copy on a phone.
 const MIN_BODY_FONT_PX = 12;
@@ -155,6 +161,9 @@ async function main() {
     } catch {
       // Optional on this backend.
     }
+  }
+  if (process.env.AUDIT_INIT) {
+    await send('Page.addScriptToEvaluateOnNewDocument', { source: readFileSync(process.env.AUDIT_INIT, 'utf8') });
   }
 
   const failures = [];

@@ -3,10 +3,11 @@
 import { use, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Download, LoaderCircle, Share2 } from 'lucide-react';
-import { API_BASE_URL, getReportById, normalizeReport, type ReportDetail } from '../../../lib/api';
+import { API_BASE_URL, claimReport, getReportById, normalizeReport, type ReportDetail } from '../../../lib/api';
 import { DEMO_REPORT } from '../../../lib/demo-report';
 import { captureEvent } from '../../../lib/posthog';
 import { supabase } from '../../../lib/supabase';
+import { invalidateMe, useMe } from '../../../lib/use-session';
 import { SharedReportInteractiveView } from '../../../components/SharedReportInteractiveView';
 import { AnalysisWaitState } from '../../../components/AnalysisWaitState';
 import { saveRecentReview } from '../../../lib/recent-reviews';
@@ -25,6 +26,9 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 }
 
 function ReportSession({ id }: { id: string }) {
+  const { session, me } = useMe();
+  const [claim, setClaim] = useState<'idle' | 'busy' | 'gone'>('idle');
+  const saved = Boolean(me?.reviews.some(r => r.id === id));
   const isDemo = id === 'demo';
   const [report, setReport] = useState<ReportDetail | null>(isDemo ? DEMO_REPORT : null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -40,6 +44,7 @@ function ReportSession({ id }: { id: string }) {
   const selected = useRef(new Set<number>());
 
   useEffect(() => { captureEvent('report_viewed', { report_id: id, is_demo: isDemo, is_shared: false }); }, [id, isDemo]);
+  useEffect(() => { if (!isDemo && report?.status === 'completed') invalidateMe(); }, [isDemo, report?.status]);
 
   useEffect(() => {
     if (isDemo) return;
@@ -162,6 +167,19 @@ function ReportSession({ id }: { id: string }) {
     }
   }
 
+  async function claimThis() {
+    if (!session || claim === 'busy') return;
+    setClaim('busy');
+    try {
+      await claimReport(id, session.access_token);
+      invalidateMe();
+      setClaim('idle');
+    } catch {
+      // 409: it already has an owner, or it isn't from this network. Nothing to offer.
+      setClaim('gone');
+    }
+  }
+
   async function share() {
     const url = window.location.origin + (isDemo ? '/report/demo' : '/r/' + report?.share_id);
     const title = report?.summary?.headline || 'My Chessplain Game Review';
@@ -240,7 +258,7 @@ function ReportSession({ id }: { id: string }) {
     )}
     {report ? <SharedReportInteractiveView report={report} isOwner actions={complete && (
       <div className="flex items-center gap-3">
-        <button className="text-link" onClick={downloadImageCard}><Download size={15} />Save card</button>
+        {!isDemo && <button className="text-link" onClick={downloadImageCard}><Download size={15} />Save card</button>}
         <button className="text-link" onClick={share}><Share2 size={15} />Share review</button>
       </div>
     )} onSelectMoment={index => {
@@ -251,10 +269,19 @@ function ReportSession({ id }: { id: string }) {
       {shareMessage && <p className="mt-5 text-sm text-[var(--w-accent)]" role="status">{shareMessage}</p>}
       {shareUrl && <input className="email-input mt-3" aria-label="Shareable review link" readOnly value={shareUrl} onFocus={event => event.target.select()} />}
       {complete && !isDemo && <section className="mt-10 flex flex-col gap-7 sm:flex-row sm:justify-between">
-        <div className="max-w-md"><h2 className="t-heading text-2xl">Keep this lesson close.</h2><p className="mt-2 mb-4 text-sm leading-relaxed text-[var(--w-ink2)]">Send yourself a sign-in link that brings you back to this review.</p>
+        {session ? <div className="max-w-md text-sm leading-relaxed text-[var(--w-ink2)]">
+          {saved ? <p>This review is saved in <Link href="/account" className="underline">your reviews</Link>.</p>
+            : me && claim !== 'gone' ? <button type="button" className="secondary-button" onClick={claimThis} disabled={claim === 'busy'}>{claim === 'busy' ? 'Adding…' : 'Add to your reviews'}</button> : null}
+        </div> : <div className="max-w-md"><h2 className="t-heading text-2xl">Keep this lesson close.</h2><p className="mt-2 mb-4 text-sm leading-relaxed text-[var(--w-ink2)]">Send yourself a sign-in link that brings you back to this review.</p>
           {emailSent ? <p role="status" className="flex items-center gap-2 text-sm text-[var(--w-accent)]"><Check size={16} />Check your inbox. Open the link in this browser.</p> : <form onSubmit={sendEmail} className="flex flex-wrap gap-2"><label className="sr-only" htmlFor="save-email">Email address</label><input id="save-email" className="email-input flex-1 min-w-0" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required disabled={emailBusy} /><button className="primary-button" disabled={emailBusy}>{emailBusy ? 'Sending…' : 'Email me a link'}</button></form>}
           {emailError && <p className="form-error mt-3" role="alert">{emailError}</p>}
-        </div><Link href="/#analyze" className="text-link self-start">Review another game <ArrowRight size={16} /></Link>
+        </div>}
+        <Link href="/#analyze" className="text-link self-start">Review another game <ArrowRight size={16} /></Link>
+      </section>}
+      {isDemo && <section className="mt-10 flex flex-col items-start gap-4 border-t border-[var(--w-border)] pt-8">
+        <h2 className="t-heading text-2xl">Now try it on your own game.</h2>
+        <p className="max-w-lg text-sm leading-relaxed text-[var(--w-ink2)]">Pick a recent Chess.com game, or paste a PGN from anywhere. Two reviews a week are free.</p>
+        <Link href="/#analyze" className="primary-button">Review your own game <ArrowRight size={16} /></Link>
       </section>}
     </SharedReportInteractiveView> : <AnalysisWaitState status="pending" stalled={stalled} onRetry={() => setRetry(n => n + 1)} />}
   </>;

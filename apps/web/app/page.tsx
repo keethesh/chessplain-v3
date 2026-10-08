@@ -8,6 +8,8 @@ import { ArrowRight, Check, ChevronRight, LoaderCircle, MoveUpRight } from 'luci
 import { ApiError, listChessComGames, submitReport, type ChessComGameSummary, type SubmitReportPayload } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { supabase } from '../lib/supabase';
+import { invalidateMe, useMe } from '../lib/use-session';
+import { ReviewsPanel } from '../components/ReviewsPanel';
 import { ChessboardView } from '../components/ChessboardView';
 import { DEMO_REPORT } from '../lib/demo-report';
 import { getRecentReviews, clearRecentReviews, type RecentReview } from '../lib/recent-reviews';
@@ -22,8 +24,14 @@ function playedAgo(iso: string): string {
 
 const OUTCOME_LABEL = { win: 'Won', loss: 'Lost', draw: 'Drew' } as const;
 
+function resetsIn(iso: string): string {
+  const days = Math.max(1, Math.ceil((Date.parse(iso) - Date.now()) / 86_400_000));
+  return days === 1 ? 'tomorrow' : `in ${days} days`;
+}
+
 export default function HomePage() {
   const router = useRouter();
+  const { signedIn, me, failed, retry } = useMe();
   const [method, setMethod] = useState<'username' | 'pgn'>('username');
   const [username, setUsername] = useState('');
   const [pgn, setPgn] = useState('');
@@ -44,11 +52,24 @@ export default function HomePage() {
   const samplePlayed = sampleBoard.move(sample.played);
   const sampleArrows = samplePlayed ? [{ startSquare: samplePlayed.from, endSquare: samplePlayed.to, color: 'var(--w-error)' }] : [];
   const sampleHighlights = samplePlayed ? [samplePlayed.from, samplePlayed.to] : [];
+  const sampleMover = sample.player_color === 'black' ? 'Black' : 'White';
+  const reviewedByUrl = new Map((me?.reviews ?? []).filter(r => r.game_url && r.status !== 'failed').map(r => [r.game_url as string, r.id]));
+  const left = me?.allowance ? Math.max(0, me.allowance.limit - me.allowance.used) : null;
 
   useEffect(() => {
     captureEvent('landing_viewed', { hero_variant: 'editorial_v1' });
     setRecentReviews(getRecentReviews());
   }, []);
+
+  // A returning player's Chess.com username is remembered: show their games straight away.
+  const remembered = me?.chesscom_username ?? null;
+  useEffect(() => {
+    if (!remembered) return;
+    let active = true;
+    setUsername(current => current || remembered);
+    listChessComGames(remembered).then(list => { if (active) setGames(current => current ?? list); }).catch(() => { /* The form still works by hand. */ });
+    return () => { active = false; };
+  }, [remembered]);
 
   async function startReview(payload: SubmitReportPayload, source: 'chesscom' | 'pgn') {
     if (submitting.current) return;
@@ -62,6 +83,7 @@ export default function HomePage() {
       signedIn = Boolean(data.session);
       const response = await submitReport(payload, data.session?.access_token);
       captureEvent('game_submitted', { method: source });
+      invalidateMe();
       router.push('/report/' + response.id);
     } catch (err) {
       setQuotaReached(err instanceof ApiError && err.status === 402 ? (signedIn ? 'signed-in' : 'anonymous') : null);
@@ -107,9 +129,19 @@ export default function HomePage() {
     <div className="home-page">
       <section className="home-hero page-width">
         <div className="hero-copy">
-          <p className="hero-kicker">Chess review for the rest of us</p>
-          <h1>Find the move that <span className="hero-mark">looked right</span> but <em>changed everything.</em></h1>
-          <p className="hero-lede">See what your move allowed, why it mattered, and what to notice next time. No engine report card. Just the turning point.</p>
+          {signedIn ? (
+            <>
+              <p className="hero-kicker">Welcome back</p>
+              <h1>Which game should we <em>look at next?</em></h1>
+              <p className="hero-lede">Pick a recent game and read the one moment that decided it. Games you’ve already reviewed are marked, and open straight away.</p>
+            </>
+          ) : (
+            <>
+              <p className="hero-kicker">Chess review for the rest of us</p>
+              <h1>Find the move that <span className="hero-mark">looked right</span> but <em>changed everything.</em></h1>
+              <p className="hero-lede">See what your move allowed, why it mattered, and what to notice next time. No engine report card. Just the turning point.</p>
+            </>
+          )}
           <div className="submit-panel" id="analyze">
             <div className="method-tabs" role="group" aria-label="Choose how to add your game">
               <button
@@ -140,31 +172,35 @@ export default function HomePage() {
                       </button>
                     </div>
                     <ul className="game-list" aria-labelledby="game-list-label">
-                      {games.map(game => (
-                        <li key={game.url}>
-                          <button
-                            type="button"
-                            className="game-row"
-                            disabled={isLoading}
-                            aria-busy={pickingUrl === game.url}
-                            onClick={() => reviewGame(game.url)}
-                          >
-                            <span className={`game-outcome game-outcome-${game.outcome}`}>{OUTCOME_LABEL[game.outcome]}</span>
-                            <span className="game-row-main">
-                              <span className="game-opponent">
-                                vs {game.opponent}
-                                {game.opponentRating !== null && <span className="game-rating">{game.opponentRating}</span>}
+                      {games.map(game => {
+                        const reviewId = reviewedByUrl.get(game.url);
+                        return (
+                          <li key={game.url}>
+                            <button
+                              type="button"
+                              className="game-row"
+                              disabled={isLoading}
+                              aria-busy={pickingUrl === game.url}
+                              onClick={() => (reviewId ? router.push('/report/' + reviewId) : reviewGame(game.url))}
+                            >
+                              <span className={`game-outcome game-outcome-${game.outcome}`}>{OUTCOME_LABEL[game.outcome]}</span>
+                              <span className="game-row-main">
+                                <span className="game-opponent">
+                                  vs {game.opponent}
+                                  {game.opponentRating !== null && <span className="game-rating">{game.opponentRating}</span>}
+                                </span>
+                                <span className="game-meta">
+                                  <span className="game-time-class">{game.timeClass}</span> · {playedAgo(game.endedAt)} · as {game.playerColor}
+                                </span>
                               </span>
-                              <span className="game-meta">
-                                <span className="game-time-class">{game.timeClass}</span> · {playedAgo(game.endedAt)} · as {game.playerColor}
-                              </span>
-                            </span>
-                            {pickingUrl === game.url
-                              ? <LoaderCircle size={17} className="spin" aria-label="Opening your review" />
-                              : <ChevronRight size={17} aria-hidden="true" />}
-                          </button>
-                        </li>
-                      ))}
+                              {reviewId && <span className="game-reviewed"><Check size={13} aria-hidden="true" /><span className="game-reviewed-label">Reviewed</span></span>}
+                              {pickingUrl === game.url
+                                ? <LoaderCircle size={17} className="spin" aria-label="Opening your review" />
+                                : <ChevronRight size={17} aria-hidden="true" />}
+                            </button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ) : (
@@ -245,11 +281,17 @@ export default function HomePage() {
                 </button>
               )}
               <p className="form-reassurance">
-                <Check size={14} /> 2 free reviews every 7 days. No signup required.
+                <Check size={14} />
+                {!signedIn
+                  ? ' 2 free reviews every 7 days. No signup required.'
+                  : !me ? (failed ? ' We couldn’t check your allowance.' : ' Checking your allowance…')
+                  : left === null ? ' Premium: no weekly limit.'
+                  : left > 0 ? ` ${left} of ${me.allowance!.limit} free reviews left this week.`
+                  : ` No free reviews left this week. ${me.allowance!.next_slot_at ? `Your next one is ${resetsIn(me.allowance!.next_slot_at)}.` : ''}`}
               </p>
             </form>
           </div>
-          {recentReviews.length > 0 && (
+          {!signedIn && recentReviews.length > 0 && (
             <div className="recent-reviews-panel mt-6 rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4 text-left shadow-[var(--shadow-sm)]">
               <div className="flex items-center justify-between mb-2.5 text-xs text-[var(--w-ink2)]">
                 <span className="font-semibold uppercase tracking-wider">Your recent reviews</span>
@@ -286,31 +328,34 @@ export default function HomePage() {
               </div>
             </div>
           )}
-          <Link
-            className="text-link hero-sample-link"
-            href="/report/demo"
-            onClick={() => captureEvent('sample_game_clicked', { source: 'hero' })}
-          >
-            See a sample review first <ArrowRight size={15} />
-          </Link>
+          {!signedIn && (
+            <Link
+              className="text-link hero-sample-link"
+              href="/report/demo"
+              onClick={() => captureEvent('sample_game_clicked', { source: 'hero' })}
+            >
+              See a sample review first <ArrowRight size={15} />
+            </Link>
+          )}
         </div>
+        {signedIn ? <ReviewsPanel me={me} failed={failed} onRetry={retry} /> : (
         <aside className="sample-preview" aria-label="Preview of a sample turning-point review">
           <div className="sample-masthead">
             <span>SAMPLE REVIEW</span>
-            <span>3… Nf6? / 4. Qxf7#</span>
+            <span>Paris, 1858 · Move {sample.move_number}</span>
           </div>
           <div className="sample-board">
             <ChessboardView
               key={showMove ? 'sample-after' : 'sample-before'}
               fen={showMove ? sample.fen_after : sample.fen_before}
-              orientation="white"
+              orientation={sample.player_color}
               boardWidth={352}
               arrows={showMove ? [] : sampleArrows}
               highlightSquares={showMove ? [] : sampleHighlights}
             />
           </div>
           <div className="sample-controls">
-            <span>Move {sample.move_number} · {showMove ? 'White to move' : 'Black to move'}</span>
+            <span>Move {sample.move_number} · {sampleMover} to move{showMove ? ' · played' : ''}</span>
             <button type="button" onClick={() => setShowMove(!showMove)}>
               {showMove ? 'Reset position' : 'Show the move'} <ChevronRight size={15} />
             </button>
@@ -318,7 +363,7 @@ export default function HomePage() {
           <div className="sample-annotation">
             <span className="annotation-mark"><MoveUpRight size={23} /></span>
             <div>
-              <h2>A natural move.<br />An overlooked threat.</h2>
+              <h2>A natural move.<br />Two things hanging.</h2>
               <p>{sample.what_actually_happens}</p>
             </div>
           </div>
@@ -326,17 +371,19 @@ export default function HomePage() {
             Explore the sample review <ArrowRight size={16} />
           </Link>
         </aside>
+        )}
       </section>
 
+      {!signedIn && <>
       <section className="lesson-section page-width">
         <div className="lesson-header">
           <h2>One game. One turning point. <em>One useful habit.</em></h2>
           <p>Start with the position, follow the consequence, then keep one question for your next game.</p>
         </div>
         <div className="lesson-grid">
-          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">?</span><h3>Before your move</h3><p>What were you trying to do? What could your opponent force next?</p></article>
-          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">!</span><h3>See what changed</h3><p>Replay the move and inspect the threat or continuation it allowed.</p></article>
-          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">→</span><h3>Carry one question</h3><p>Leave with a practical check to use before a similar move next time.</p></article>
+          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">?</span><h3>Before your move</h3><p>Every moment starts with one idea, in plain words. <strong>{sample.concept_name}</strong> means {sample.concept_definition}</p></article>
+          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">!</span><h3>See what changed</h3><p>{sample.what_actually_happens} Replay it on the board.</p></article>
+          <article className="lesson-card"><span className="lesson-mark" aria-hidden="true">→</span><h3>Carry one question</h3><p>{DEMO_REPORT.summary?.focus_habit}</p></article>
         </div>
       </section>
       <section className="questions-section page-width">
@@ -374,6 +421,11 @@ export default function HomePage() {
           </details>
         </div>
       </section>
+      <section className="closing-cta page-width">
+        <h2>Bring a game you’re still thinking about.</h2>
+        <a href="#analyze" className="primary-button">Review a game <ArrowRight size={17} /></a>
+      </section>
+      </>}
     </div>
   );
 }

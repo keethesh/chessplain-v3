@@ -517,6 +517,87 @@ async function bootstrap() {
     return reply.send({ success: true, user_id: userId });
   });
 
+  // GET /api/me: everything the signed-in home and account pages need in one
+  // call. The Chess.com username is the one last used on a submitted game, so
+  // no profile column (or migration) is required.
+  fastify.get('/api/me', async (request, reply) => {
+    const token = request.headers.authorization?.replace(/^Bearer /, '');
+    if (!token) return reply.status(401).send({ error: 'Sign in to see your account.' });
+    const { data: auth, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !auth.user) return reply.status(401).send({ error: 'Please sign in again.' });
+    const userId = auth.user.id;
+
+    const [profileRes, reviewsRes] = await Promise.all([
+      supabase.from('profiles').select('subscription_tier').eq('id', userId).maybeSingle(),
+      supabase.from('game_analyses')
+        .select('id, share_id, status, summary, moments, created_at, source_games(external_id, source, player_color, white_player, black_player, metadata)')
+        .eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
+    ]);
+    if (reviewsRes.error) {
+      fastify.log.error(reviewsRes.error, 'Failed to load reviews for /api/me');
+      return reply.status(503).send({ error: 'We could not load your reviews. Please try again shortly.' });
+    }
+
+    type Moment = { concept_name?: string };
+    const rows = (reviewsRes.data ?? []) as unknown as Array<{
+      id: string; share_id: string; status: string; created_at: string;
+      summary: { headline?: string; focus_habit?: string } | null;
+      moments: Moment[] | null;
+      source_games: { external_id: string | null; source: string; player_color: string | null; white_player: string | null; black_player: string | null; metadata: { chesscom_username?: string } | null } | null;
+    }>;
+
+    const reviews = rows.map(r => ({
+      id: r.id,
+      share_id: r.share_id,
+      status: r.status,
+      created_at: r.created_at,
+      headline: r.summary?.headline ?? null,
+      moment_count: r.moments?.length ?? 0,
+      game_url: r.source_games?.external_id ?? null,
+      player_color: r.source_games?.player_color ?? null,
+      white_player: r.source_games?.white_player ?? null,
+      black_player: r.source_games?.black_player ?? null,
+    }));
+
+    // Concepts that keep coming up across completed reviews: the reason to
+    // read more than one review. Names are free LLM text, so group case-insensitively
+    // and skip the generic name given to moments that fell back to template text.
+    const concepts = new Map<string, { concept: string; count: number }>();
+    for (const r of rows) {
+      if (r.status !== 'completed') continue;
+      const seen = new Set<string>();
+      for (const raw of (r.moments ?? []).map(m => m.concept_name?.trim())) {
+        const key = raw?.toLowerCase();
+        if (!raw || !key || key === 'position to review' || seen.has(key)) continue;
+        seen.add(key);
+        const entry = concepts.get(key) ?? { concept: raw, count: 0 };
+        entry.count++;
+        concepts.set(key, entry);
+      }
+    }
+    const patterns = [...concepts.values()].filter(p => p.count >= 2).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    const premium = profileRes.data?.subscription_tier === 'premium';
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    // Same rule as the submit quota: failed runs and empty completed reports are free.
+    const counted = rows.filter(r => r.status !== 'failed' && (r.status !== 'completed' || (r.moments?.length ?? 0) > 0) && Date.parse(r.created_at) >= weekAgo);
+    const oldest = counted.length ? Math.min(...counted.map(r => Date.parse(r.created_at))) : null;
+
+    return reply.send({
+      email: auth.user.email ?? null,
+      tier: premium ? 'premium' : 'free',
+      allowance: premium ? null : {
+        limit: 2,
+        used: Math.min(counted.length, 2),
+        // A slot frees up 7 days after the oldest counted review.
+        next_slot_at: counted.length >= 2 && oldest !== null ? new Date(oldest + 7 * 24 * 60 * 60 * 1000).toISOString() : null,
+      },
+      chesscom_username: rows.find(r => r.source_games?.source === 'chesscom' && r.source_games.metadata?.chesscom_username)?.source_games?.metadata?.chesscom_username ?? null,
+      reviews,
+      patterns,
+    });
+  });
+
   // 8. POST /api/billing/checkout (Stripe Checkout)
   fastify.post('/api/billing/checkout', async (request, reply) => {
     if (!stripe) return reply.status(503).send({ error: 'Billing is not configured yet.' });

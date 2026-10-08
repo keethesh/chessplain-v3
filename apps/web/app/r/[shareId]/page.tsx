@@ -6,7 +6,6 @@ import { SITE_URL } from '../../layout';
 import { getReportByShareId } from '../../../lib/api';
 import { ShareViewTracker } from '../../../components/ShareViewTracker';
 import { SharedReportInteractiveView } from '../../../components/SharedReportInteractiveView';
-import { BookOpen } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ shareId: string }>;
@@ -74,27 +73,12 @@ export default async function SharedReportPage({ params }: PageProps) {
 
   if (!report) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-20 text-center">
-        <div className="card-box p-8 border border-[var(--w-border-strong)] bg-[var(--w-surface)] shadow-md">
-          <h2 className="t-heading text-2xl mb-2 text-[var(--w-ink1)]">Report not found</h2>
-          <p className="t-body text-[var(--w-ink2)] mb-6">
-            The link may be incorrect, or the service may be temporarily unavailable. Try opening it again shortly.
-          </p>
-          <div className="flex justify-center gap-3">
-            <Link
-              href="/"
-              className="rounded bg-[var(--w-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] transition-all shadow-sm"
-            >
-              Analyze your own game
-            </Link>
-            <Link
-              href="/report/demo"
-              className="rounded border border-[var(--w-border)] bg-[var(--w-canvas)] px-4 py-2.5 text-sm font-semibold text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] transition-colors flex items-center gap-1.5"
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Read the sample review</span>
-            </Link>
-          </div>
+      <div className="page-width py-16 max-w-2xl">
+        <h1 className="t-display mb-5">This review isn’t available.</h1>
+        <p className="t-body text-[var(--w-ink2)] mb-7">The link may be wrong, or Chessplain may be briefly unavailable. Try it again in a moment.</p>
+        <div className="flex flex-wrap gap-3">
+          <Link className="primary-button" href="/#analyze">Review a game</Link>
+          <Link className="secondary-button" href="/report/demo">Read the sample review</Link>
         </div>
       </div>
     );

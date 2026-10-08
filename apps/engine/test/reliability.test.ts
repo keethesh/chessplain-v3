@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Chess } from 'chess.js';
 import { parsePgn } from '../src/analysis/pgn.js';
+import { validateMomentJson, validateSummaryJson } from '../src/analysis/prompts.js';
 import { DEMO_REPORT, DEMO_PGN } from '../../web/lib/demo-report.js';
 import type { CandidateMoment, MomentReport } from '../src/types.js';
 
@@ -26,18 +27,26 @@ describe('Game perspective and sample truth', () => {
     expect(parsed.positions[0].fenBefore).toBe(fen);
     expect(parsed.positions[0].san).toBe('34.Kd4');
   });
-  it('the sample move and reply match their boards and stated mate', () => {
-    const moment = DEMO_REPORT.moments[0];
-    const board = new Chess(moment.fen_before);
-    board.move(moment.played);
-    expect(board.fen()).toBe(moment.fen_after);
-    board.move(moment.refutation_line.replace(/^\d+\.\s*/, ''));
-    expect(board.isCheckmate()).toBe(true);
-    expect(board.turn()).toBe('b');
+  it('each sample moment replays from its board, and the sample matches its PGN', () => {
     const full = new Chess();
     full.loadPgn(DEMO_PGN);
-    expect(full.fen()).toBe(board.fen());
-    expect(new Chess(moment.fen_before).move(moment.best_move)?.san).toBe('Qe7');
+    expect(full.isCheckmate()).toBe(true);
+    const mainLine = full.history();
+    for (const moment of DEMO_REPORT.moments) {
+      const board = new Chess(moment.fen_before);
+      expect(board.move(moment.played)?.san).toBe(moment.played);
+      expect(board.fen()).toBe(moment.fen_after);
+      // ply is 1-based, so the move played at that ply sits at index ply - 1.
+      expect(mainLine[moment.ply - 1]).toBe(moment.played);
+      for (const san of moment.refutation_line.replace(/\d+\.+\s*/g, '').split(/\s+/)) expect(board.move(san)?.san).toBe(san);
+      expect(new Chess(moment.fen_before).move(moment.best_move)?.san).toBe(moment.best_move);
+      // The sample must pass the same contract real LLM output does (word limits, no first person).
+      const verdict = validateMomentJson(moment);
+      expect(verdict.errors).toEqual([]);
+    }
+  });
+  it('the sample summary passes the same contract as real summaries', () => {
+    expect(validateSummaryJson(DEMO_REPORT.summary, 'lost').errors).toEqual([]);
   });
 });
 

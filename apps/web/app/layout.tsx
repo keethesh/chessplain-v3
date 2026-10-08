@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { PostHogProvider } from '../components/PostHogProvider';
-import { AccountNav } from '../components/AccountNav';
+import { SiteNav } from '../components/SiteNav';
 import './globals.css';
 
 // Public marketing origin. Not a credential: it only affects how absolute
@@ -30,13 +30,13 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     url: SITE_URL,
     locale: 'en_US',
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little clarity, a better next game.' }],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little more understanding, every game.' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: TITLE,
     description: DESCRIPTION,
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little clarity, a better next game.' }],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little more understanding, every game.' }],
   },
   robots: { index: true, follow: true },
 };
@@ -89,12 +89,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               </svg>
               chessplain
             </Link>
-            <nav className="nav-links" aria-label="Main navigation">
-              <Link href="/report/demo" className="nav-sample">Sample review</Link>
-              <Link href="/pricing">Pricing</Link>
-              <AccountNav />
-              <Link href="/#analyze" className="nav-cta">Review a game</Link>
-            </nav>
+            <SiteNav />
           </div>
         </header>
         <main id="main-content" className="flex-1">

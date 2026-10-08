@@ -584,7 +584,7 @@ input, textarea {
 }
 
 .text-button {
-  min-height: 36px;
+  min-height: 44px;
   border: 0;
   padding: 0 2px;
   background: none;
@@ -1109,3 +1109,36 @@ body { color:var(--w-ink1); }
 #board-view [role="group"] button:last-child:hover:not(:disabled) {
   background: var(--w-accent-hover) !important;
 }
+
+/* Signed-in home, account page */
+.game-reviewed { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 5px; background: var(--w-accent-soft); color: var(--w-accent); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.game-row:has(.game-reviewed) { grid-template-columns: 52px minmax(0, 1fr) auto auto; }
+@media (max-width: 480px) { .game-reviewed-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }
+.reviews-panel { min-width: 0; padding: 20px; background: var(--w-surface); border: 1px solid var(--w-border); border-radius: 6px; box-shadow: var(--shadow-md); animation: panel-arrive .65s cubic-bezier(.2,.75,.2,1) both; }
+.reviews-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--w-border); }
+.reviews-panel-head h2 { margin: 0; font: 500 11px/1.4 var(--font-plex-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--w-accent); }
+.reviews-empty { margin: 18px 0 4px; color: var(--w-ink2); font-size: 14px; line-height: 1.6; }
+.reviews-list { list-style: none; margin: 0; padding: 0; }
+.reviews-list li + li { border-top: 1px solid var(--w-border); }
+.reviews-list a { display: grid; gap: 3px; padding: 14px 8px; margin-inline: -8px; border-radius: 4px; color: var(--w-ink1); text-decoration: none; transition: background .15s ease; }
+.reviews-list a:hover { background: var(--w-surface-subtle); }
+.reviews-headline { font-size: 15px; font-weight: 500; line-height: 1.35; }
+.reviews-meta { color: var(--w-ink3); font-size: 12px; }
+.reviews-patterns { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--w-border); }
+.reviews-patterns h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--w-ink1); }
+.reviews-patterns ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.reviews-patterns li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--w-ink1); }
+.reviews-patterns li span:last-child { color: var(--w-ink3); font-size: 12px; font-family: var(--font-plex-mono), monospace; }
+.account-page { padding-block: 48px 72px; }
+.account-head { margin-bottom: 32px; }
+.account-head h1 { margin: 0; font-size: clamp(26px, 3.4vw, 40px); font-weight: 500; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.account-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 24px; align-items: start; }
+.account-side { display: grid; gap: 16px; }
+.account-card { display: grid; gap: 12px; justify-items: start; padding: 20px; background: var(--w-surface); border: 1px solid var(--w-border); border-radius: 6px; }
+.account-card h2 { margin: 0; font: 500 11px/1.4 var(--font-plex-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--w-ink2); }
+.account-plan { margin: 0; font-size: 28px; font-weight: 500; letter-spacing: -.02em; }
+.account-note { margin: 0; color: var(--w-ink2); font-size: 14px; line-height: 1.6; }
+.account-signout { justify-self: start; }
+@media (max-width: 860px) { .account-grid { grid-template-columns: 1fr; } .account-page { padding-block: 32px 56px; } }
+.closing-cta { display: flex; flex-direction: column; align-items: center; gap: 22px; padding-block: 64px 88px; border-top: 1px solid var(--w-border); text-align: center; }
+.closing-cta h2 { margin: 0; max-width: 560px; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.1; font-weight: 500; letter-spacing: -.03em; }

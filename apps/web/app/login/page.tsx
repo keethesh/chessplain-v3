@@ -1,13 +1,21 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Check, LoaderCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { safeNextPath, useSession } from '../../lib/use-session';
 
 export default function LoginPage() {
+  const router = useRouter();
   const { session, ready } = useSession();
+  // Already signed in: carry on to where they were headed, else to their account.
+  useEffect(() => {
+    if (!session) return;
+    const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
+    router.replace(next === '/' ? '/account' : next);
+  }, [session, router]);
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -46,26 +54,13 @@ export default function LoginPage() {
     }
   }
 
-  async function signOut() {
-    setBusy(true);
-    await supabase.auth.signOut();
-    setBusy(false);
-  }
 
   return (
     <div className="page-width login-page">
       {!ready ? (
         <p role="status" className="text-sm text-[var(--w-ink2)]">Checking your account…</p>
       ) : session ? (
-        <>
-          <h1 className="t-heading">You’re signed in.</h1>
-          <p className="login-lede">Signed in as <strong>{session.user.email}</strong>. Your free reviews are counted on this account, not your network.</p>
-          <div className="login-actions">
-            <Link href="/#analyze" className="primary-button">Review a game <ArrowRight size={16} /></Link>
-            <Link href="/pricing" className="secondary-button">Plan and billing</Link>
-          </div>
-          <button className="text-link mt-6" onClick={signOut} disabled={busy}>{busy ? 'Signing out…' : 'Sign out'}</button>
-        </>
+        <p role="status" className="text-sm text-[var(--w-ink2)]">Taking you to your account…</p>
       ) : sent ? (
         <div role="status">
           <h1 className="t-heading">Check your inbox.</h1>
