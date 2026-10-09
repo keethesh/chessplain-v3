@@ -33,6 +33,7 @@
   --shadow-md: 0 8px 22px rgb(0 0 0 / 22%);
   --shadow-lg: 0 18px 48px rgb(0 0 0 / 28%);
   --header-h: 81px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 html {
@@ -194,7 +195,9 @@ input, textarea {
   text-decoration: none;
   transition: color 0.18s ease;
 }
-.nav-links a:hover { color: var(--w-accent); }
+@media (hover: hover) and (pointer: fine) {
+  .nav-links a:hover { color: var(--w-accent); }
+}
 .nav-links a { white-space: nowrap; }
 .nav-links .nav-cta {
   border: 0;
@@ -203,9 +206,12 @@ input, textarea {
   background: var(--w-accent);
   color: var(--w-on-accent);
   font-weight: 700;
-  transition: background 0.18s ease, transform 0.18s ease;
+  transition: background 0.18s ease, transform 160ms var(--ease-out);
 }
-.nav-links .nav-cta:hover { background: var(--w-accent-hover); color: var(--w-on-accent); transform: translateY(-1px); }
+@media (hover: hover) and (pointer: fine) {
+  .nav-links .nav-cta:hover { background: var(--w-accent-hover); color: var(--w-on-accent); transform: translateY(-1px); }
+}
+.nav-links .nav-cta:active { transform: scale(0.97); }
 
 .site-footer {
   display: flex;
@@ -238,8 +244,10 @@ input, textarea {
   transition: color 0.15s ease;
 }
 
-.site-footer a:hover {
-  color: var(--w-accent);
+@media (hover: hover) and (pointer: fine) {
+  .site-footer a:hover {
+    color: var(--w-accent);
+  }
 }
 
 .skip-link {
@@ -312,7 +320,9 @@ input, textarea {
 .lesson-grid { gap: 0; border-block: 1px solid var(--w-border); background: transparent; }
 .lesson-card { position: relative; overflow: hidden; background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 25px 28px 30px; }
 .lesson-card + .lesson-card { border-left: 1px solid var(--w-border); }
-.lesson-card:hover { background: linear-gradient(145deg, rgb(201 243 109 / 5%), transparent 70%); transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .lesson-card:hover { background: linear-gradient(145deg, rgb(201 243 109 / 5%), transparent 70%); transform: none; }
+}
 .lesson-card h3 { font-family: var(--font-plex-sans), sans-serif; font-size: 21px; font-weight: 600; }
 .lesson-mark { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 28px; border: 1px solid var(--w-accent); border-radius: 50%; color: var(--w-accent); font: 500 17px var(--font-plex-mono), monospace; transform: rotate(-7deg); }
 .questions-list details { border-color: var(--w-border); }
@@ -374,8 +384,10 @@ input, textarea {
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.method-tabs button:hover:not(:disabled) {
-  color: var(--w-ink1);
+@media (hover: hover) and (pointer: fine) {
+  .method-tabs button:hover:not(:disabled) {
+    color: var(--w-ink1);
+  }
 }
 
 .method-tabs button[aria-pressed="true"] {
@@ -473,15 +485,17 @@ input, textarea {
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
-  transition: background 0.18s ease, transform 0.12s ease;
+  transition: background 0.18s ease, transform 120ms var(--ease-out);
 }
 
-.primary-button:hover:not(:disabled) {
-  background: var(--w-accent-hover);
+@media (hover: hover) and (pointer: fine) {
+  .primary-button:hover:not(:disabled) {
+    background: var(--w-accent-hover);
+  }
 }
 
 .primary-button:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .primary-button:disabled {
@@ -501,15 +515,17 @@ input, textarea {
   background: transparent;
   color: var(--w-ink1);
   white-space: nowrap;
-  transition: background 0.18s ease, transform 0.12s ease;
+  transition: background 0.18s ease, transform 120ms var(--ease-out);
 }
 
-.secondary-button:hover {
-  background: var(--w-surface-subtle);
+@media (hover: hover) and (pointer: fine) {
+  .secondary-button:hover {
+    background: var(--w-surface-subtle);
+  }
 }
 
 .secondary-button:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .side-choice {
@@ -631,7 +647,14 @@ input, textarea {
   transition: background-color 0.16s ease;
 }
 
-.game-row:hover:not(:disabled) {
+@media (hover: hover) and (pointer: fine) {
+  .game-row:hover:not(:disabled) {
+    background: var(--w-surface-subtle);
+  }
+}
+
+/* Full-width rows don't scale; the press shows as an instant tint, on touch too. */
+.game-row:active:not(:disabled) {
   background: var(--w-surface-subtle);
 }
 
@@ -650,12 +673,14 @@ input, textarea {
 
 .game-row > svg {
   color: var(--w-ink3);
-  transition: color 0.16s ease, transform 0.16s ease;
+  transition: color 0.16s ease, transform 160ms var(--ease-out);
 }
 
-.game-row:hover:not(:disabled) > svg {
-  color: var(--w-accent);
-  transform: translateX(2px);
+@media (hover: hover) and (pointer: fine) {
+  .game-row:hover:not(:disabled) > svg {
+    color: var(--w-accent);
+    transform: translateX(2px);
+  }
 }
 
 .game-outcome {
@@ -716,9 +741,11 @@ input, textarea {
   transition: color 0.15s ease;
 }
 
-.text-link:hover {
-  color: var(--w-accent);
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .text-link:hover {
+    color: var(--w-accent);
+    text-decoration: underline;
+  }
 }
 
 .hero-sample-link {
@@ -774,8 +801,10 @@ input, textarea {
   transition: color 0.15s ease;
 }
 
-.questions-list summary:hover {
-  color: var(--w-accent);
+@media (hover: hover) and (pointer: fine) {
+  .questions-list summary:hover {
+    color: var(--w-accent);
+  }
 }
 
 .questions-list summary::-webkit-details-marker {
@@ -790,7 +819,7 @@ input, textarea {
   height: 24px;
   font-size: 18px;
   color: var(--w-accent);
-  transition: transform 0.2s ease;
+  transition: transform 200ms var(--ease-out);
 }
 
 .questions-list details[open] summary .faq-icon {
@@ -908,11 +937,11 @@ input, textarea {
   min-height: 44px;
   padding: 10px 20px;
   font-size: 14px;
-  transition: transform 0.12s ease;
+  transition: transform 120ms var(--ease-out);
 }
 
 .billing-choice button:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .billing-choice button[aria-pressed="true"] {
@@ -1092,8 +1121,10 @@ body { color:var(--w-ink1); }
   color: var(--w-ink1);
   border: 1px solid var(--w-border);
 }
-#board-view [role="group"] button:first-child:hover:not(:disabled) {
-  background: var(--w-surface-subtle);
+@media (hover: hover) and (pointer: fine) {
+  #board-view [role="group"] button:first-child:hover:not(:disabled) {
+    background: var(--w-surface-subtle);
+  }
 }
 #board-view [role="group"] button:last-child {
   background: var(--w-accent) !important;
@@ -1106,8 +1137,10 @@ body { color:var(--w-ink1); }
 #board-view [role="group"] button:last-child svg {
   color: var(--w-on-accent) !important;
 }
-#board-view [role="group"] button:last-child:hover:not(:disabled) {
-  background: var(--w-accent-hover) !important;
+@media (hover: hover) and (pointer: fine) {
+  #board-view [role="group"] button:last-child:hover:not(:disabled) {
+    background: var(--w-accent-hover) !important;
+  }
 }
 
 /* Signed-in home, account page */
@@ -1121,7 +1154,9 @@ body { color:var(--w-ink1); }
 .reviews-list { list-style: none; margin: 0; padding: 0; }
 .reviews-list li + li { border-top: 1px solid var(--w-border); }
 .reviews-list a { display: grid; gap: 3px; padding: 14px 8px; margin-inline: -8px; border-radius: 4px; color: var(--w-ink1); text-decoration: none; transition: background .15s ease; }
-.reviews-list a:hover { background: var(--w-surface-subtle); }
+@media (hover: hover) and (pointer: fine) {
+  .reviews-list a:hover { background: var(--w-surface-subtle); }
+}
 .reviews-headline { font-size: 15px; font-weight: 500; line-height: 1.35; }
 .reviews-meta { color: var(--w-ink3); font-size: 12px; }
 .reviews-patterns { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--w-border); }
@@ -1144,3 +1179,28 @@ body { color:var(--w-ink1); }
 .closing-cta h2 { margin: 0; max-width: 560px; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.1; font-weight: 500; letter-spacing: -.03em; }
 .game-limit-note { margin: 0 0 10px; padding: 10px 12px; border-radius: 6px; background: var(--w-surface-subtle); color: var(--w-ink2); font-size: 13px; line-height: 1.5; }
 .game-row:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Board step buttons: press feedback like every other pressable. */
+#board-view [role="group"] button { transition: background-color 0.15s ease, transform 120ms var(--ease-out); }
+#board-view [role="group"] button:active:not(:disabled) { transform: scale(0.97); }
+
+/* Lists arrive in a short cascade (30-50ms apart, five rows at most) so they read as one set. Never blocks input. */
+@keyframes row-arrive { from { opacity: 0; transform: translateY(6px); } }
+.game-list > li, .reviews-list > li { animation: row-arrive 260ms var(--ease-out) both; }
+.game-list > li:nth-child(2), .reviews-list > li:nth-child(2) { animation-delay: 40ms; }
+.game-list > li:nth-child(3), .reviews-list > li:nth-child(3) { animation-delay: 80ms; }
+.game-list > li:nth-child(4), .reviews-list > li:nth-child(4) { animation-delay: 120ms; }
+.game-list > li:nth-child(n+5), .reviews-list > li:nth-child(n+5) { animation-delay: 160ms; }
+
+/* FAQ answers open and close instead of snapping. Browsers without ::details-content ignore this and keep the instant toggle. */
+.questions-list details { interpolate-size: allow-keywords; }
+.questions-list details::details-content {
+  block-size: 0;
+  overflow: clip;
+  transition: block-size 220ms var(--ease-out), content-visibility 220ms allow-discrete;
+}
+.questions-list details[open]::details-content { block-size: auto; }
+@media (prefers-reduced-motion: reduce) {
+  /* The global reset above doesn't reach ::details-content. */
+  .questions-list details::details-content { transition: none; }
+}
