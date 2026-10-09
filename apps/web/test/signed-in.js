@@ -19,12 +19,17 @@
     reviews: [
       { id: 'r1', share_id: 's1', status: 'completed', created_at: iso(1), headline: 'Two natural moves, each one already outnumbered.', moment_count: 2, game_url: 'https://www.chess.com/game/live/1', player_color: 'white', white_player: 'a_long_chess_username', black_player: 'an_opponent_with_a_long_name' },
       { id: 'r2', share_id: 's2', status: 'pending', created_at: iso(0), headline: null, moment_count: 0, game_url: null, player_color: null, white_player: null, black_player: null },
+      ...[3, 4, 5].map(n => ({ id: 'r' + n, share_id: 's' + n, status: 'completed', created_at: iso(n), headline: 'Review number ' + n + ' with a headline long enough to wrap onto a second line on a narrow phone.', moment_count: 1, game_url: null, player_color: 'white', white_player: 'a_long_chess_username', black_player: 'opponent' + n })),
     ],
     patterns: [{ concept: 'Attackers and defenders', count: 3 }, { concept: 'Double attack', count: 2 }],
   };
   const games = { games: [
     { url: 'https://www.chess.com/game/live/1', endedAt: iso(1), timeClass: 'blitz', playerColor: 'white', outcome: 'loss', playerRating: 1210, opponent: 'an_opponent_with_a_long_name', opponentRating: 1250 },
     { url: 'https://www.chess.com/game/live/2', endedAt: iso(2), timeClass: 'rapid', playerColor: 'black', outcome: 'win', playerRating: 1210, opponent: 'bob', opponentRating: 1180 },
+    { url: 'https://www.chess.com/game/live/3', endedAt: iso(3), timeClass: 'blitz', playerColor: 'white', outcome: 'draw', playerRating: 1210, opponent: 'carol', opponentRating: 1300 },
+    { url: 'https://www.chess.com/game/live/4', endedAt: iso(4), timeClass: 'bullet', playerColor: 'black', outcome: 'loss', playerRating: 1210, opponent: 'dave', opponentRating: 1150 },
+    { url: 'https://www.chess.com/game/live/5', endedAt: iso(5), timeClass: 'rapid', playerColor: 'white', outcome: 'win', playerRating: 1210, opponent: 'erin', opponentRating: 1195 },
+    { url: 'https://www.chess.com/game/live/6', endedAt: iso(6), timeClass: 'blitz', playerColor: 'black', outcome: 'win', playerRating: 1210, opponent: 'frank', opponentRating: 1240 },
   ] };
   const json = body => Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }));
   const realFetch = window.fetch;
