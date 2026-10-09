@@ -54,8 +54,6 @@ export default function HomePage() {
   const sampleHighlights = samplePlayed ? [samplePlayed.from, samplePlayed.to] : [];
   const sampleMover = sample.player_color === 'black' ? 'Black' : 'White';
   const reviewedByUrl = new Map((me?.reviews ?? []).filter(r => r.game_url && r.status !== 'failed').map(r => [r.game_url as string, r.id]));
-  // A failed review is re-queued without using the allowance, so those games stay clickable.
-  const failedUrls = new Set((me?.reviews ?? []).filter(r => r.game_url && r.status === 'failed').map(r => r.game_url as string));
   const left = me?.allowance ? Math.max(0, me.allowance.limit - me.allowance.used) : null;
 
   useEffect(() => {
@@ -186,7 +184,7 @@ export default function HomePage() {
                             <button
                               type="button"
                               className="game-row"
-                              disabled={isLoading || (left === 0 && !reviewId && !failedUrls.has(game.url))}
+                              disabled={isLoading || (left === 0 && !reviewId)}
                               aria-busy={pickingUrl === game.url}
                               onClick={() => (reviewId ? router.push('/report/' + reviewId) : reviewGame(game.url))}
                             >
