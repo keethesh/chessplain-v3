@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   insertedAnalyses: 0,
   // Status of the signed-in user's earlier review of the submitted Chess.com game, if any.
   priorStatus: null as string | null,
+  priorCreatedAt: new Date().toISOString(),
   requeueUpdate: undefined as Record<string, unknown> | undefined,
 }));
 
@@ -62,7 +63,7 @@ vi.mock('../src/db/supabase.js', () => {
     }
     if (table === 'profiles') return { data: { subscription_tier: 'free' }, error: null };
     if (table === 'source_games') {
-      return { data: { id: 'source-1', game_analyses: state.priorStatus ? [{ id: 'old-1', share_id: 'share-old', status: state.priorStatus }] : [] }, error: null };
+      return { data: { id: 'source-1', game_analyses: state.priorStatus ? [{ id: 'old-1', share_id: 'share-old', status: state.priorStatus, created_at: state.priorCreatedAt }] : [] }, error: null };
     }
     return { data: { id: 'analysis-1', share_id: 'share-1', status: 'pending' }, error: null };
   }
@@ -184,6 +185,7 @@ describe('retrying a failed report', () => {
     state.quotaBuilders.length = 0;
     state.insertedAnalyses = 0;
     state.priorStatus = 'failed';
+    state.priorCreatedAt = new Date(Date.now() - 86_400_000).toISOString(); // failed yesterday
     state.requeueUpdate = undefined;
   });
 
@@ -205,5 +207,16 @@ describe('retrying a failed report', () => {
   it('does not make a different game free', async () => {
     state.priorStatus = null;
     expect((await submit()).statusCode).toBe(402);
+  });
+
+  it('does not make an old failure free: it needs a slot and counts from now', async () => {
+    state.priorCreatedAt = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    expect((await submit()).statusCode).toBe(402);
+
+    state.quotaCount = 0;
+    state.quotaBuilders.length = 0;
+    expect((await submit()).statusCode).toBe(201);
+    expect(state.quotaBuilders).toHaveLength(1);
+    expect(state.requeueUpdate).toHaveProperty('created_at');
   });
 });

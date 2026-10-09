@@ -54,8 +54,8 @@ export default function HomePage() {
   const sampleHighlights = samplePlayed ? [samplePlayed.from, samplePlayed.to] : [];
   const sampleMover = sample.player_color === 'black' ? 'Black' : 'White';
   const reviewedByUrl = new Map((me?.reviews ?? []).filter(r => r.game_url && r.status !== 'failed').map(r => [r.game_url as string, r.id]));
-  // The engine retries a failed review without using the allowance, so those games stay clickable.
-  const failedUrls = new Set((me?.reviews ?? []).filter(r => r.game_url && r.status === 'failed').map(r => r.game_url as string));
+  // The engine retries a failure from the last 7 days without using the allowance; older ones need a slot.
+  const failedUrls = new Set((me?.reviews ?? []).filter(r => r.game_url && r.status === 'failed' && Date.parse(r.created_at) >= Date.now() - 7 * 86_400_000).map(r => r.game_url as string));
   const left = me?.allowance ? Math.max(0, me.allowance.limit - me.allowance.used) : null;
 
   useEffect(() => {

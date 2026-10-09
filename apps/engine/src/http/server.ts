@@ -228,6 +228,7 @@ async function bootstrap() {
       const externalId = chesscomGame?.gameUrl ?? null;
       let sourceGameId: string | undefined;
       let failedAnalysisId: string | undefined;
+      let freeRetry = false;
 
       // Free/anon users get 2 reports in 7 days. Signed-in users are counted by
       // user_id: an IP key punishes everyone behind shared NAT for a stranger's
@@ -241,19 +242,22 @@ async function bootstrap() {
 
       const createReport = async () => {
         if (userId && externalId) {
-          const { data: existing } = await supabase.from('source_games').select('id, game_analyses(id, share_id, status)')
+          const { data: existing } = await supabase.from('source_games').select('id, game_analyses(id, share_id, status, created_at)')
             .eq('user_id', userId).eq('source', 'chesscom').eq('external_id', externalId).maybeSingle();
           sourceGameId = existing?.id;
           // PostgREST embeds a one-to-one relation as an object, one-to-many as an array.
-          const prior = [existing?.game_analyses].flat()[0] as { id: string; share_id: string; status: string } | null | undefined;
+          const prior = [existing?.game_analyses].flat()[0] as { id: string; share_id: string; status: string; created_at: string } | null | undefined;
           if (prior && prior.status !== 'failed') {
             return reply.status(200).send({ id: prior.id, share_id: prior.share_id, status: prior.status });
           }
           failedAnalysisId = prior?.id;
+          // A failure from this week is retried free: the failure was ours, and failed runs never counted.
+          // An older one goes through the normal quota check and gets a fresh date, or keeping its old
+          // date would make it a free review that never counts.
+          freeRetry = Boolean(prior) && Date.parse(prior!.created_at) >= Date.now() - 7 * 24 * 60 * 60 * 1000;
         }
 
-        // Retrying a failed report is free: the failure was ours, and failed runs never counted.
-        if (!failedAnalysisId && !isPremium && quotaKey && quotaEnforced) {
+        if (!freeRetry && !isPremium && quotaKey && quotaEnforced) {
           const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
           const { count, error: countErr } = await supabase
             .from('game_analyses')
@@ -280,11 +284,12 @@ async function bootstrap() {
         }
 
         if (failedAnalysisId) {
-          // Re-queue the failed report in place. created_at stays as it was, so the
-          // retry does not enter this week's count as a new review.
+          // Re-queue the failed report in place. A free retry keeps its date so it is not
+          // counted as a new review; any other retry has just passed the quota check, so it
+          // counts from now.
           const { data: requeued, error: requeueErr } = await supabase.from('game_analyses').update({
             status: 'pending', attempts: 0, next_attempt_at: null, locked_at: null,
-            error_message: null,
+            error_message: null, ...(freeRetry ? {} : { created_at: new Date().toISOString() }),
           }).eq('id', failedAnalysisId).select('id, share_id, status').single();
           if (requeueErr || !requeued) {
             fastify.log.error(requeueErr, 'Failed to re-queue game_analyses');
