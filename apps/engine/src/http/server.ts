@@ -252,7 +252,8 @@ async function bootstrap() {
           failedAnalysisId = prior?.id;
         }
 
-        if (!isPremium && quotaKey && quotaEnforced) {
+        // Retrying a failed report is free: the failure was ours, and failed runs never counted.
+        if (!failedAnalysisId && !isPremium && quotaKey && quotaEnforced) {
           const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
           const { count, error: countErr } = await supabase
             .from('game_analyses')
@@ -279,10 +280,11 @@ async function bootstrap() {
         }
 
         if (failedAnalysisId) {
-          // Re-queue the failed report in place; created_at resets so quota counts it this week.
+          // Re-queue the failed report in place. created_at stays as it was, so the
+          // retry does not enter this week's count as a new review.
           const { data: requeued, error: requeueErr } = await supabase.from('game_analyses').update({
             status: 'pending', attempts: 0, next_attempt_at: null, locked_at: null,
-            error_message: null, created_at: new Date().toISOString(),
+            error_message: null,
           }).eq('id', failedAnalysisId).select('id, share_id, status').single();
           if (requeueErr || !requeued) {
             fastify.log.error(requeueErr, 'Failed to re-queue game_analyses');

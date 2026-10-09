@@ -54,6 +54,8 @@ export default function HomePage() {
   const sampleHighlights = samplePlayed ? [samplePlayed.from, samplePlayed.to] : [];
   const sampleMover = sample.player_color === 'black' ? 'Black' : 'White';
   const reviewedByUrl = new Map((me?.reviews ?? []).filter(r => r.game_url && r.status !== 'failed').map(r => [r.game_url as string, r.id]));
+  // The engine retries a failed review without using the allowance, so those games stay clickable.
+  const failedUrls = new Set((me?.reviews ?? []).filter(r => r.game_url && r.status === 'failed').map(r => r.game_url as string));
   const left = me?.allowance ? Math.max(0, me.allowance.limit - me.allowance.used) : null;
 
   useEffect(() => {
@@ -173,7 +175,7 @@ export default function HomePage() {
                     </div>
                     {left === 0 && (
                       <p className="game-limit-note" role="status">
-                        No free reviews left this week{me?.allowance?.next_slot_at ? `. Your next one is ${resetsIn(me.allowance.next_slot_at)}` : ''}. <Link href="/pricing" className="underline">Upgrade</Link> for no weekly limit. Games you’ve reviewed still open.
+                        No free reviews left this week{me?.allowance?.next_slot_at ? `. Your next one is ${resetsIn(me.allowance.next_slot_at)}` : ''}. <Link href="/pricing" className="underline">Upgrade</Link> for no weekly limit. Games you’ve reviewed open, and a review that failed can be retried.
                       </p>
                     )}
                     <ul className="game-list" aria-labelledby="game-list-label">
@@ -184,7 +186,7 @@ export default function HomePage() {
                             <button
                               type="button"
                               className="game-row"
-                              disabled={isLoading || (left === 0 && !reviewId)}
+                              disabled={isLoading || (left === 0 && !reviewId && !failedUrls.has(game.url))}
                               aria-busy={pickingUrl === game.url}
                               onClick={() => (reviewId ? router.push('/report/' + reviewId) : reviewGame(game.url))}
                             >

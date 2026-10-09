@@ -12,6 +12,9 @@ const state = vi.hoisted(() => ({
   // game_analyses rows inserted during the test; the quota count sees them,
   // like the real table does.
   insertedAnalyses: 0,
+  // Status of the signed-in user's earlier review of the submitted Chess.com game, if any.
+  priorStatus: null as string | null,
+  requeueUpdate: undefined as Record<string, unknown> | undefined,
 }));
 
 // server.ts builds a module-private Fastify instance and starts listening
@@ -41,6 +44,14 @@ vi.mock('../src/config.js', () => ({
   },
 }));
 
+
+vi.mock('../src/analysis/chesscom.js', () => ({
+  ChessComInputError: class extends Error {},
+  listRecentChessComGames: vi.fn(),
+  fetchRecentChessComGame: vi.fn(async (_user: string, url?: string) => ({
+    pgn: '1. e4 e5 2. Nf3 Nc6 *', eloBand: 'intermediate', rating: 1200, playerColor: 'white', opponentUsername: 'x', gameUrl: url ?? null,
+  })),
+}));
 vi.mock('../src/db/supabase.js', () => {
   type Log = Array<[string, unknown[]]>;
   function resultFor(table: string, log: Log) {
@@ -50,7 +61,9 @@ vi.mock('../src/db/supabase.js', () => {
       return { count: state.quotaCount + state.insertedAnalyses, error: null };
     }
     if (table === 'profiles') return { data: { subscription_tier: 'free' }, error: null };
-    if (table === 'source_games') return { data: { id: 'source-1' }, error: null };
+    if (table === 'source_games') {
+      return { data: { id: 'source-1', game_analyses: state.priorStatus ? [{ id: 'old-1', share_id: 'share-old', status: state.priorStatus }] : [] }, error: null };
+    }
     return { data: { id: 'analysis-1', share_id: 'share-1', status: 'pending' }, error: null };
   }
   return {
@@ -64,7 +77,11 @@ vi.mock('../src/db/supabase.js', () => {
         const log: Log = [];
         const builder: Record<string, unknown> & { log: Log } = { log };
         for (const method of ['select', 'eq', 'neq', 'or', 'gte', 'is', 'in', 'single', 'maybeSingle', 'insert', 'update', 'order', 'limit']) {
-          builder[method] = (...args: unknown[]) => { log.push([method, args]); return builder; };
+          builder[method] = (...args: unknown[]) => {
+            log.push([method, args]);
+            if (method === 'update' && table === 'game_analyses') state.requeueUpdate = args[0] as Record<string, unknown>;
+            return builder;
+          };
         }
         builder.then = (onFulfilled: (value: unknown) => unknown, onRejected: (reason: unknown) => unknown) => {
           if (table === 'game_analyses' && log.some(e => e[0] === 'insert')) state.insertedAnalyses++;
@@ -157,5 +174,36 @@ describe('free-report quota keying', () => {
     const replies = [fakeReply(), fakeReply(), fakeReply()];
     await Promise.all(replies.map(reply => handler(fakeRequest(false), reply)));
     expect(replies.map(r => r.statusCode).sort()).toEqual([201, 201, 402]);
+  });
+});
+
+describe('retrying a failed report', () => {
+  beforeEach(() => {
+    state.signedIn = true;
+    state.quotaCount = 2; // allowance used up
+    state.quotaBuilders.length = 0;
+    state.insertedAnalyses = 0;
+    state.priorStatus = 'failed';
+    state.requeueUpdate = undefined;
+  });
+
+  async function submit() {
+    const reply = fakeReply();
+    const request = { ...fakeRequest(true), body: { chesscom_username: 'someone', chesscom_game_url: 'https://www.chess.com/game/live/1' } };
+    await (await reportsHandler())(request, reply);
+    return reply;
+  }
+
+  it('is free when the allowance is used up, and keeps its original date', async () => {
+    const reply = await submit();
+    expect(reply.statusCode).toBe(201);
+    expect(state.quotaBuilders).toHaveLength(0); // the quota was never consulted
+    expect(state.requeueUpdate).toMatchObject({ status: 'pending', attempts: 0 });
+    expect(state.requeueUpdate).not.toHaveProperty('created_at');
+  });
+
+  it('does not make a different game free', async () => {
+    state.priorStatus = null;
+    expect((await submit()).statusCode).toBe(402);
   });
 });
