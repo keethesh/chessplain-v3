@@ -37,6 +37,8 @@ const CANDIDATES: Candidate[] = [
   { label: 'deepseek-v4.1-flash', model: 'deepseek/deepseek-v4.1-flash', reasoning: 'none' },
   { label: 'qwen3.8-flash', model: 'qwen/qwen3.8-flash', reasoning: 'none' },
   { label: 'qwen3.8-omni-flash', model: 'qwen/qwen3.8-omni-flash', reasoning: 'none' },
+  { label: 'mimo-v2.6-flash', model: 'xiaomi/mimo-v2.6-flash', reasoning: 'none' },
+  { label: 'mimo-v2.6-pro', model: 'xiaomi/mimo-v2.6-pro', reasoning: 'none' },
 ];
 
 /**
