@@ -1100,8 +1100,6 @@ body { color:var(--w-ink1); }
 .report-shell > header h1 { max-width:1000px; font-family:var(--font-plex-sans),sans-serif; font-size:clamp(36px,4.4vw,64px); font-weight:600; letter-spacing:-.035em; line-height:1.02; }
 .report-shell > header p { color:var(--w-ink2); }
 .report-analysis { border-top:0; padding-top:0; }
-.report-analysis > div:first-child > p { color:var(--w-accent); font:500 12px var(--font-plex-mono),monospace; text-transform:uppercase; }
-.report-analysis > div:first-child button { border-radius:4px; }
 .report-analysis #board-view { padding:14px; border:1px solid var(--w-border); background:var(--w-surface); border-radius:6px; }
 .report-analysis #board-view > div:first-child { color:var(--w-ink2); }
 .report-analysis #board-view > div:first-child p { color:var(--w-ink2); font:500 12px var(--font-plex-mono),monospace; }
@@ -1204,3 +1202,14 @@ body { color:var(--w-ink1); }
   /* The global reset above doesn't reach ::details-content. */
   .questions-list details::details-content { transition: none; }
 }
+
+/* Report header: one card per moment, which also picks the moment shown on the board. */
+.moment-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; max-width: 880px; margin-top: 28px; }
+.moment-chip { display: grid; gap: 4px; align-content: start; min-height: 44px; padding: 14px 16px; border: 1px solid var(--w-border); border-radius: 6px; background: transparent; color: var(--w-ink1); text-align: left; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease, transform 120ms var(--ease-out); }
+.moment-chip:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .moment-chip:hover { background: var(--w-surface-subtle); } }
+.moment-chip[aria-pressed="true"] { border-color: var(--w-accent); background: var(--w-accent-soft); }
+.moment-chip-kicker { font: 500 11px/1.4 var(--font-plex-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--w-ink3); }
+.moment-chip[aria-pressed="true"] .moment-chip-kicker { color: var(--w-accent); }
+.moment-chip-move { font-size: 20px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; }
+.moment-chip-idea { font-size: 14px; color: var(--w-ink2); line-height: 1.4; }

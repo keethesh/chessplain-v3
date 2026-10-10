@@ -154,20 +154,22 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
           {actions}
         </div>
         <h1 className="t-heading max-w-4xl text-4xl leading-[1.1] sm:text-5xl lg:text-[3.5rem]">{report.summary?.headline || (complete ? 'Your game, a little clearer.' : 'Finding the moments that matter.')}</h1>
-        {report.summary?.story && <p className="mt-5 max-w-3xl text-base leading-relaxed text-[var(--w-ink2)] sm:text-lg">{report.summary.story}</p>}
+        {moments.length > 0 ? (
+          <div className="moment-strip" role="group" aria-label={moments.length === 1 ? 'The moment to learn from' : `The ${moments.length} moments to learn from`}>
+            {moments.map((moment, index) => (
+              <button key={moment.ply} type="button" aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className="moment-chip focus-ring">
+                <span className="moment-chip-kicker">{moment.severity_label || 'Moment'}</span>
+                <span className="moment-chip-move t-notation">{moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played.replace(/^\d+\.+\s*/, '')}</span>
+                <span className="moment-chip-idea">{moment.concept_name}</span>
+              </button>
+            ))}
+          </div>
+        ) : report.summary?.story && <p className="mt-5 max-w-3xl text-base leading-relaxed text-[var(--w-ink2)] sm:text-lg">{report.summary.story}</p>}
         <p className="mt-4 max-w-2xl text-xs leading-relaxed text-[var(--w-ink3)]">Engine evidence points to an explanation; it isn’t a certainty. Use the board to check the idea yourself.</p>
       </header>
 
       {moments.length > 0 ? (
         <section aria-label="Explore the key moments" className="report-analysis border-t border-[var(--w-border)] pt-6">
-          <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-sm text-[var(--w-ink2)]">{moments.length === 1 ? 'One moment to learn from' : `${moments.length} moments to learn from`}</p>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Choose a moment">
-              {moments.map((moment, index) => (
-                <button key={moment.ply} aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className={`focus-ring min-h-11 rounded border px-4 text-sm font-medium transition-[background-color,border-color,color,transform] active:scale-[0.98] ${index === activeIndex ? 'border-[var(--w-ink1)] bg-[var(--w-ink1)] text-[var(--w-canvas)]' : 'border-[var(--w-border)] hover:bg-[var(--w-surface-subtle)]'}`}>Move {moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played.replace(/^\d+\.+\s*/, '')}</button>
-              ))}
-            </div>
-          </div>
           <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
             <div id="board-view" className="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+16px)]">
               <div className="mb-3 flex items-center justify-between gap-3">
