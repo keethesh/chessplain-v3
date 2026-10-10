@@ -40,6 +40,27 @@ function positionSteps(moment: MomentReport) {
   return steps;
 }
 
+/**
+ * The game summary, one sentence per line. "Move 19" opens that position, so a
+ * claim can be checked on the board instead of replayed in the reader's head.
+ */
+function StoryLines({ story, moments, onPick }: { story: string; moments: MomentReport[]; onPick: (index: number) => void }) {
+  const sentences = story.replace(/([.!?])\s+(?=[A-Z])/g, '$1\u0000').split('\u0000').filter(Boolean);
+  return (
+    <ol className="story-lines">
+      {sentences.map((sentence, i) => (
+        <li key={i}>
+          {sentence.split(/(\b[Mm]ove \d+\b)/).map((part, j) => {
+            const number = part.match(/^[Mm]ove (\d+)$/)?.[1];
+            const index = number ? moments.findIndex(m => m.move_number === Number(number)) : -1;
+            return index >= 0 ? <button key={j} type="button" className="story-move focus-ring" onClick={() => onPick(index)}>{part}</button> : part;
+          })}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function SharedReportInteractiveView({ report, shareId, isOwner = false, actions, children, onSelectMoment }: SharedReportInteractiveViewProps) {
   const moments = report.moments || [];
   const [activeIndex, setActiveIndex] = useState(0);
@@ -154,7 +175,7 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
           {actions}
         </div>
         <h1 className="t-heading max-w-4xl text-4xl leading-[1.1] sm:text-5xl lg:text-[3.5rem]">{report.summary?.headline || (complete ? 'Your game, a little clearer.' : 'Finding the moments that matter.')}</h1>
-        {moments.length > 0 ? (
+        {moments.length > 0 && (
           <div className="moment-strip" role="group" aria-label={moments.length === 1 ? 'The moment to learn from' : `The ${moments.length} moments to learn from`}>
             {moments.map((moment, index) => (
               <button key={moment.ply} type="button" aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className="moment-chip focus-ring">
@@ -164,7 +185,13 @@ export function SharedReportInteractiveView({ report, shareId, isOwner = false, 
               </button>
             ))}
           </div>
-        ) : report.summary?.story && <p className="mt-5 max-w-3xl text-base leading-relaxed text-[var(--w-ink2)] sm:text-lg">{report.summary.story}</p>}
+        )}
+        {report.summary?.story && (
+          <div className="story-block">
+            <span className="story-kicker">How the game went</span>
+            <StoryLines story={report.summary.story} moments={moments} onPick={selectMoment} />
+          </div>
+        )}
         <p className="mt-4 max-w-2xl text-xs leading-relaxed text-[var(--w-ink3)]">Engine evidence points to an explanation; it isn’t a certainty. Use the board to check the idea yourself.</p>
       </header>
 

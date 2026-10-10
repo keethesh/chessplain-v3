@@ -31,7 +31,7 @@ export const DEMO_REPORT: ReportDetail = {
   created_at: '2026-09-01T12:00:00Z', source_games: { pgn: DEMO_PGN },
   summary: {
     headline: 'Two natural moves, each one already outnumbered.',
-    story: 'On move 6 Black developed a knight and walked into a double attack from White’s queen. Three moves later a pawn push to b5 was met by three attackers against one defender. After that, White’s forcing sacrifices finished the game.',
+    story: 'Move 6 developed a knight into a double attack from White’s queen. At move 9, a pawn push to b5 met three attackers against one defender. After that, White’s forcing sacrifices finished the game.',
     focus_habit: 'Before every move, count what your opponent’s pieces attack and what you defend.',
   },
   moments: [
