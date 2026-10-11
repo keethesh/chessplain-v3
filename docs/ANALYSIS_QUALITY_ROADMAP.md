@@ -332,7 +332,7 @@ the capture sequence the played move starts. Two labels that had mirrored
 the bug were corrected to `null`.
 
 Result (2026-10-11): overall accuracy 0.980 (97/99), non-null precision
-1.000 (14/14). Class balance: null 82, double attack 7, hanging piece 4,
+1.000 (14/14). Class balance: null 83, double attack 7, hanging piece 4,
 missed mate threat 3, losing exchange 2, weak back rank 0. Per concept:
 hanging piece, double attack and losing exchange 1.000 precision and recall;
 missed mate threat precision 1.000, recall 0.333 (1/3); weak back rank has no
