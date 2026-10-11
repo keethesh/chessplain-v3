@@ -17,7 +17,7 @@ function stepIndex(status: string): number {
 
 export function AnalysisWaitState({ status, stalled, onRetry, playerNames }: AnalysisWaitStateProps) {
   const active = stepIndex(status);
-  const live = `${STEPS[active]}.${stalled ? ' This is taking longer than usual.' : ' About a minute.'}`;
+  const live = `${STEPS[active]}.${stalled ? ' This is taking longer than usual.' : ''}`;
 
   return (
     <div className="page report-wait">

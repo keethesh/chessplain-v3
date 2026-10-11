@@ -273,9 +273,8 @@ function Pending() {
 }
 
 export default function HomePage() {
-  const { ready, signedIn, me, failed, retry } = useMe();
+  const { signedIn, me, failed, retry } = useMe();
   useEffect(() => { captureEvent('landing_viewed', { hero_variant: 'editorial_v1' }); }, []);
-  if (!ready || (signedIn && !me && !failed)) return <Pending />;
   if (signedIn && me) return <SignedIn me={me} />;
   if (signedIn && failed) {
     return (
@@ -289,5 +288,6 @@ export default function HomePage() {
       </div>
     );
   }
+  if (signedIn) return <Pending />;
   return <Anonymous />;
 }

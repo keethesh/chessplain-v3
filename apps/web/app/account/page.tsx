@@ -168,7 +168,7 @@ export default function AccountPage() {
 
           <section className="acct-block" aria-labelledby="acct-patterns">
             <h2 id="acct-patterns" className="h3">What came back</h2>
-            {me.patterns.length === 0 ? <p className="surface muted">Nothing has come back twice. Scan again and we’ll keep watch.</p> : (
+            {me.patterns.length === 0 ? <p className="surface muted">Nothing has come back twice. Scan again after you’ve played more.</p> : (
               <ul className="acct-patterns">
                 {me.patterns.map(pattern => (
                   <li key={pattern.concept.id} className="surface acct-pattern bg-concept" data-concept={pattern.concept.id}>

@@ -2,8 +2,8 @@
    Durations stay inside the UI budget. Reduced motion snaps. */
 
 ::view-transition-group(.morph) {
-  animation-duration: 400ms;
-  animation-timing-function: var(--ease-in-out);
+  animation-duration: 200ms;
+  animation-timing-function: var(--ease-out);
 }
 ::view-transition-image-pair(.morph) {
   animation-name: vt-blur;

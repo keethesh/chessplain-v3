@@ -23,7 +23,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   return (
     <div className="page status-page">
       <div className="panel status-panel bg-concept" data-concept="missed_mate_threat">
-        <Gremlin className="status-gremlin" concept="missed_mate_threat" size={200} />
+        <Gremlin className="status-gremlin" concept="missed_mate_threat" size={200} priority />
         <div className="status-copy">
           <h1 className="h1">Oops!</h1>
           <p className="lede">The Mate Misser looked everywhere. This page failed before it could finish. Try again, or go back and scan a username.</p>

@@ -189,6 +189,7 @@ function Scan({ id }: { id: string }) {
   if (missing) {
     return (
       <div className="page scan">
+        <p className="sr-only" role="status">{statusLine(scan, true)}</p>
         <h1 className="h1">Can’t find that scan.</h1>
         <p className="lede">The link may be wrong. Start a new one and we’ll read your last 10 games.</p>
         <Link className="btn" href="/#scan">Find my gremlin <span className="arrow" aria-hidden="true">→</span></Link>
@@ -213,8 +214,9 @@ function Scan({ id }: { id: string }) {
 
   return (
     <div className="page scan">
+      <p className="sr-only" role="status">{statusLine(scan, false)}</p>
       {(!scan || scan.status === 'pending' || scan.status === 'fetching' || scan.status === 'analyzing') && (
-        <h1 className="h2 scan-lead" role="status">{statusLine(scan, false)}</h1>
+        <h1 className="h2 scan-lead">{statusLine(scan, false)}</h1>
       )}
       {loadError && <p className="field-note" data-tone="error" role="alert">{loadError}</p>}
 
@@ -240,7 +242,7 @@ function Scan({ id }: { id: string }) {
 
       {!scan || scan.status === 'pending' || scan.status === 'fetching' || scan.status === 'analyzing' ? (
         <section className="surface" aria-busy={!done}>
-          <p className="muted scan-reassure">About a minute. Leave this page open.</p>
+          <p className="muted scan-reassure">Leave this page open. The count above updates as each game is read.</p>
           <Slips scan={scan} totalSlots={totalSlots} />
         </section>
       ) : null}
@@ -286,7 +288,7 @@ function Scan({ id }: { id: string }) {
                   <Link className="btn btn--key" href={`/login?next=${encodeURIComponent(`/scan/${id}`)}`}>Sign in to keep tracking it</Link>
                 )}
               </div>
-              {!exampleHref && <p className="small muted">The example game is still being written. It takes about 20 seconds.</p>}
+              {!exampleHref && <p className="small muted">The example game is still being written.</p>}
             </div>
             <ViewTransition name={`gremlin-${top.concept.id}`} share="morph" default="none">
               <div className="scan-gremlin">

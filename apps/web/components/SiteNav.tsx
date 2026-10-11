@@ -21,7 +21,7 @@ export function SiteNav() {
         ? <Link href="/account" className="nav__link" aria-current={pathname === '/account' ? 'page' : undefined}>Account</Link>
         : <Link href={`/login${next}`} className="nav__link">Sign in</Link>)}
       {!(onHome && signedIn) && (
-        <Link href={signedIn ? '/' : '/#scan'} className="btn btn--sm" aria-label={signedIn ? undefined : 'Find my gremlin'}>
+        <Link href={signedIn ? '/' : '/#scan'} className="btn btn--sm">
           {signedIn ? 'Your gremlin' : <><span className="nav__cta-long">Find my gremlin</span><span className="nav__cta-short">Scan</span></>}
         </Link>
       )}

@@ -130,6 +130,10 @@ export function SharedReportInteractiveView({
   const [shareNote, setShareNote] = useState('');
   const [shareUrl, setShareUrl] = useState('');
   const moveRef = useRef<HTMLInputElement>(null);
+  const outcomeRef = useRef<HTMLParagraphElement>(null);
+  const ideaRef = useRef<HTMLHeadingElement>(null);
+  const promptRef = useRef<HTMLHeadingElement>(null);
+  const land = useRef<'result' | 'input' | null>(null);
 
   useEffect(() => {
     if (jumped.current || focusPly == null) return;
@@ -160,6 +164,13 @@ export function SharedReportInteractiveView({
   }, [revealed, moment]);
 
   useEffect(() => { setTyped(''); setNote(''); setFocusSquare(null); }, [moment?.ply]);
+  useEffect(() => {
+    const want = land.current;
+    if (!want) return;
+    land.current = null;
+    if (want === 'input') moveRef.current?.focus();
+    else (outcomeRef.current ?? ideaRef.current ?? promptRef.current)?.focus();
+  });
 
   function commit(san: string, fen: string, from?: string, to?: string) {
     if (!moment) return;
@@ -175,6 +186,7 @@ export function SharedReportInteractiveView({
     setTries(prev => ({ ...prev, [moment.ply]: next }));
     setNote('');
     setTyped('');
+    land.current = 'result';
   }
 
   function showMe() {
@@ -192,6 +204,7 @@ export function SharedReportInteractiveView({
       setTries(prev => ({ ...prev, [moment.ply]: { kind: 'shown', fen: moment.fen_before, san: best } }));
     }
     setNote('');
+    land.current = 'result';
   }
 
   function onDrop(from: string, to: string): boolean {
@@ -229,6 +242,7 @@ export function SharedReportInteractiveView({
     setTries(prev => ({ ...prev, [moment.ply]: { kind: 'prompt' } }));
     setNote('');
     setTyped('');
+    land.current = 'input';
   }
 
   async function share() {
@@ -253,6 +267,7 @@ export function SharedReportInteractiveView({
     const url = new URL(window.location.href);
     url.searchParams.set('focus', String(ply));
     window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+    land.current = 'result';
   }
 
   const boardFen = !moment ? ''
@@ -302,14 +317,14 @@ export function SharedReportInteractiveView({
         {report.share_id && (
           <div className="report-share">
             <button type="button" className="btn btn--key btn--sm" onClick={share}>Copy link</button>
-            {shareNote && <p role="status">{shareNote}</p>}
+            <p role="status" className={shareNote ? undefined : 'sr-only'}>{shareNote}</p>
             {shareUrl && <input className="input" aria-label="Share link" readOnly value={shareUrl} onFocus={event => event.target.select()} />}
           </div>
         )}
       </header>
 
       {progressNote && <p className="report-status" role="status">{progressNote}</p>}
-      {moments.length > 1 && <p className="report-count">Moment {safe + 1} of {moments.length}</p>}
+      {moments.length > 1 && <p className="report-count" aria-live="polite">Moment {safe + 1} of {moments.length}</p>}
 
       {moment ? (
         <div className="report-grid">
@@ -338,10 +353,10 @@ export function SharedReportInteractiveView({
           </div>
 
           <div className="report-copy">
-            <p className={outcome ? 'report-outcome' : 'sr-only'} role="status" data-outcome={outcome ? attempt.kind : undefined}>{outcome}</p>
+            <p ref={outcome ? outcomeRef : undefined} tabIndex={outcome ? -1 : undefined} className={outcome ? 'report-outcome' : 'sr-only'} role="status" data-outcome={outcome ? attempt.kind : undefined}>{outcome}</p>
             {attempt.kind === 'prompt' ? (
               <>
-                <h2 className="h3">Your move.</h2>
+                <h2 ref={promptRef} tabIndex={-1} className="h3">Your move.</h2>
                 <p className="lede report-context">
                   In the game, {mode === 'owner' ? 'you' : side} played <span className="move" translate="no">{moveLabel}</span> here.
                   {gremlinName ? <> That let <strong translate="no">{gremlinName}</strong> in.</> : null}
@@ -374,7 +389,7 @@ export function SharedReportInteractiveView({
             ) : (
               <>
                 <div className="report-explain">
-                  <h2 className="h3">The idea</h2>
+                  <h2 ref={ideaRef} tabIndex={-1} className="h3">The idea</h2>
                   <div className="report-prose"><SquareText text={moment.probable_thought} colors={squareColors} onFocusSquare={setFocusSquare} /></div>
                   <h3 className="h3">What happens</h3>
                   <div className="report-prose"><SquareText text={moment.what_actually_happens} colors={squareColors} onFocusSquare={setFocusSquare} /></div>

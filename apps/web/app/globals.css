@@ -150,7 +150,6 @@ p { text-wrap: pretty; }
   transition: box-shadow var(--dur-ui) var(--ease-out);
 }
 .input::placeholder { color: #6b6b6b; }
-.input:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--sky); }
 .input[aria-invalid="true"] { border-color: var(--red); background: #fff4f6; }
 textarea.input { height: auto; min-height: 140px; padding: 16px 24px; border-radius: 24px; resize: vertical; line-height: 1.4; }
 
@@ -223,7 +222,7 @@ textarea.input { height: auto; min-height: 140px; padding: 16px 24px; border-rad
   text-transform: uppercase; text-decoration: none; color: var(--ink);
 }
 .nav { display: flex; align-items: center; gap: clamp(12px, 2vw, 28px); }
-.nav__link { font-weight: 700; font-size: 16px; text-decoration: none; }
+.nav__link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; font-size: 16px; text-decoration: none; }
 .nav__link[aria-current="page"] { text-decoration: underline; }
 @media (hover: hover) and (pointer: fine) { .nav__link:hover { text-decoration: underline; } }
 .nav__cta-short { display: none; }
@@ -235,11 +234,16 @@ textarea.input { height: auto; min-height: 140px; padding: 16px 24px; border-rad
   .nav__cta-long { display: none; }
   .nav__cta-short { display: inline; }
 }
+@media (max-width: 360px) {
+  .wordmark { font-size: 16px; }
+  .nav { gap: 6px; }
+  .btn--sm { padding-inline: 12px; }
+}
 
 .site-footer { border-top: var(--line); margin-top: clamp(48px, 8vw, 120px); }
 .site-footer__inner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 32px; padding-block: 24px; font-size: 15px; }
 .site-footer__links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
-.site-footer__links a { font-weight: 700; text-decoration: none; }
+.site-footer__links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .site-footer__links a:hover { text-decoration: underline; } }
 
 /* ---------- Motion utilities ---------- */

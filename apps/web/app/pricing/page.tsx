@@ -88,7 +88,7 @@ export default function PricingPage() {
           <h1 className="h1">Drop the <span className="hl">weekly limit</span>!</h1>
           <p className="lede">Free is two scans and two full reviews every 7 days. Premium removes both limits.</p>
         </div>
-        <Gremlin className="price-gremlin" concept="hanging_piece" size={240} />
+        <Gremlin className="price-gremlin" concept="hanging_piece" size={240} priority />
       </header>
 
       {returnedFromCheckout && (
@@ -194,7 +194,7 @@ export default function PricingPage() {
         </details>
         <details>
           <summary>Do I need an account?</summary>
-          <p>No. The free scan and the two weekly reviews work without an account or a card. Sign in when you want the gremlin to stay with you.</p>
+          <p>No. Two free scans and two full reviews every 7 days work without an account or a card. Sign in when you want the gremlin to stay with you.</p>
         </details>
         <details>
           <summary>What does Premium do today?</summary>

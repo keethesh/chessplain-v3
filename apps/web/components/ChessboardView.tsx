@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 
@@ -31,6 +31,27 @@ export function ChessboardView({
   animationMs,
   onPieceDrop,
 }: ChessboardViewProps) {
+  const boardRef = useRef<HTMLDivElement>(null);
+  const animate = useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      mq.addEventListener('change', onChange);
+      return () => mq.removeEventListener('change', onChange);
+    },
+    () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    () => true,
+  );
+  useEffect(() => {
+    const root = boardRef.current;
+    if (!root) return;
+    const lock = () => {
+      root.querySelectorAll<HTMLElement>('[tabindex]').forEach((el) => { if (el.tabIndex !== -1) el.tabIndex = -1; });
+    };
+    lock();
+    const obs = new MutationObserver(lock);
+    obs.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['tabindex'] });
+    return () => obs.disconnect();
+  }, [fen, onPieceDrop]);
   const customSquareStyles: Record<string, React.CSSProperties> = {};
 
   for (const sq of highlightSquares) {
@@ -77,7 +98,7 @@ export function ChessboardView({
 
   return (
     <div className="w-full select-none overflow-hidden board-frame" style={{ maxWidth: boardWidth }}>
-      <div className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${positionLabel}. ${piecePlacement}`}>
+      <div ref={boardRef} className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${positionLabel}. ${piecePlacement}`}>
         <Chessboard
           options={{
             position: fen,
@@ -88,7 +109,10 @@ export function ChessboardView({
             arrows: customArrows,
             darkSquareStyle: { backgroundColor: '#a6d7ff' },
             lightSquareStyle: { backgroundColor: '#ffffff' },
-            ...(animationMs === undefined ? {} : { animationDurationInMs: animationMs, showAnimations: animationMs > 0 }),
+            lightSquareNotationStyle: { color: '#0a0a0a' },
+            darkSquareNotationStyle: { color: '#0a0a0a' },
+            showAnimations: animate && animationMs !== 0,
+            ...(animationMs === undefined ? {} : { animationDurationInMs: animationMs }),
           }}
         />
       </div>

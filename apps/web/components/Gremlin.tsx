@@ -1,5 +1,4 @@
 import type { ConceptId } from '../lib/api';
-import { GREMLINS } from '../lib/gremlins';
 
 /**
  * The one place a gremlin character is drawn. Today it is a still illustration;
@@ -13,19 +12,22 @@ export function Gremlin({ concept, size = 240, label, className, priority }: {
   className?: string;
   priority?: boolean;
 }) {
+  const base = `/gremlins/${concept}`;
   return (
     <img
-      src={`/gremlins/${concept}.png`}
+      src={`${base}-320.webp`}
+      srcSet={`${base}-160.webp 160w, ${base}-320.webp 320w, ${base}-640.webp 640w`}
+      sizes={`${size}px`}
       alt={label ?? ''}
       aria-hidden={label ? undefined : true}
       width={size}
       height={size}
       loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : undefined}
       decoding="async"
       draggable={false}
       className={className}
-      style={{ width: size, height: 'auto', maxWidth: '100%' }}
-      title={label ?? GREMLINS[concept].name}
+      title={label}
     />
   );
 }

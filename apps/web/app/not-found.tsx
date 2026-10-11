@@ -14,7 +14,7 @@ export default function NotFound() {
   return (
     <div className="page status-page">
       <div className="panel status-panel bg-concept" data-concept="missed_mate_threat">
-        <Gremlin className="status-gremlin" concept="missed_mate_threat" size={200} />
+        <Gremlin className="status-gremlin" concept="missed_mate_threat" size={200} priority />
         <div className="status-copy">
           <h1 className="h1">Nothing on this square!</h1>
           <p className="lede">The Mate Misser looked everywhere. The link may have been cut short when it was shared.</p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Chess } from 'chess.js';
 import { ChessboardView } from './ChessboardView';
 import { DEMO_REPORT } from '../lib/demo-report';
@@ -14,12 +14,23 @@ export function HomeTry() {
   const [outcome, setOutcome] = useState<Outcome>('idle');
   const [typed, setTyped] = useState('');
   const [note, setNote] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const outcomeRef = useRef<HTMLParagraphElement>(null);
+  const land = useRef<'outcome' | 'input' | null>(null);
+
+  useEffect(() => {
+    const want = land.current;
+    if (!want) return;
+    land.current = null;
+    (want === 'input' ? inputRef.current : outcomeRef.current)?.focus();
+  });
 
   function apply(game: Chess, san: string) {
     setFen(game.fen());
     setNote('');
     setTyped('');
     setOutcome(san === MOMENT.best_move ? 'checked' : san === MOMENT.played ? 'played' : 'other');
+    land.current = 'outcome';
   }
 
   function onDrop(from: string, to: string) {
@@ -67,7 +78,8 @@ export function HomeTry() {
   return (
     <div className="home-try">
       <ChessboardView fen={fen} orientation="black" boardWidth={520} arrows={arrows} onPieceDrop={outcome === 'idle' ? onDrop : undefined} />
-      <div className="home-try-copy" aria-live="polite">
+      <div className="home-try-copy">
+        <p className="sr-only" role="status">{outcome === 'checked' ? 'That’s the move we checked.' : outcome === 'played' ? 'That’s the game move.' : outcome === 'other' ? 'Different from the line we checked.' : ''}</p>
         {outcome === 'idle' ? (
           <>
             <p className="big">Black to move. Find the move that stops the fork.</p>
@@ -75,7 +87,7 @@ export function HomeTry() {
             {note ? <p className="field-note" data-tone="error" role="alert">{note}</p> : null}
             <form className="home-try-actions" onSubmit={playTyped}>
               <label className="sr-only" htmlFor="try-san">Move</label>
-              <input id="try-san" className="input" name="move" value={typed} onChange={(event) => setTyped(event.target.value)} placeholder="Qf6" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="text" />
+              <input ref={inputRef} id="try-san" className="input" name="move" value={typed} onChange={(event) => setTyped(event.target.value)} placeholder="e.g. Be7" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="text" />
               <button className="btn btn--key" type="submit">Play move</button>
               <button className="btn btn--key" type="button" onClick={showChecked}>Show the checked move</button>
             </form>
@@ -84,24 +96,24 @@ export function HomeTry() {
           <div className="home-outcome" data-outcome={outcome} key={outcome}>
             {outcome === 'checked' ? (
               <>
-                <p className="big">That’s the move we checked.</p>
+                <p className="big" ref={outcomeRef} tabIndex={-1}>That’s the move we checked.</p>
                 <p>{MOMENT.why_better}</p>
               </>
             ) : null}
             {outcome === 'played' ? (
               <>
-                <p className="big">That’s the game move.</p>
+                <p className="big" ref={outcomeRef} tabIndex={-1}>That’s the game move.</p>
                 <p>{MOMENT.what_actually_happens}</p>
                 <p className="move">Checked line: {MOMENT.refutation_line}</p>
               </>
             ) : null}
             {outcome === 'other' ? (
               <>
-                <p className="big">Different from the line we checked.</p>
+                <p className="big" ref={outcomeRef} tabIndex={-1}>Different from the line we checked.</p>
                 <p>We only verified <span className="move">{MOMENT.best_move}</span>.</p>
               </>
             ) : null}
-            <button className="btn btn--key" type="button" onClick={() => { setFen(MOMENT.fen_before); setOutcome('idle'); setNote(''); setTyped(''); }}>Try again</button>
+            <button className="btn btn--key" type="button" onClick={() => { land.current = 'input'; setFen(MOMENT.fen_before); setOutcome('idle'); setNote(''); setTyped(''); }}>Try again</button>
           </div>
         )}
       </div>

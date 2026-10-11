@@ -26,9 +26,9 @@
   pointer-events: none;
 }
 .home-walker img {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
+  width: 100%;
+  height: 100%;
+  max-width: none;
   object-fit: contain;
   object-position: left bottom;
 }
@@ -185,7 +185,7 @@
     transition: opacity 160ms ease, scale 380ms var(--ease-stamp);
     transition-delay: calc(620ms + var(--i) * 55ms);
   }
-  .home-outcome { animation: home-word-in 320ms var(--ease-out); }
+  .home-outcome { animation: home-word-in 200ms var(--ease-out); }
 }
 
 @keyframes home-word-in {
@@ -213,7 +213,7 @@
   .home-hero { --hero-size: clamp(40px, 13vw, 58px); }
   .home-line--lead .home-word { display: block; }
   .home-walker { width: 1.9em; height: 0.9em; margin-left: 0.12em; overflow: visible; }
-  .home-walker img { height: 1.7em !important; width: auto !important; position: absolute; bottom: 0; left: 0; }
+  .home-walker img { height: 1.7em; width: auto; position: absolute; bottom: 0; left: 0; }
   .home-slips, .home-cast { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-cast { gap: 12px; }
   .home-cast-art img { width: min(100%, 140px); }

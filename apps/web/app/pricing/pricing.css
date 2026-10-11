@@ -91,7 +91,7 @@
 @media (max-width: 640px) {
   .price-hero { grid-template-columns: 1fr; }
   .price-gremlin { order: -1; justify-self: start; width: 140px; }
-  .price-plan .btn, .price-interval .btn { width: 100%; }
+  .price-plan .btn, .price-interval .btn { width: 100%; white-space: normal; text-align: center; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
