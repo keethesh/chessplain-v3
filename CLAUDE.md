@@ -38,7 +38,7 @@ Engine deploy (VPS `london-ampere`, systemd `chessplain-engine`) is documented i
 2. `sweep.ts` does a fast Stockfish pass over every position (cached in `analysis_cache`).
 3. `select.ts` picks candidate moments and builds refutation lines (extended up to 2 plies to finish capture sequences).
 4. `verify.ts` re-checks candidates at depth and drops false positives.
-5. `concepts.ts` `classifyMoment` tags each verified moment with a `concept_id` (hanging_piece, double_attack, missed_mate_threat, weak_back_rank, losing_exchange) or null when unsure; a wrong tag is worse than none.
+5. `concepts.ts` `classifyMoment` tags each verified moment with a `concept_id` (hanging_piece, double_attack, missed_mate_threat, weak_back_rank, losing_exchange for what the move allowed; missed_chance for a win the player had and did not play) or null when unsure; a wrong tag is worse than none. Accuracy is gated by `benchmark:concepts` on `benchmark/concepts/labelled.json`.
 6. `explain.ts` asks the LLM for each moment's explanation (the prompt names the code concept), then a game summary.
 
 If every moment falls back to generic text, or credits run out, the pipeline throws `LlmUnavailableError` rather than publish a degraded "completed" report.

@@ -316,38 +316,79 @@ production turns into a retry, then fallback prose). The `config.ts` default
 against `apps/engine/benchmark/concepts/labelled.json`. The gate fails under
 90% overall accuracy or 90% precision on non-null predictions.
 
-Method: 99 verified turning points (`quietDriftFallback: false`, real
-sweep at 15k nodes and depth-20 verify) from recent rapid, blitz, and daily
-games of public Chess.com club members and their recent opponents, ratings
-753–2071. A first labeller labelled each moment from the position and the
-refutation line using the five definitions in `CONCEPTS`. Because that
-labeller knew the classifier's rules, a second labeller relabelled all 99
-blind (positions, lines and definitions only; no code, no first labels).
-They agreed on 97/99, including all 14 non-null tags. The integrator
-reviewed every non-null label by hand and settled the two disagreements
-with Stockfish (depth 24). That review also found and fixed a classifier
-bug: `losing_exchange` counted recaptures inside a capture sequence the
-opponent started, and a forced trade later in the line; it now counts only
-the capture sequence the played move starts. Two labels that had mirrored
-the bug were corrected to `null`.
+Concepts (2026-10-12): five things the move allowed (hanging piece, double
+attack, missed mate threat, weak back rank, losing exchange) and one the player
+missed (missed chance). A hanging piece now includes a piece a cheaper piece
+takes, or one with more attackers than defenders; a defended piece has to cost
+two points net. A missed chance is a forced mate given up, or a better line
+that wins at least three points in the stored line while the played move
+loses less than two. Once the opponent has a forced mate, only the mate
+concepts may tag the moment.
 
-Result (2026-10-11): overall accuracy 0.980 (97/99), non-null precision
-1.000 (14/14). Class balance: null 83, double attack 7, hanging piece 4,
-missed mate threat 3, losing exchange 2, weak back rank 0. Per concept:
-hanging piece, double attack and losing exchange 1.000 precision and recall;
-missed mate threat precision 1.000, recall 0.333 (1/3); weak back rank has no
-labelled cases, so its precision and recall are unmeasured.
+Labelled set: 212 verified turning points (`quietDriftFallback: false`,
+15k-node sweep, depth-20 verify) from recent rapid, blitz and daily games.
 
-The two misses are both forced mates deeper than the stored refutation line
-(mate in 3 and mate in 5 after the played move). The classifier stays `null`
-there by design: a missed tag costs a lesson, a wrong tag costs trust.
-Catching them needs the verify step's mate score passed into the candidate,
-not a guess from a truncated line.
+- **Dev, 98 moments** (players rated 753–2071): the 2026-10-11 set, minus one
+  moment the pipeline no longer selects (a mate in 7 played as a mate in 8).
+  Its 20 new labels (5 wider hanging pieces, 15 missed chances) come from two
+  blind motif labellers (allowed or missed, plus the tactic) and integrator
+  rulings on their 29 disagreements. The new rules were tuned on this set.
+- **Held-out, 114 moments** from 19 other players (796–1680, two recent games
+  each), labelled blind by two labellers with the six definitions. They agreed
+  on 98; the integrator ruled the other 16. One rule change came after scoring
+  it (a given-up forced mate now outranks the material concepts), which fixed
+  one held-out error.
 
-Limits: 99 moments, mostly blitz, few mates and no back-rank cases, so the
-figure is not a balanced estimate of the rare tags. Positional turning points
-correctly stay `null`. Re-label before treating a new concept rule as
-cleared.
+| Set | Rules | Accuracy | Non-null precision | Moments tagged |
+|---|---|---|---|---|
+| Dev (98) | before | 0.776 | 14/14 | 14 |
+| Dev (98) | after | 0.888 | 25/25 | 25 |
+| Held-out (114) | before | 0.667 | 16/18 | 18 |
+| Held-out (114) | after | 0.807 | 34/38 | 38 |
+| All (212) | after | 0.844 | 59/63 (0.937) | 63 |
+
+Held-out per concept after the change (precision, recall): missed chance 16/19,
+16/24; hanging piece 6/7, 6/9; double attack 6/6, 6/10; weak back rank 3/3,
+3/4; missed mate threat 2/2, 2/4; losing exchange 1/1, 1/2.
+
+The gate passes on precision and fails on accuracy, because of recall: the
+rules read the stored lines (3–4 moves plus captures), so wins and losses that
+land later stay `null`. The old rules scored 0.980 on the dev set but 0.667
+on fresh games, so the earlier figure was optimistic.
+
+The four held-out errors all come from that line length. In two missed
+chances the player stayed clearly winning (+11.7 and +3.7 after the move) and
+the played line wins the same material later. In one, the move allowed a fork
+that wins the exchange beyond the stored line, so the missed win was the
+smaller story. In one hanging piece (the original rule), the recapture comes
+after a quiet move.
+
+Tried and dropped: reading the full depth-20 PV (14 plies) for missed
+chances. Two depth-20 runs of the same positions gave different tails and
+different material counts, so the rule was not repeatable.
+
+Mate scores are 100 − N pawns, so a mate that only got longer (mate in 7 to
+mate in 8) read as a one-pawn mistake and reached reports as a turning point.
+`select.ts` and `verify.ts` now drop a move when the same side is mating, or
+50+ pawns ahead, before and after it.
+
+Limits: mostly blitz; labels are two labellers plus one integrator; the rare
+concepts have 2–4 held-out cases each.
+
+Scan coverage (2026-10-12): the last 20 rapid, blitz and daily games of 13
+players outside both labelled sets (rated 770–1687), scanned like production,
+each turning point classified by the old and the new rules.
+
+| Games | Rules | Players with a gremlin in 2+ games | Turning points tagged |
+|---|---|---|---|
+| 10 | before | 10/13 | 60/342 (18%) |
+| 10 | after | 12/13 | 112/342 (33%) |
+| 20 | before | 13/13 | 123/721 (17%) |
+| 20 | after | 13/13 | 226/721 (31%) |
+
+With the new rules the missed chance is the top gremlin for 7 of 13 players at
+10 games and 9 of 13 at 20: the most common gremlin is also the one with the
+lowest precision (16/19 held-out) and the weakest explanations.
 
 ## What happened vs what was allowed (prompt 2026-10-11.2)
 
@@ -384,3 +425,22 @@ capture by a different piece. The moment benchmark (no LLM judge) stays at
 49/49 valid with 0 phantom pieces, but its fixtures have no game record, so it
 exercises only the base prompt; the in-game rules are covered by this
 hand-judged corpus alone. Limits: one reader, 14 games.
+
+## Missed chances and the hanging-piece fact (prompt 2026-10-12.1)
+
+The base prompt explains what a move allowed. For a missed chance the mistake
+is the win not taken, so `momentSystemPrompt` appends a block that tells that
+story from the better line. Widening the hanging piece exposed a grounding gap:
+the tactical context never says whether a piece had a defender, and the model
+called every lost piece "undefended". `buildMomentPayload` now sends
+`code_concept.fact` from `hangingPieceFact` ("had no defender", "had 1
+defender, but a cheaper piece (their pawn) could take it", or attackers against
+defenders); on the seven widened-hanging fixtures every explanation then
+matched it.
+
+Missed-chance explanations, read by hand after three prompt rounds (11
+moments: 5 benchmark fixtures, 6 labelled): 7 clean. The other 4 narrate the
+opponent's line when they should not, and two of those misstate it (a pawn
+push told as a capture; "down a knight for a bishop"). The no-judge benchmark
+stays at 49/49 valid; its 3 phantom flags are on moments with no code concept.
+Next: a judged pass on missed-chance moments before treating them as solid.

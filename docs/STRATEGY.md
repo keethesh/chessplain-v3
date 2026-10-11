@@ -397,14 +397,21 @@ Built and committed, not deployed (see the deploy order in
 - Verified end to end locally on real usernames (local Supabase, Stockfish 19):
   a 10-game scan took about 40 s and named a recurring concept.
 
-- Concept-tag gate: 0.980 overall and 1.000 precision on non-null tags over 99
-  labelled real moments, two labellers (one blind), disagreements settled with
-  Stockfish (`pnpm --filter @chessplain/engine benchmark:concepts`; details in
-  [the analysis roadmap](ANALYSIS_QUALITY_ROADMAP.md)). Missed-mate recall is
-  1/3 and back-rank cases are unmeasured.
+- Concept tags (2026-10-12, six concepts: hanging piece, double attack, missed
+  mate threat, weak back rank, losing exchange, and the player's own missed
+  chance): 0.937 precision and 0.844 overall accuracy over 212 labelled
+  real moments; on 114 fresh held-out moments, 34/38 precision and 0.807
+  accuracy, up from 16/18 and 0.667 with the five-concept rules (details in
+  [the analysis roadmap](ANALYSIS_QUALITY_ROADMAP.md)). Precision meets the 90%
+  bar; accuracy does not, because many moments stay untagged.
+- Scan repeat rate (13 players, 770–1687, scanned like production): a gremlin
+  in 2+ of the last 10 games for 12 of 13 players (10 of 13 with the
+  five-concept rules); 33% of turning points tagged (18% before). The missed
+  chance is the top gremlin for 7 of 13.
 
-Prompt `2026-10-11.2` on `openai/gpt-6-luna`: the code concept is named exactly
-where tagged, and explanations now keep what a move allowed apart from what
-was played (hand-judged on 14 real games; see the analysis roadmap). Still
+Prompt `2026-10-12.1` on `openai/gpt-6-luna`: the code concept is named exactly
+where tagged, explanations keep what a move allowed apart from what was played
+(hand-judged on 14 real games), and missed chances are told from the better
+line (7 of 11 read cleanly; see the analysis roadmap). Still
 open: the concierge test (H1/H2) and deployment. The build matches the "Not in
 this cut" list in §11.
