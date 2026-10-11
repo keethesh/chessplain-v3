@@ -64,6 +64,17 @@ export function buildRefutationLine(fenAfterMove: string, pvUci: string, maxMove
 // verify.ts re-applies it at depth 20 so shallow noise is not published.
 export const MIN_QUIET_DRIFT_SWING = -0.75;
 
+/**
+ * Mate scores arrive as 100 − N pawns (uci-client.ts). Past 50 pawns either way
+ * a side is mating, or so far ahead that no move is a mistake.
+ */
+export const MATE_PAWNS = 50;
+
+/** A mate that only gets longer or shorter reads as a swing; it is no mistake. */
+export function sameSideMate(before: number, after: number): boolean {
+  return (before >= MATE_PAWNS && after >= MATE_PAWNS) || (before <= -MATE_PAWNS && after <= -MATE_PAWNS);
+}
+
 export function selectCandidateMoments(
   positions: PositionInfo[],
   evalMap: Map<string, EngineEvalResult>,
@@ -95,7 +106,7 @@ export function selectCandidateMoments(
     // ("Bxd7+"), so comparing the SAN strings silently never matches.
     const engineAgrees = evalBeforeObj?.bestMove !== undefined && evalBeforeObj.bestMove !== '' && evalBeforeObj.bestMove === pos.uci;
 
-    if ((isMissedWin || isLargeSwing) && !engineAgrees) {
+    if ((isMissedWin || isLargeSwing) && !engineAgrees && !sameSideMate(evalBefore, evalAfter)) {
       let severityLabel: SeverityLabel = 'Turning point';
       if (isMissedWin) {
         severityLabel = 'Missed win';
@@ -159,7 +170,7 @@ export function selectCandidateMoments(
       const ea = (evalMap.get(pos.fenAfter)?.evalPawns ?? 0) * playerPerspectiveMultiplier;
       const s = ea - eb;
       const engineAgrees = evalMap.get(pos.fenBefore)?.bestMove === pos.uci && pos.uci !== '';
-      if (s < worstSwing && s <= MIN_QUIET_DRIFT_SWING && !engineAgrees) {
+      if (s < worstSwing && s <= MIN_QUIET_DRIFT_SWING && !engineAgrees && !sameSideMate(eb, ea)) {
         worstSwing = s;
         worstPos = pos;
         worstBefore = eb;

@@ -1,6 +1,6 @@
 import { CandidateMoment, EloBand, MomentExplanation, GameSummary } from '../types.js';
 import { buildTacticalContext } from './chess-facts.js';
-import { classifyMoment, conceptInfo } from './concepts.js';
+import { CONCEPTS, classifyMoment, conceptInfo, hangingPieceFact } from './concepts.js';
 
 /**
  * The player's standing in words, from a player-relative evaluation. Computed
@@ -17,6 +17,7 @@ export function describeStanding(evalPawns: number): string {
 /** The exact user message production sends for one moment; the benchmark reuses it. */
 export function buildMomentPayload(moment: CandidateMoment, eloBand: EloBand, opponentName: string) {
   const concept = conceptInfo(moment.concept_id !== undefined ? moment.concept_id : classifyMoment(moment));
+  const fact = concept?.id === 'hanging_piece' ? hangingPieceFact(moment) : null;
   return {
     position_before_fen: moment.fenBefore,
     played_move: moment.san,
@@ -32,7 +33,7 @@ export function buildMomentPayload(moment: CandidateMoment, eloBand: EloBand, op
     material_note: moment.materialNote,
     phase: moment.phase,
     opponent_name: opponentName,
-    ...(concept ? { code_concept: { name: concept.name, definition: concept.definition } } : {}),
+    ...(concept ? { code_concept: { name: concept.name, definition: concept.definition, ...(fact ? { fact } : {}) } } : {}),
     ...(moment.inGame ? { in_the_game: moment.inGame } : {}),
   };
 }
@@ -48,7 +49,7 @@ export function cleanJsonString(str: string): string {
   return match ? match[0] : unquoted;
 }
 
-export const PROMPT_VERSION = '2026-10-11.2';
+export const PROMPT_VERSION = '2026-10-12.1';
 
 export const MOMENT_SYSTEM_PROMPT = `You are the explanation engine for Chessplain, a game-review product for adult
 casual players (roughly 600–1200) who want to understand their losses, not be
@@ -79,10 +80,12 @@ INPUT (JSON):
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
 - material_note, phase ("opening"|"middlegame"|"endgame"), opponent_name
-- code_concept, when present: { name, definition } of the pattern this moment is.
-  concept_name must be exactly code_concept.name. Still explain only from
-  tactical_context; do not invent a different pattern. When code_concept is
-  absent, name the pattern yourself.
+- code_concept, when present: { name, definition } of the pattern this moment is,
+  and fact when the code checked one (why it applies, e.g. whether the piece
+  had a defender). concept_name must be exactly code_concept.name. State fact
+  as given; never contradict it. Still explain only from tactical_context; do
+  not invent a different pattern. When code_concept is absent, name the
+  pattern yourself.
 
 THINK IN THIS ORDER, SILENTLY:
 1. Read tactical_context carefully: notice exactly which piece moved (e.g. "Black knight from b6 to d7"),
@@ -209,9 +212,37 @@ Example (middlegame, 1300 Black, "Turning point"; refutation_moves_played 0,
 next_moves [{"move":"19.Bd2","by":"opponent"},{"move":"19...Be6","by":"you"}]):
 {"played":"18...Nd5","probable_thought":"The knight jumps to d5 to trade itself for the bishop on e3.","what_actually_happens":"The knight was the only guard of your bishop on g4. Their queen on d1 can take it for nothing. In the game, they played 19.Bd2 instead.","why_better":"18...Be6 brings the bishop back first, so the knight can go to d5 next move.","concept_name":"Hanging piece","concept_definition":"a piece of yours that nothing is defending","takeaway":"Before moving a piece, check what it was guarding.","severity_label":"Turning point"}`;
 
-/** The moment system prompt for a payload: the in-game rules only when it carries in_the_game. */
-export function momentSystemPrompt(payload: { in_the_game?: unknown }): string {
-  return payload.in_the_game ? `${MOMENT_SYSTEM_PROMPT}\n\n${MOMENT_IN_GAME_RULES}` : MOMENT_SYSTEM_PROMPT;
+/**
+ * Appended when code_concept is the missed chance. The base prompt explains
+ * what a move allowed; here the mistake is a win the player had and did not
+ * play, so the story comes from the better line.
+ */
+export const MOMENT_MISSED_CHANCE_RULES = `MISSED CHANCE — code_concept is "Missed chance": the player had a win and
+played something else. The mistake is the win not taken, so tell that story
+from best_move, best_line_moves and best_line_outcome:
+- what_actually_happens: two sentences. First, what best_move would have
+  done: the mate, or what it takes or attacks, as best_line_moves shows. Call
+  a piece of theirs undefended only when nothing of theirs takes back in
+  best_line_moves. Second, what the played move did instead, from played_move
+  only. Add a third sentence only when refutation_outcome shows the player
+  losing material.
+- why_better: the winning move and what it wins. Attribute every capture by
+  its "by" field ("you take the knight", "their queen takes back"). State the
+  gain only as best_line_outcome gives it ("you win their queen for a
+  knight"); never write a trade of equal pieces as a loss or a gain.
+
+Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance"):
+{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Their knight on e5 had no defender, and your rook on e1 could take it. 21.a3 lets it walk to d3, where it attacks your rook.","why_better":"21.Rxe5 takes the knight for nothing: no piece of theirs can take back on e5.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}`;
+
+/**
+ * The moment system prompt for a payload: the in-game rules when it carries
+ * in_the_game, the missed-chance rules when that is its code concept.
+ */
+export function momentSystemPrompt(payload: { in_the_game?: unknown; code_concept?: { name: string } }): string {
+  const parts = [MOMENT_SYSTEM_PROMPT];
+  if (payload.in_the_game) parts.push(MOMENT_IN_GAME_RULES);
+  if (payload.code_concept?.name === CONCEPTS.missed_chance.name) parts.push(MOMENT_MISSED_CHANCE_RULES);
+  return parts.join('\n\n');
 }
 
 export const SUMMARY_SYSTEM_PROMPT = `You write the top of a Chessplain report: the first thing a player reads

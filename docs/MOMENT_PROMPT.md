@@ -12,7 +12,7 @@ wins; re-sync this document rather than trusting it. Remaining prompt work
 decision) is tracked in
 [`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md).
 
-- **`PROMPT_VERSION` constant: `2026-10-11.2`** (`prompts.ts`). Bump on every
+- **`PROMPT_VERSION` constant: `2026-10-12.1`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**
   anywhere — no `game_analyses` write includes it, despite an earlier version
   of this document claiming it is stored per-row. Wire it into
@@ -59,10 +59,12 @@ INPUT (JSON):
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
 - material_note, phase ("opening"|"middlegame"|"endgame"), opponent_name
-- code_concept, when present: { name, definition } of the pattern this moment is.
-  concept_name must be exactly code_concept.name. Still explain only from
-  tactical_context; do not invent a different pattern. When code_concept is
-  absent, name the pattern yourself.
+- code_concept, when present: { name, definition } of the pattern this moment is,
+  and fact when the code checked one (why it applies, e.g. whether the piece
+  had a defender). concept_name must be exactly code_concept.name. State fact
+  as given; never contradict it. Still explain only from tactical_context; do
+  not invent a different pattern. When code_concept is absent, name the
+  pattern yourself.
 
 THINK IN THIS ORDER, SILENTLY:
 1. Read tactical_context carefully: notice exactly which piece moved (e.g. "Black knight from b6 to d7"),
@@ -192,6 +194,33 @@ That sentence may take what_actually_happens to 50 words.
 Example (middlegame, 1300 Black, "Turning point"; refutation_moves_played 0,
 next_moves [{"move":"19.Bd2","by":"opponent"},{"move":"19...Be6","by":"you"}]):
 {"played":"18...Nd5","probable_thought":"The knight jumps to d5 to trade itself for the bishop on e3.","what_actually_happens":"The knight was the only guard of your bishop on g4. Their queen on d1 can take it for nothing. In the game, they played 19.Bd2 instead.","why_better":"18...Be6 brings the bishop back first, so the knight can go to d5 next move.","concept_name":"Hanging piece","concept_definition":"a piece of yours that nothing is defending","takeaway":"Before moving a piece, check what it was guarding.","severity_label":"Turning point"}
+```
+
+### Missed-chance rules (appended when `code_concept` is "Missed chance")
+
+`momentSystemPrompt(payload)` also appends this block when the moment's code
+concept is the missed chance (`concepts.ts`): the mistake is a win the player
+had and did not play, so the story comes from the better line. For a hanging
+piece, the payload's `code_concept.fact` says whether the lost piece had a
+defender (`hangingPieceFact`); the tactical context does not.
+
+```
+MISSED CHANCE — code_concept is "Missed chance": the player had a win and
+played something else. The mistake is the win not taken, so tell that story
+from best_move, best_line_moves and best_line_outcome:
+- what_actually_happens: two sentences. First, what best_move would have
+  done: the mate, or what it takes or attacks, as best_line_moves shows. Call
+  a piece of theirs undefended only when nothing of theirs takes back in
+  best_line_moves. Second, what the played move did instead, from played_move
+  only. Add a third sentence only when refutation_outcome shows the player
+  losing material.
+- why_better: the winning move and what it wins. Attribute every capture by
+  its "by" field ("you take the knight", "their queen takes back"). State the
+  gain only as best_line_outcome gives it ("you win their queen for a
+  knight"); never write a trade of equal pieces as a loss or a gain.
+
+Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance"):
+{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Their knight on e5 had no defender, and your rook on e1 could take it. 21.a3 lets it walk to d3, where it attacks your rook.","why_better":"21.Rxe5 takes the knight for nothing: no piece of theirs can take back on e5.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}
 ```
 
 `tactical_context` is built by `buildTacticalContext()` in

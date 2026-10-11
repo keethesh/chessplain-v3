@@ -19,6 +19,9 @@ const QUIET_FEN_AFTER = '8/8/8/8/8/8/8/K6k b - - 1 1';
 const QUIET_KEEP_FEN_BEFORE = '7k/8/8/8/8/8/6K1/7R w - - 0 1';
 const QUIET_KEEP_FEN_AFTER = '7k/8/8/8/8/8/6K1/7R b - - 1 1';
 const PLAYED_UCI = 'b5d7';
+// Real labelled moment: 29.Qf7+ keeps a forced mate, one move longer than 29.Qa5+.
+const MATE_FEN_BEFORE = '3r4/ppk5/3p4/5Q2/2p1N3/1P3N2/P1PR3P/3K4 w - - 0 29';
+const MATE_FEN_AFTER = '3r4/ppk2Q2/3p4/8/2p1N3/1P3N2/P1PR3P/3K4 b - - 1 29';
 
 const flatEval = (fen: string, evalPawns: number, bestMove: string): EngineEvalResult => ({
   fen,
@@ -44,6 +47,8 @@ const evaluate = vi.fn(async (fen: string) => {
   if (fen === QUIET_FEN_AFTER) return flatEval(fen, 0.7, 'h1h2');
   if (fen === QUIET_KEEP_FEN_BEFORE) return flatEval(fen, 1.0, 'h1h2');
   if (fen === QUIET_KEEP_FEN_AFTER) return flatEval(fen, 0.2, 'a1a2');
+  if (fen === MATE_FEN_BEFORE) return flatEval(fen, 93, 'f5a5'); // mate in 7
+  if (fen === MATE_FEN_AFTER) return flatEval(fen, 92, 'd8d7'); // mate in 8
   return flatEval(fen, 2.0, 'e6e7');
 });
 
@@ -116,5 +121,12 @@ describe('verifyCandidates', () => {
 
     expect(verified).toHaveLength(1);
     expect(verified[0].swing).toBe(-0.8);
+  });
+  it('drops a move that keeps a forced mate, only a longer one', async () => {
+    const verified = await verifyCandidates([
+      candidate({ fenBefore: MATE_FEN_BEFORE, fenAfter: MATE_FEN_AFTER, uci: 'f5f7', san: '29.Qf7+' }),
+    ]);
+
+    expect(verified, 'mate in 7 → mate in 8 scored as a one-pawn mistake').toEqual([]);
   });
 });

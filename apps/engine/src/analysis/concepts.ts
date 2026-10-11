@@ -8,13 +8,15 @@ import {
   getAttackersOfSquare,
   type TacticalContext,
 } from './chess-facts.js';
+import { MATE_PAWNS } from './select.js';
 
 export type ConceptId =
   | 'hanging_piece'
   | 'double_attack'
   | 'missed_mate_threat'
   | 'weak_back_rank'
-  | 'losing_exchange';
+  | 'losing_exchange'
+  | 'missed_chance';
 
 export interface ConceptInfo {
   id: ConceptId;
@@ -29,8 +31,8 @@ export const CONCEPTS: Record<ConceptId, ConceptInfo> = {
     id: 'hanging_piece',
     name: 'Hanging piece',
     gremlin: 'The Hanger',
-    definition: 'A piece of yours that nothing is defending.',
-    habit: 'Before you let go of a piece, check: what did I just leave undefended?',
+    definition: 'A piece nothing defends, or a cheaper piece can take.',
+    habit: 'Before you let go of a piece, check: can it be taken for free, or by something cheaper?',
   },
   double_attack: {
     id: 'double_attack',
@@ -60,6 +62,13 @@ export const CONCEPTS: Record<ConceptId, ConceptInfo> = {
     definition: 'A capture on a defended square that still costs material.',
     habit: 'Before you capture, count attackers and defenders, then whose piece is worth more.',
   },
+  missed_chance: {
+    id: 'missed_chance',
+    name: 'Missed chance',
+    gremlin: 'The Daydreamer',
+    definition: "A winning move you had but didn't play.",
+    habit: 'When they move, look at their pieces first: is one loose, or can you hit two at once?',
+  },
 };
 
 export const CONCEPT_IDS: ConceptId[] = [
@@ -68,6 +77,7 @@ export const CONCEPT_IDS: ConceptId[] = [
   'missed_mate_threat',
   'weak_back_rank',
   'losing_exchange',
+  'missed_chance',
 ];
 
 const PIECE_VALUE: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 };
@@ -312,33 +322,73 @@ function isMissedMateThreat(candidate: CandidateMoment, ctx: TacticalContext, pl
   return true;
 }
 
-function isHangingPiece(candidate: CandidateMoment, ctx: TacticalContext, player: 'w' | 'b'): boolean {
+interface LooseCapture {
+  type: string;
+  square: string;
+  defenders: number;
+  attackers: number;
+  taker: string | null;
+}
+
+/** The piece the opponent's first reply wins because it was loose, or null. */
+function looseCapture(candidate: CandidateMoment, ctx: TacticalContext, player: 'w' | 'b'): LooseCapture | null {
   const first = ctx.refutation_moves[0];
-  if (!first || first.by !== 'opponent') return false;
+  if (!first || first.by !== 'opponent') return null;
   const captured = parseCaptured(first.captured);
-  if (!captured || captured.color !== player) return false;
-  if (captured.type !== 'n' && captured.type !== 'b' && captured.type !== 'r' && captured.type !== 'q') return false;
+  if (!captured || captured.color !== player) return null;
+  if (captured.type !== 'n' && captured.type !== 'b' && captured.type !== 'r' && captured.type !== 'q') return null;
   let fenAfter: string;
   let playedTo = '';
   let playedCapture = false;
   try {
     const board = new Chess(candidate.fenBefore);
     const played = board.move(stripSan(candidate.san));
-    if (!played) return false;
+    if (!played) return null;
     fenAfter = board.fen();
     playedTo = played.to;
     playedCapture = !!played.captured;
   } catch {
-    return false;
+    return null;
   }
   // The queen (or other piece) was just put on this square by a capture.
   // That loss is the exchange, classified below, not a piece left hanging.
-  if (playedCapture && playedTo === captured.square) return false;
-  if (defenderCount(fenAfter, captured.square, player) !== 0) return false;
-  if (getAttackersOfSquare(fenAfter, captured.square, player).length === 0) return false;
+  if (playedCapture && playedTo === captured.square) return null;
+  const defenders = defenderCount(fenAfter, captured.square, player);
+  const attackers = getAttackersOfSquare(fenAfter, captured.square, player).length;
+  if (attackers === 0) return null;
+  // Loose: nothing defends it, a cheaper piece takes it, or it is outnumbered.
+  const takerPiece = new Chess(fenAfter).get(first.from as Square);
+  const taker = takerPiece && takerPiece.type !== 'k' && PIECE_VALUE[takerPiece.type] < PIECE_VALUE[captured.type] ? takerPiece.type : null;
+  if (defenders > 0 && !taker && attackers <= defenders) return null;
   const end = endFen(candidate.fenBefore, candidate.san, candidate.refutationLineSan);
-  // "Wins" — the line leaves the player down material, not a capture that is handed back.
-  return !!end && netDown(candidate.fenBefore, end, player) >= 1;
+  // "Wins": the line leaves the player down material, not a capture that is
+  // handed back. A defended piece has to cost at least two points net.
+  if (!end || netDown(candidate.fenBefore, end, player) < (defenders === 0 ? 1 : 2)) return null;
+  return { type: captured.type, square: captured.square, defenders, attackers, taker };
+}
+
+const PIECE_NAME: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' };
+
+/**
+ * The code-checked reason a hanging-piece tag applies, in words for the
+ * prompt. The tactical context does not say whether the piece was defended,
+ * and without this the model calls every loose piece "undefended".
+ */
+export function hangingPieceFact(candidate: CandidateMoment): string | null {
+  const player = playerOf(candidate);
+  if (!player) return null;
+  try {
+    const ctx = buildTacticalContext(candidate.fenBefore, candidate.san, candidate.bestMoveSan, candidate.refutationLineSan, candidate.bestLineSan);
+    const loose = looseCapture(candidate, ctx, player);
+    if (!loose) return null;
+    const piece = `Your ${PIECE_NAME[loose.type]} on ${loose.square}`;
+    if (loose.defenders === 0) return `${piece} had no defender.`;
+    const guards = `${loose.defenders} defender${loose.defenders === 1 ? '' : 's'}`;
+    if (loose.taker) return `${piece} had ${guards}, but a cheaper piece (their ${PIECE_NAME[loose.taker]}) could take it.`;
+    return `${piece} had ${loose.attackers} attackers and only ${guards}.`;
+  } catch {
+    return null;
+  }
 }
 
 function isDoubleAttack(candidate: CandidateMoment, ctx: TacticalContext, player: 'w' | 'b'): boolean {
@@ -410,6 +460,31 @@ function isLosingExchange(candidate: CandidateMoment, player: 'w' | 'b'): boolea
   return attackers > defenders || loss > gain;
 }
 
+/** The player had a forced mate and the played move gave it up. */
+function gaveUpMate(candidate: CandidateMoment): boolean {
+  const best = stripSan(candidate.bestMoveSan);
+  return !!best && best !== stripSan(candidate.san) && candidate.evalBefore >= MATE_PAWNS && candidate.evalAfter < MATE_PAWNS;
+}
+
+/**
+ * The player's own win, not taken: the better line wins at least a piece's
+ * worth (3) and the played move gave that up without losing material itself
+ * (a move that loses material is the opponent's tactic, tagged above or not at
+ * all). Two-point wins stay null: at the stored line's length they are as
+ * often a line cut short as a win.
+ */
+function isMissedChance(candidate: CandidateMoment, player: 'w' | 'b'): boolean {
+  const best = stripSan(candidate.bestMoveSan);
+  if (!best || best === stripSan(candidate.san)) return false;
+  const bestEnd = endFen(candidate.fenBefore, '', candidate.bestLineSan);
+  const playedEnd = endFen(candidate.fenBefore, candidate.san, candidate.refutationLineSan);
+  if (!bestEnd || !playedEnd) return false;
+  const gainPlayed = -netDown(candidate.fenBefore, playedEnd, player);
+  if (gainPlayed <= -2) return false;
+  const gainBest = -netDown(candidate.fenBefore, bestEnd, player);
+  return gainBest >= 3 && gainBest - gainPlayed >= 2;
+}
+
 /**
  * Deterministic tag for one verified moment. Precedence is fixed; null means
  * the position did not clearly match — a wrong tag is worse than none.
@@ -432,9 +507,15 @@ export function classifyMoment(candidate: CandidateMoment): ConceptId | null {
   try {
     if (isWeakBackRank(candidate, ctx, player)) return 'weak_back_rank';
     if (isMissedMateThreat(candidate, ctx, player)) return 'missed_mate_threat';
-    if (isHangingPiece(candidate, ctx, player)) return 'hanging_piece';
+    // A forced mate against the player outweighs any material a line shows;
+    // only the mate concepts above may name it.
+    if (candidate.evalAfter <= -MATE_PAWNS) return null;
+    // So does a forced mate the player had and gave up, even if the move also dropped material.
+    if (gaveUpMate(candidate)) return 'missed_chance';
+    if (looseCapture(candidate, ctx, player)) return 'hanging_piece';
     if (isDoubleAttack(candidate, ctx, player)) return 'double_attack';
     if (isLosingExchange(candidate, player)) return 'losing_exchange';
+    if (isMissedChance(candidate, player)) return 'missed_chance';
   } catch {
     return null;
   }

@@ -1,7 +1,7 @@
 import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { CandidateMoment, EngineEvalResult } from '../types.js';
-import { buildRefutationLine, MIN_QUIET_DRIFT_SWING, uciToSan } from './select.js';
+import { buildRefutationLine, MIN_QUIET_DRIFT_SWING, sameSideMate, uciToSan } from './select.js';
 
 interface CacheRow {
   fen: string;
@@ -108,7 +108,7 @@ export async function verifyCandidates(
     // drift has a lower floor to preserve the fallback's intended low-swing
     // band, but still drops moves that the deeper search finds to be noise.
     const minSwing = c.candidateType === 'Quiet drift' ? MIN_QUIET_DRIFT_SWING : -1.0;
-    if (vSwing > minSwing) {
+    if (vSwing > minSwing || sameSideMate(vEvalBefore, vEvalAfter)) {
       continue;
     }
 

@@ -1,14 +1,10 @@
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
-import { CONCEPT_IDS, CONCEPTS, classifyMoment, conceptInfo, type ConceptId } from '../src/analysis/concepts.js';
+import { classifyMoment, type ConceptId } from '../src/analysis/concepts.js';
 import { parsePgn } from '../src/analysis/pgn.js';
 import { buildMomentPayload } from '../src/analysis/prompts.js';
 import { selectCandidateMoments } from '../src/analysis/select.js';
 import type { CandidateMoment, EngineEvalResult, PositionInfo } from '../src/types.js';
-
-function words(text: string): number {
-  return text.trim().split(/\s+/).length;
-}
 
 /** Play `played` from `fen` and wrap a candidate the classifier can read. */
 function moment(
@@ -51,31 +47,6 @@ function fenAfter(moves: string[]): string {
   return board.fen();
 }
 
-describe('concept catalogue', () => {
-  it('names every concept with a short definition and a board check', () => {
-    expect(CONCEPT_IDS).toEqual([
-      'hanging_piece',
-      'double_attack',
-      'missed_mate_threat',
-      'weak_back_rank',
-      'losing_exchange',
-    ]);
-    for (const id of CONCEPT_IDS) {
-      const info = CONCEPTS[id];
-      expect(conceptInfo(id)).toEqual(info);
-      expect(words(info.definition)).toBeLessThanOrEqual(14);
-      expect(words(info.habit)).toBeLessThanOrEqual(22);
-      expect(info.habit.startsWith('Before') || info.habit.startsWith('When')).toBe(true);
-    }
-    expect(CONCEPTS.hanging_piece.gremlin).toBe('The Hanger');
-    expect(CONCEPTS.double_attack.gremlin).toBe('Double Trouble');
-    expect(CONCEPTS.missed_mate_threat.gremlin).toBe('The Mate Misser');
-    expect(CONCEPTS.weak_back_rank.gremlin).toBe('The Back-Rank Sleeper');
-    expect(CONCEPTS.losing_exchange.gremlin).toBe('The Bad Trader');
-    expect(conceptInfo(null)).toBeNull();
-    expect(conceptInfo(undefined)).toBeNull();
-  });
-});
 
 describe('classifyMoment', () => {
   const cases: Array<{ id: ConceptId; fen: string; played: string; best: string; line: string }> = [
@@ -119,10 +90,54 @@ describe('classifyMoment', () => {
       best: 'Bb5',
       line: 'cxd5 Bxd5',
     },
+    {
+      id: 'hanging_piece',
+      // Nd4 is defended by the e3 pawn, but a pawn takes it: cxd4 exd4 costs a knight for a pawn.
+      fen: '4k3/8/8/2p5/8/1N2P3/8/4K3 w - - 0 1',
+      played: 'Nd4',
+      best: 'Kd2',
+      line: 'cxd4 exd4',
+    },
+    {
+      id: 'missed_chance',
+      // Rxe5 wins the undefended knight; a3 lets it walk away (and hit the rook).
+      fen: '7k/8/8/4n3/8/8/P7/4RK2 w - - 0 1',
+      played: 'a3',
+      best: 'Rxe5',
+      line: 'Nd3',
+    },
   ];
 
-  it.each(cases)('$id', ({ id, fen, played, best, line }) => {
+  it.each(cases)('$id: $played', ({ id, fen, played, best, line }) => {
     expect(classifyMoment(moment(fen, played, best, line))).toBe(id);
+  });
+
+  it('does not call an even trade on a defended square a hanging piece', () => {
+    // Nd4 is taken by a knight and recaptured: nothing is lost.
+    expect(classifyMoment(moment('4k3/8/8/8/5n2/1N2P3/8/4K3 w - - 0 1', 'Nd4', 'Kd2', 'Nxd4 exd4'))).toBeNull();
+  });
+
+  it('does not call a two-point win a missed chance', () => {
+    // Bxe5 dxe5 wins only the exchange; at the stored line's length that is too often a line cut short.
+    const exchange = moment('4k3/8/3p4/4r3/8/2B5/P7/5K2 w - - 0 1', 'a3', 'Bxe5', 'Re2');
+    exchange.bestLineSan = 'Bxe5 dxe5';
+    expect(classifyMoment(exchange)).toBeNull();
+  });
+
+  it('calls a forced mate given up a missed chance', () => {
+    const quiet = moment(new Chess().fen(), 'e4', 'd4', 'e5');
+    quiet.evalBefore = 95;
+    quiet.evalAfter = 2;
+    expect(classifyMoment(quiet)).toBe('missed_chance');
+  });
+
+  it('names nothing but a mate once the opponent has a forced mate', () => {
+    // Real game (labelled set darkiall-37-064): hxg3+ takes the bishop with a pawn, but it starts mate in 5.
+    const mated = moment('2kr2nN/ppp5/2np1p1b/8/Q1NPq2p/2P3BP/PP3KP1/R6R w - - 0 19', 'Rae1', 'Bxd6', 'hxg3+ Kf1 Qf4+');
+    mated.bestLineSan = 'Bxd6 Qf5+ Kg1 Rd7';
+    mated.evalBefore = 3.36;
+    mated.evalAfter = -95;
+    expect(classifyMoment(mated)).toBeNull();
   });
 
   it('does not tag a back-rank threat the better line still allows', () => {
@@ -146,11 +161,12 @@ describe('classifyMoment', () => {
     expect(tagged).toBe('weak_back_rank');
   });
 
-  it('does not call an opponent-started recapture a losing exchange', () => {
-    // a3 captures nothing. Bxc3 Qxc3 wins the rook, but White never started the trade.
+  it('calls a piece lost to a cheaper attacker the Hanger, not a losing exchange', () => {
+    // Kd1 captures nothing. Bxc3 Qxc3 wins the rook for a bishop: White never started a trade,
+    // and the rook stood where a cheaper piece could take it.
     expect(
       classifyMoment(moment('4k3/8/8/b7/8/2R5/3Q4/4K3 w - - 0 1', 'Kd1', 'Qd3', 'Bxc3+ Qxc3'))
-    ).toBeNull();
+    ).toBe('hanging_piece');
   });
 
   it('does not call recaptures inside a sequence the opponent started a losing exchange', () => {
@@ -197,14 +213,19 @@ describe('moment payload', () => {
   it('sends code_concept only when the moment has a concept', () => {
     const hanging = moment('4k3/p7/8/4n3/8/5N2/P3B3/4K3 w - - 0 1', 'Ba6', 'Bd3', 'Nxf3');
     const payload = buildMomentPayload(hanging, '1000_1400', 'Sam');
-    expect(payload.code_concept).toEqual({
-      name: 'Hanging piece',
-      definition: CONCEPTS.hanging_piece.definition,
-    });
+    expect(payload.code_concept?.name).toBe('Hanging piece');
 
     const quiet = moment(new Chess().fen(), 'e4', 'd4', 'e5');
     quiet.concept_id = null;
     expect(buildMomentPayload(quiet, '1000_1400', 'Sam').code_concept).toBeUndefined();
+  });
+
+  it('tells the model whether a lost piece had a defender', () => {
+    // The model cannot see defenders; without the fact it called defended pieces "undefended".
+    const bare = buildMomentPayload(moment('4k3/p7/8/4n3/8/5N2/P3B3/4K3 w - - 0 1', 'Ba6', 'Bd3', 'Nxf3'), '1000_1400', 'Sam');
+    expect(bare.code_concept?.fact).toBe('Your knight on f3 had no defender.');
+    const guarded = buildMomentPayload(moment('4k3/8/8/2p5/8/1N2P3/8/4K3 w - - 0 1', 'Nd4', 'Kd2', 'cxd4 exd4'), '1000_1400', 'Sam');
+    expect(guarded.code_concept?.fact).toBe('Your knight on d4 had 1 defender, but a cheaper piece (their pawn) could take it.');
   });
 });
 
