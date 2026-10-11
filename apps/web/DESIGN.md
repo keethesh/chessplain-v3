@@ -10,6 +10,7 @@ colors:
   mint: "#DDFFF1"
   sky: "#A6D7FF"
   lilac: "#E9E0FF"
+  peach: "#FFE0C7"
   red: "#D4213F"
   red-fill: "#FF4D6D"
   blue: "#1F4FD8"
@@ -85,11 +86,11 @@ Warmth comes from authored illustration, not from gradients, glass or dark-mode 
 ## Colour
 
 - **Paper** white is the page. **Ink** near-black is text, borders and primary buttons.
-- **Pastels** (butter, pink, mint, sky, lilac) fill scene panels, one per scene. Never mix
+- **Pastels** (butter, pink, mint, sky, lilac, peach) fill scene panels, one per scene. Never mix
   two pastels inside one panel.
 - **Concept tints**: each gremlin owns one pastel, applied with `data-concept` +
   `.bg-concept`: hanging_piece lilac, double_attack pink, missed_mate_threat butter,
-  weak_back_rank sky, losing_exchange mint.
+  weak_back_rank sky, losing_exchange mint, missed_chance peach.
 - **Red** marks what went wrong (the played move, losses); **Blue** marks the checked
   line and focus. They are semantic, never decoration. Use `--red`/`--blue` for text and the
   `-fill` variants for arrows and board marks.

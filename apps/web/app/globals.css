@@ -20,6 +20,7 @@
   --mint: #ddfff1;
   --sky: #a6d7ff;
   --lilac: #e6e2ff;
+  --peach: #ffe0c7;
   --butter-light: #feffe5;
   --pink-light: #fff3f8;
   --sky-light: #e5f3ff;
@@ -188,6 +189,7 @@ textarea.input { height: auto; min-height: 140px; padding: 16px 24px; border-rad
 [data-concept="missed_mate_threat"] { --concept-tint: var(--butter); }
 [data-concept="weak_back_rank"] { --concept-tint: var(--sky); }
 [data-concept="losing_exchange"] { --concept-tint: var(--mint); }
+[data-concept="missed_chance"] { --concept-tint: var(--peach); }
 .bg-concept { background: var(--concept-tint, var(--butter)); }
 
 .board-frame { border: var(--line); background: var(--paper); line-height: 0; }

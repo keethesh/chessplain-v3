@@ -52,7 +52,13 @@ export interface MomentReport {
   concept?: ConceptInfo | null;
 }
 
-export type ConceptId = 'hanging_piece' | 'double_attack' | 'missed_mate_threat' | 'weak_back_rank' | 'losing_exchange';
+export type ConceptId =
+  | 'hanging_piece'
+  | 'double_attack'
+  | 'missed_mate_threat'
+  | 'weak_back_rank'
+  | 'losing_exchange'
+  | 'missed_chance';
 
 export interface ConceptInfo {
   id: ConceptId;
