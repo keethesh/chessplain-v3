@@ -2,10 +2,10 @@ import 'dotenv/config';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Chess } from 'chess.js';
 import {
-  MOMENT_SYSTEM_PROMPT,
   PROMPT_VERSION,
   buildMomentPayload,
   cleanJsonString,
+  momentSystemPrompt,
   validateMomentJson,
 } from '../src/analysis/prompts.js';
 import type { MomentExplanation } from '../src/types.js';
@@ -168,7 +168,7 @@ async function runOne(f: BenchmarkFixture, c: Candidate, run: number, judgeModel
     const { json, ms } = await openRouter({
       model: c.model,
       messages: [
-        { role: 'system', content: MOMENT_SYSTEM_PROMPT },
+        { role: 'system', content: momentSystemPrompt(payload) },
         { role: 'user', content: JSON.stringify(payload) },
       ],
       response_format: { type: 'json_object' },

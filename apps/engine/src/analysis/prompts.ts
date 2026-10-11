@@ -33,6 +33,7 @@ export function buildMomentPayload(moment: CandidateMoment, eloBand: EloBand, op
     phase: moment.phase,
     opponent_name: opponentName,
     ...(concept ? { code_concept: { name: concept.name, definition: concept.definition } } : {}),
+    ...(moment.inGame ? { in_the_game: moment.inGame } : {}),
   };
 }
 
@@ -47,7 +48,7 @@ export function cleanJsonString(str: string): string {
   return match ? match[0] : unquoted;
 }
 
-export const PROMPT_VERSION = '2026-10-11.1';
+export const PROMPT_VERSION = '2026-10-11.2';
 
 export const MOMENT_SYSTEM_PROMPT = `You are the explanation engine for Chessplain, a game-review product for adult
 casual players (roughly 600–1200) who want to understand their losses, not be
@@ -177,12 +178,55 @@ Example A (middlegame, 1198 White, "Turning point"):
 Example B (late middlegame, 1198 White, "Last chance"):
 {"played":"31.Rd3","probable_thought":"The rook lifts to d3 to swing over to the kingside and join an attack.","what_actually_happens":"Your attack needs three moves; their h-file break needs one. It lands first, and your king has lost its defender.","why_better":"31.Rd1 keeps the rook on the back rank, where it defends your king against that break.","concept_name":"Tempo","concept_definition":"a unit of time — one move","takeaway":"Before starting an attack, count what they can do in one move — not two.","severity_label":"Last chance"}`;
 
+/**
+ * Appended to MOMENT_SYSTEM_PROMPT when the payload has in_the_game, which
+ * every pipeline run sets. Benchmark fixtures have no game record and get the
+ * base prompt alone: describing an absent field made the model write "no moves
+ * were provided" into the explanation.
+ */
+export const MOMENT_IN_GAME_RULES = `IN THE GAME — the input also has in_the_game, what was really played after
+this move:
+- next_moves: the moves played next, in order, each { move, by }; "by" is
+  "you" or "opponent". Empty when the game ended right after this move.
+- refutation_moves_played: how many moves of refutation_line were really
+  played, counting from its first move.
+- game_over: true when the game ended within next_moves.
+
+refutation_line is what the move allowed, not a record of the game. Only its
+first refutation_moves_played moves happened: tell those as events ("They take
+the rook."). Tell every later move of the line as a possibility, never in the
+present tense ("Their queen can take the rook.", "This allows Qxf1."). When
+refutation_moves_played is 0 and next_moves is not empty, end
+what_actually_happens with one short sentence on what really happened, taken
+from next_moves and attributed by each move's "by" field ("In the game, they
+played 33...Qg5 instead.", "In the game, you played 40...Qh5 instead."). If
+next_moves shows the same capture arriving a move or two later, say that
+instead ("They took it a move later with 19.Qxd7."). When next_moves is
+empty, the game ended right after this move: end with "The game ended there."
+That sentence may take what_actually_happens to 50 words.
+
+Example (middlegame, 1300 Black, "Turning point"; refutation_moves_played 0,
+next_moves [{"move":"19.Bd2","by":"opponent"},{"move":"19...Be6","by":"you"}]):
+{"played":"18...Nd5","probable_thought":"The knight jumps to d5 to trade itself for the bishop on e3.","what_actually_happens":"The knight was the only guard of your bishop on g4. Their queen on d1 can take it for nothing. In the game, they played 19.Bd2 instead.","why_better":"18...Be6 brings the bishop back first, so the knight can go to d5 next move.","concept_name":"Hanging piece","concept_definition":"a piece of yours that nothing is defending","takeaway":"Before moving a piece, check what it was guarding.","severity_label":"Turning point"}`;
+
+/** The moment system prompt for a payload: the in-game rules only when it carries in_the_game. */
+export function momentSystemPrompt(payload: { in_the_game?: unknown }): string {
+  return payload.in_the_game ? `${MOMENT_SYSTEM_PROMPT}\n\n${MOMENT_IN_GAME_RULES}` : MOMENT_SYSTEM_PROMPT;
+}
+
 export const SUMMARY_SYSTEM_PROMPT = `You write the top of a Chessplain report: the first thing a player reads
 after their game. Adult casual players (600–1200). No grades, no praise
 sandwich, no numbers.
 
 INPUT (JSON): outcome, result, player_color, player_name, opponent_name,
-move_count, time_control, and the full moment JSONs in move order.
+move_count (the move the game finished on), ended_by (how it finished:
+"checkmate" | "resignation" | "time" | "abandoned" | "agreement" |
+"stalemate" | "repetition" | "insufficient material" | "unknown"),
+time_control, and the moments in move order. In each moment,
+what_the_move_allowed explains the opponent's best reply, and in_the_game
+says what was really played: next_moves (each { move, by }, "by" being "you"
+or "opponent"), refutation_moves_played (how many moves of that reply's line
+really happened) and game_over.
 
 OUTPUT — strict JSON, nothing else:
 {
@@ -198,8 +242,10 @@ THE OUTCOME IS NOT NEGOTIABLE:
   or built pressure they could not escape. Close on how they secured it, or on
   the moment that nearly cost them the win ("You still won, but move 19 gave
   them a way back in.").
-- outcome "lost": they LOST. Close in one calm clause on how it finished
-  ("After that, Carlos converted cleanly.").
+- outcome "lost": they LOST. Close in one calm clause on how it finished,
+  matching ended_by ("After that, Carlos converted cleanly." after a
+  resignation or checkmate; "You ran out of time at move 40."; "The game was
+  abandoned at move 36.").
 - outcome "drew": it ended in a DRAW. Do not declare either side a winner.
 - A won game still has moments worth studying. Reviewing a win is normal —
   never apologise for it and never invent a defeat to explain.
@@ -210,13 +256,23 @@ RULES:
   win, "This was closer than the result looks."). No move numbers in headline.
 - story references at least two moments by move number when two exist, and
   closes in one calm clause consistent with "outcome".
-- STRICT GROUNDING: the story is built only from the moments provided and the
-  non-negotiable outcome. Every move, capture, threat, and consequence you name
-  must come from a provided moment. NEVER invent downstream moves or game
-  events that are not in the moments list — do not claim a weakness "stayed
-  weak", an attack "never returned", or the position "got worse every move"
-  unless a provided moment says so. When the moments end, stop there and close
-  on the outcome.
+- WHAT HAPPENED vs WHAT WAS ALLOWED: what_the_move_allowed is a possibility,
+  not a record. Only the first in_the_game.refutation_moves_played moves of
+  that line happened. Tell everything else as what the move allowed or risked
+  ("move 33 left your rook on f1 loose"). When refutation_moves_played is 0
+  you may say what was played instead, attributing each move by its "by"
+  field ("LeoWin2012 played Qg5 instead", "you played ...Qh5"); when
+  next_moves shows the same capture arriving a move or two later, say it
+  happened then.
+- STRICT GROUNDING: every move, capture, threat, and consequence you name must
+  come from a provided moment. NEVER invent downstream moves or game events
+  that are not in the moments list — do not claim a weakness "stayed weak", an
+  attack "never returned", or the position "got worse every move" unless a
+  provided moment says so. The game finished at move move_count by ended_by:
+  never write that it ended at a moment unless that moment's
+  in_the_game.game_over is true, and say checkmate happened only when
+  ended_by is "checkmate". When the moments end, stop there and close on the
+  outcome.
 - focus_habit: if two moments share a root cause, name the shared cause and
   write the habit against it — that is the most valuable sentence you produce.
   Otherwise lift the strongest moment's takeaway.
@@ -228,7 +284,7 @@ GOLD STANDARD (outcome "lost"):
 {"headline":"You didn't lose this in the endgame.","story":"Move 23 was the whole story. You took on f7 with the bishop, and afterwards it had no square where it was safe — a bishop for one pawn. Move 31 was your last real chance: the rook lift was one move too slow, and the refutation landed first on the h-file. After that, Carlos converted cleanly.","focus_habit":"Before taking a free pawn, trace where the piece lands and how it comes back."}
 
 GOLD STANDARD (outcome "won"):
-{"headline":"This was closer than the result looks.","story":"Move 14 was the one that nearly cost you — the knight left the centre and their bishop got the long diagonal for free. Move 22 was where you took it back: your pieces came home to the squares that cover it. You still won, but the loose-centre habit from move 14 is the thing to fix.","focus_habit":"Before moving a centre knight, check which diagonal it stops covering."}`;
+{"headline":"This was closer than the result looks.","story":"Move 14 was the one that nearly cost you — the knight left the centre, and their bishop could have taken the long diagonal for free; they played elsewhere. Move 22 was where you took it back: your pieces came home to the squares that cover it. You still won, but the loose-centre habit from move 14 is the thing to fix.","focus_habit":"Before moving a centre knight, check which diagonal it stops covering."}`;
 
 const BANNED_PATTERNS = [
   /\b(blunder|inaccurac\w*|mistake|accuracy|centipawn|stockfish)\b/i,

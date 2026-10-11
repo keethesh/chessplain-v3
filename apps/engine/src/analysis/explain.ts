@@ -1,12 +1,12 @@
 import OpenAI from 'openai';
 import { config } from '../config.js';
 import { recordAnalysisError } from '../db/errors.js';
-import { CandidateMoment, EloBand, GameSummary, MomentReport } from '../types.js';
+import { CandidateMoment, EloBand, GameEnding, GameSummary, MomentReport } from '../types.js';
 import {
-  MOMENT_SYSTEM_PROMPT,
   SUMMARY_SYSTEM_PROMPT,
   buildMomentPayload,
   cleanJsonString,
+  momentSystemPrompt,
   validateMomentJson,
   validateSummaryJson,
 } from './prompts.js';
@@ -153,6 +153,7 @@ export async function explainMoment(
   };
 
   const inputPayload = buildMomentPayload(moment, eloBand, opponentName);
+  const systemPrompt = momentSystemPrompt(inputPayload);
 
   const userContent = JSON.stringify(inputPayload);
 
@@ -161,7 +162,7 @@ export async function explainMoment(
     const response = await createChatCompletion({
       model: config.llmModel,
       messages: [
-        { role: 'system', content: MOMENT_SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
       response_format: { type: 'json_object' },
@@ -201,7 +202,7 @@ export async function explainMoment(
     const retryResponse = await createChatCompletion({
       model: config.llmModel,
       messages: [
-        { role: 'system', content: MOMENT_SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: retryUserContent },
       ],
       response_format: { type: 'json_object' },
@@ -282,6 +283,7 @@ export async function explainSummary(
     playerName: string;
     opponentName: string;
     moveCount: number;
+    ending?: GameEnding;
     timeControl?: string;
   },
   analysisId?: string
@@ -330,16 +332,20 @@ export async function explainSummary(
     player_name: meta.playerName,
     opponent_name: meta.opponentName,
     move_count: meta.moveCount,
+    ended_by: meta.ending ?? 'unknown',
     time_control: meta.timeControl || 'unknown',
     moments: moments.map((m) => ({
       played: m.played,
       probable_thought: m.probable_thought,
-      what_actually_happens: m.what_actually_happens,
+      // Named for what it is: the opponent's best reply, which may not have
+      // been played. Under its stored name the model told it as the game.
+      what_the_move_allowed: m.what_actually_happens,
       why_better: m.why_better,
       concept_name: m.concept_name,
       concept_definition: m.concept_definition,
       takeaway: m.takeaway,
       severity_label: m.severity_label,
+      ...(m.in_game ? { in_the_game: m.in_game } : {}),
     })),
   };
 

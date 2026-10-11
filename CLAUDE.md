@@ -43,7 +43,7 @@ Engine deploy (VPS `london-ampere`, systemd `chessplain-engine`) is documented i
 
 If every moment falls back to generic text, or credits run out, the pipeline throws `LlmUnavailableError` rather than publish a degraded "completed" report.
 
-**Grounding rule.** Explanations must rest on code-verified facts from `src/analysis/chess-facts.ts` (per-move annotations of the refutation line, mate threats, why escapes fail, mate geometry), which are passed into the prompt. `validateMomentJson` rejects output that breaks the contract (word limits, first-person mind-reading). Never let the model's own chess claims stand in for these facts.
+**Grounding rule.** Explanations must rest on code-verified facts from `src/analysis/chess-facts.ts` (per-move annotations of the refutation line, mate threats, why escapes fail, mate geometry), which are passed into the prompt. The refutation line is what the move allowed, not what was played: `inGameFacts` (`pgn.ts`) sends the moves really played next as `in_the_game`, and only the part of the line the game followed may be told as an event. `validateMomentJson` rejects output that breaks the contract (word limits, first-person mind-reading). Never let the model's own chess claims stand in for these facts.
 
 **Prompt changes.** `src/analysis/prompts.ts` carries `PROMPT_VERSION`; bump it on any prompt change and mirror the prompt in `docs/MOMENT_PROMPT.md`. Quality claims come from the benchmark harness (`scripts/benchmark-models.ts`, results in `apps/engine/benchmark/results/`), not from reading a few outputs.
 

@@ -348,3 +348,39 @@ Limits: 99 moments, mostly blitz, few mates and no back-rank cases, so the
 figure is not a balanced estimate of the rare tags. Positional turning points
 correctly stay `null`. Re-label before treating a new concept rule as
 cleared.
+
+## What happened vs what was allowed (prompt 2026-10-11.2)
+
+Problem: the refutation line is the opponent's best reply, but the moment
+field holding it is named `what_actually_happens`, and nothing told the model
+what was really played. Moments told unplayed lines as events, and summaries
+built on them stated false game events and endings ("the queen moved to g7
+with checkmate. The game ended there." in a game that went on to move 56).
+
+Fix: `inGameFacts` (`pgn.ts`) reads the moves really played after each moment
+from the game record (each with who played it), counts how much of the line
+the game followed, and flags games that ended inside it. The moment prompt
+gets in-game rules only when that record is present; the summary gets the
+same facts, the moment text renamed `what_the_move_allowed`, and how the game
+ended (`ended_by`, a closed word from the board or the Termination header).
+
+Evaluation (2026-10-11, judged by hand against the game records, no LLM judge):
+14 real games, 48 moments, regenerated on `2026-10-11.1` and `2026-10-11.2`
+with `openai/gpt-6-luna`. 42 moments are at risk: the game left the engine line
+or ended inside it.
+
+| Check | `2026-10-11.1` | `2026-10-11.2` |
+|---|---|---|
+| Summaries stating an engine line as a game event, or a false ending | 10/14 | 0/14 |
+| Summaries with any other wrong game fact | 2/14 | 2/14 |
+| At-risk moments telling an unplayed move as an event | 38/42 | 2/42, both corrected by an "In the game" sentence |
+| At-risk moments misstating what was played | – | 2/42 |
+| Validation failures, fallbacks | 0 | 0 |
+
+The remaining wrong facts: one summary credits the opponent's move to the
+player ("you played ...Kf1") and one gives move 21's f3 to move 20; one moment
+calls 40...Qh5 a bishop move, and one says "a move later" for an immediate
+capture by a different piece. The moment benchmark (no LLM judge) stays at
+49/49 valid with 0 phantom pieces, but its fixtures have no game record, so it
+exercises only the base prompt; the in-game rules are covered by this
+hand-judged corpus alone. Limits: one reader, 14 games.

@@ -52,12 +52,12 @@ describe('Game perspective and sample truth', () => {
 
 describe('Report publication', () => {
   it('serializes snapshots and leaves completed publication to the database owner', async () => {
-    const candidate = { ply: 1 } as CandidateMoment;
+    const candidate = { ply: 1, refutationLineSan: '' } as CandidateMoment;
     const momentA = { ply: 1, takeaway: 'Check threats' } as MomentReport;
     const momentB = { ply: 3, takeaway: 'Check captures' } as MomentReport;
     mocks.sweep.mockResolvedValue(new Map());
-    mocks.select.mockReturnValue([candidate, { ply: 3 }]);
-    mocks.verify.mockResolvedValue([candidate, { ply: 3 }]);
+    mocks.select.mockReturnValue([candidate, { ply: 3, refutationLineSan: '' }]);
+    mocks.verify.mockResolvedValue([candidate, { ply: 3, refutationLineSan: '' }]);
     mocks.moment.mockImplementation(async (c: CandidateMoment) => c.ply === 1 ? momentA : momentB);
     mocks.summary.mockResolvedValue({ headline: 'A lesson', story: 'Read the board.', focus_habit: 'Check threats.' });
     const stages: string[] = [];

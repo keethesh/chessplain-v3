@@ -2,7 +2,7 @@ import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
 import { CONCEPT_IDS, CONCEPTS, classifyMoment, conceptInfo, type ConceptId } from '../src/analysis/concepts.js';
 import { parsePgn } from '../src/analysis/pgn.js';
-import { PROMPT_VERSION, buildMomentPayload } from '../src/analysis/prompts.js';
+import { buildMomentPayload } from '../src/analysis/prompts.js';
 import { selectCandidateMoments } from '../src/analysis/select.js';
 import type { CandidateMoment, EngineEvalResult, PositionInfo } from '../src/types.js';
 
@@ -195,7 +195,6 @@ describe('classifyMoment', () => {
 
 describe('moment payload', () => {
   it('sends code_concept only when the moment has a concept', () => {
-    expect(PROMPT_VERSION).toBe('2026-10-11.1');
     const hanging = moment('4k3/p7/8/4n3/8/5N2/P3B3/4K3 w - - 0 1', 'Ba6', 'Bd3', 'Nxf3');
     const payload = buildMomentPayload(hanging, '1000_1400', 'Sam');
     expect(payload.code_concept).toEqual({

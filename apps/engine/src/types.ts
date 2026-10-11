@@ -3,6 +3,21 @@ import type { ConceptId } from './analysis/concepts.js';
 export type EloBand = 'under_1000' | '1000_1400' | 'above_1400';
 export type SeverityLabel = 'Turning point' | 'Last chance' | 'Missed win' | 'Quiet drift';
 export type GamePhase = 'opening' | 'middlegame' | 'endgame';
+/** How a game finished, in a closed vocabulary (never the raw PGN Termination text). */
+export type GameEnding = 'checkmate' | 'resignation' | 'time' | 'abandoned' | 'agreement' | 'stalemate' | 'repetition' | 'insufficient material' | 'unknown';
+
+/**
+ * What was really played after a reviewed move. The refutation line is what the
+ * move allowed; explanations get these facts so they never tell it as the game.
+ */
+export interface InGameFacts {
+  /** The moves actually played next, numbered SAN ("33...Qg5"), with who played each; empty when the game had ended. */
+  next_moves: Array<{ move: string; by: 'you' | 'opponent' }>;
+  /** How many moves of the refutation line were really played, counting from its first move. */
+  refutation_moves_played: number;
+  /** The game ended within next_moves. */
+  game_over: boolean;
+}
 
 export interface MultiPvInfo {
   multipv: number;
@@ -55,6 +70,8 @@ export interface CandidateMoment {
   candidateType: SeverityLabel;
   /** Set by the pipeline before explanation. Absent until then. */
   concept_id?: ConceptId | null;
+  /** Set by the pipeline from the game record. Absent in benchmark fixtures. */
+  inGame?: InGameFacts;
   verified?: boolean;
 }
 
@@ -85,6 +102,8 @@ export interface MomentReport extends MomentExplanation {
   refutation_line: string;
   eval_swing: number;
   concept_id: ConceptId | null;
+  /** Absent on reports created before prompt 2026-10-11.2. */
+  in_game?: InGameFacts;
 }
 
 export interface GameAnalysisReport {

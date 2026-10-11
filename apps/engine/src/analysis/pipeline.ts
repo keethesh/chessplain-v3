@@ -1,5 +1,5 @@
 import { EloBand, GameAnalysisReport, MomentReport } from '../types.js';
-import { parsePgn } from './pgn.js';
+import { inGameFacts, parsePgn } from './pgn.js';
 import { sweepPositions } from './sweep.js';
 import { classifyMoment } from './concepts.js';
 import { selectCandidateMoments } from './select.js';
@@ -66,6 +66,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   const verifiedCandidates = await verifyCandidates(rawCandidates);
   for (const candidate of verifiedCandidates) {
     candidate.concept_id = classifyMoment(candidate);
+    candidate.inGame = inGameFacts(parsedGame.positions, candidate);
   }
   const verifiedAt = Date.now();
 
@@ -95,6 +96,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
     }
     if (explained) {
       explained.concept_id = candidate.concept_id ?? null;
+      explained.in_game = candidate.inGame;
       completedMoments.push(explained);
       // Sort in ply order
       completedMoments.sort((a, b) => a.ply - b.ply);
@@ -143,6 +145,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
       playerName: parsedGame.playerName || 'You',
       opponentName: parsedGame.opponentName || 'opponent',
       moveCount: parsedGame.moveCount,
+      ending: parsedGame.ending,
       timeControl: parsedGame.timeControl,
     },
     analysisId
