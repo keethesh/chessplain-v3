@@ -125,6 +125,19 @@ describe('classifyMoment', () => {
     expect(classifyMoment(moment(fen, played, best, line))).toBe(id);
   });
 
+  it('does not tag a back-rank threat the better line still allows', () => {
+    // Qxb7 lets Qd3 threaten Qxf1#. e6 Qd3 still threatens that same mate.
+    const still = moment(
+      '5rk1/1p1Q1ppp/8/p2pP3/1P6/P1P3P1/3q2PP/5R1K w - - 5 36',
+      'Qxb7',
+      'e6',
+      'Qd3 Rc1 axb4 Qxb4',
+      'white'
+    );
+    still.bestLineSan = 'e6 Qd3 exf7+ Kh8';
+    expect(classifyMoment(still)).toBeNull();
+  });
+
   it('tags a back-rank mate threat the refutation move just created', () => {
     // Nb5 does not allow mate at once. Ra8 threatens Ra1# with the rook that just moved.
     const tagged = classifyMoment(
@@ -137,6 +150,21 @@ describe('classifyMoment', () => {
     // a3 captures nothing. Bxc3 Qxc3 wins the rook, but White never started the trade.
     expect(
       classifyMoment(moment('4k3/8/8/b7/8/2R5/3Q4/4K3 w - - 0 1', 'Kd1', 'Qd3', 'Bxc3+ Qxc3'))
+    ).toBeNull();
+  });
+
+  it('does not call recaptures inside a sequence the opponent started a losing exchange', () => {
+    // Real game (labelled set raziborneo-32-068): bxc5, then Qh5 h6 Bxf7+ Rxf7 Qxf7+.
+    // Black's Rxf7 is a recapture in White's sequence on f7; the played capture on c5 was not recaptured.
+    expect(
+      classifyMoment(moment('r1bq1rk1/b2pnppp/ppp5/2P1P1N1/1P2P3/PB6/1B3PPP/R2Q1RK1 b - - 1 16', 'bxc5', 'Qe8', 'Qh5 h6 Bxf7+ Rxf7 Qxf7+'))
+    ).toBeNull();
+  });
+
+  it('does not call a forced trade later in the line a losing exchange', () => {
+    // Real game (ctrpolar-76-095): Nxe3 wins a pawn; Re1 then forces Qxe1+ Bxe1. The capture the player chose was on e3.
+    expect(
+      classifyMoment(moment('2r4r/5R2/2p1Qbpk/2Pn4/3PpP1p/4P2P/4qBP1/5RK1 b - - 15 38', 'Nxe3', 'Rhf8', 'Re1 Qxe1+ Bxe1 Bxd4'))
     ).toBeNull();
   });
 

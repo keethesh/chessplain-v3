@@ -309,3 +309,31 @@ production turns into a retry, then fallback prose). The `config.ts` default
    justify a stronger model.
 8. **Revisit `probable_thought` v2** — ask the player what they were going for
    after v1 can be compared against a neutral aim description.
+
+## Concept tags (phase 1 gate)
+
+`classifyMoment` is scored offline by `pnpm --filter @chessplain/engine benchmark:concepts`
+against `apps/engine/benchmark/concepts/labelled.json`. The gate fails under
+90% overall accuracy or 90% precision on non-null predictions.
+
+Method: 99 verified turning points (`quietDriftFallback: false`, real
+sweep at 15k nodes and depth-20 verify) from recent rapid, blitz, and daily
+games of public Chess.com club members and their recent opponents, ratings
+753–2071. One person labelled each moment from the position and the
+refutation line, without looking at `classifyMoment`, using the five
+definitions in `CONCEPTS` and the same precedence as the code (back rank,
+then mate, then hanging piece, then double attack, then losing exchange).
+Ambiguous positions are `null`. A wrong tag was dropped rather than kept:
+a back-rank mate threat that the recorded better line still allows is not
+tagged (`goalkeeper_luk` 36.Qxb7).
+
+Class balance on this set: null 83, double attack 7, hanging piece 4,
+losing exchange 4, missed mate threat 1, weak back rank 0. Overall accuracy
+1.000 (99/99) and non-null precision 1.000 (16/16) after that fix. Per-concept
+precision and recall are 1.000 on the four concepts that appear; weak back
+rank has no labelled cases here, so its recall is unmeasured.
+
+Limits: one labeller, 99 moments, mostly blitz, and almost no mates, so the
+90% figure is not a balanced estimate of the rare tags. Positional turning
+points correctly stay `null`. Re-label before treating a new concept rule
+as cleared.

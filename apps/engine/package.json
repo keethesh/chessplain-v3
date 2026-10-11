@@ -14,7 +14,8 @@
     "verify:20": "tsx scripts/verify-20-games.ts",
     "verify:representative": "tsx scripts/verify-representative-games.ts",
     "benchmark:fixtures": "tsx scripts/export-benchmark-fixtures.ts",
-    "benchmark:models": "tsx scripts/benchmark-models.ts"
+    "benchmark:models": "tsx scripts/benchmark-models.ts",
+    "benchmark:concepts": "tsx scripts/concept-accuracy.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

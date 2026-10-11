@@ -216,6 +216,38 @@ function isWeakBackRank(candidate: CandidateMoment, ctx: TacticalContext, player
       } catch {
         continue;
       }
+      if (isBackRankMate(flipped.fen(), player)) {
+        // A threat the better line still allows is not this move's mistake.
+        return !bestLineHasBackRankMate(candidate, player);
+      }
+    }
+  }
+  return false;
+}
+
+function bestLineHasBackRankMate(candidate: CandidateMoment, player: 'w' | 'b'): boolean {
+  const enemy = player === 'w' ? 'b' : 'w';
+  let board: Chess;
+  try {
+    board = new Chess(candidate.fenBefore);
+  } catch {
+    return true;
+  }
+  for (const san of lineSans(candidate.bestLineSan)) {
+    try {
+      if (!board.move(san)) break;
+    } catch {
+      break;
+    }
+    if (board.turn() !== player) continue;
+    for (const threatSan of findMateThreats(board.fen(), enemy)) {
+      const flipped = withTurn(board.fen(), enemy);
+      if (!flipped) continue;
+      try {
+        if (!flipped.move(threatSan)) continue;
+      } catch {
+        continue;
+      }
       if (isBackRankMate(flipped.fen(), player)) return true;
     }
   }
@@ -334,56 +366,48 @@ function isLosingExchange(candidate: CandidateMoment, player: 'w' | 'b'): boolea
   } catch {
     return false;
   }
+  // The concept (and its habit, "before you capture, count…") is about the
+  // player's own capture. Only the capture sequence the played move starts
+  // counts; recaptures in a sequence the opponent began, or a forced trade
+  // later in the line, are not a trade the player chose.
   const sans = [stripSan(candidate.san), ...lineSans(candidate.refutationLineSan)].filter(Boolean);
-  type Run = { square: string; fen: string; victim: 'w' | 'b'; captures: number; loss: number; gain: number };
-  let run: Run | null = null;
-  const runs: Run[] = [];
-  for (const san of sans) {
-    const fen = board.fen();
+  const fen = board.fen();
+  let square: string | null = null;
+  let victim: 'w' | 'b' = player;
+  let captures = 0;
+  let loss = 0;
+  let gain = 0;
+  for (const [index, san] of sans.entries()) {
     let move;
     try {
       move = board.move(san);
     } catch {
       break;
     }
-    if (!move) break;
-    if (!move.captured) {
-      if (run) runs.push(run);
-      run = null;
-      continue;
+    if (!move || !move.captured) break;
+    if (index === 0) {
+      if (move.color !== player) return false;
+      square = move.to;
+      victim = move.color === 'w' ? 'b' : 'w';
+    } else if (move.to !== square) {
+      break;
     }
-    const capturedColor: 'w' | 'b' = move.color === 'w' ? 'b' : 'w';
+    captures += 1;
     const value = PIECE_VALUE[move.captured] ?? 0;
-    if (!run || run.square !== move.to) {
-      if (run) runs.push(run);
-      // A recapture the opponent started is not a trade the player chose.
-      if (move.color !== player) {
-        run = null;
-        continue;
-      }
-      run = { square: move.to, fen, victim: capturedColor, captures: 0, loss: 0, gain: 0 };
-    }
-    run.captures += 1;
-    if (capturedColor === player) run.loss += value;
-    else run.gain += value;
+    if ((move.color === 'w' ? 'b' : 'w') === player) loss += value;
+    else gain += value;
   }
-  if (run) runs.push(run);
-
-  return runs.some((seq) => {
-    if (seq.captures < 2) return false;
-    const down = seq.loss - seq.gain;
-    if (down < 2) return false;
-    let defenders = 0;
-    try {
-      defenders = defenderCount(seq.fen, seq.square, seq.victim);
-    } catch {
-      return false;
-    }
-    if (defenders < 1) return false;
-    const attackers = getAttackersOfSquare(seq.fen, seq.square, seq.victim).length;
-    // Outnumbered square, or the player gave up the more valuable piece.
-    return attackers > defenders || seq.loss > seq.gain;
-  });
+  if (!square || captures < 2 || loss - gain < 2) return false;
+  let defenders = 0;
+  try {
+    defenders = defenderCount(fen, square, victim);
+  } catch {
+    return false;
+  }
+  if (defenders < 1) return false;
+  const attackers = getAttackersOfSquare(fen, square, victim).length;
+  // Outnumbered square, or the player gave up the more valuable piece.
+  return attackers > defenders || loss > gain;
 }
 
 /**
