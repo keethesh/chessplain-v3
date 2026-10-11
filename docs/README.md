@@ -11,6 +11,7 @@ production operation.
 | Document | Purpose |
 | --- | --- |
 | [Product](../apps/web/PRODUCT.md) | Purpose, audience hypotheses, capabilities, pricing entitlement, constraints. **Wins when documents disagree about product intent.** |
+| [Strategy](STRATEGY.md) | The 2026-10-10 direction: a chess coach for the mistake you keep making. Problem evidence, audience, positioning, packaging, go-to-market, metrics, hypotheses and phases. |
 | [Design system](../apps/web/DESIGN.md) | Implemented colors, typography, layouts, controls, responsive behavior, accessibility. |
 | [Product and launch assessment](PRODUCT_REVIEW.md) | The 2026-09-30 audit: verdict, production data, positioning, competition, pricing, unit economics, go-to-market gates, architecture, legal/tax, UX/SEO, risks. |
 | [Launch checklist](LAUNCH_CHECKLIST.md) | Ordered pre-launch steps with current VPS and Cloudflare Workers evidence, remaining account-owner actions, and known limits. **Start here when deploying.** |
