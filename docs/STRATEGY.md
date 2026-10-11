@@ -403,5 +403,7 @@ Built and committed, not deployed (see the deploy order in
   [the analysis roadmap](ANALYSIS_QUALITY_ROADMAP.md)). Missed-mate recall is
   1/3 and back-rank cases are unmeasured.
 
-Still open: the concierge test (H1/H2), the benchmark rerun for the new
-prompt, and deployment. The build matches the "Not in this cut" list in §11.
+Prompt `2026-10-11.1` was benchmarked on `openai/gpt-6-luna` on 2026-10-11
+(49/49 valid, the code concept named exactly in 9/9 tagged positions) and ran
+on real scans locally. Still open: the concierge test (H1/H2) and deployment.
+The build matches the "Not in this cut" list in §11.

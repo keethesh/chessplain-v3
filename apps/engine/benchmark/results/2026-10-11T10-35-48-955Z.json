@@ -1,0 +1,1560 @@
+{
+ "promptVersion": "2026-10-11.1",
+ "judgeModel": "anthropic/claude-sonnet-5",
+ "candidates": [
+  {
+   "label": "gpt-6-luna",
+   "model": "openai/gpt-6-luna",
+   "reasoning": "none"
+  }
+ ],
+ "results": [
+  {
+   "fixture": "rep-hanging-bishop-c4:19",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3090,
+   "costUsd": 0.00023958,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "10.Bg5",
+    "probable_thought": "The bishop moves to g5 to attack Sam’s queen on d8.",
+    "what_actually_happens": "The bishop on g5 is undefended. Sam’s knight from e4 takes it; your knight from f3 recaptures, but Sam’s queen from d8 takes that knight, leaving you down a bishop for a knight.",
+    "why_better": "10.Bd3 attacks the knight on e4 while keeping your bishop safe; Sam’s reply leaves the material unchanged.",
+    "concept_name": "Hanging piece",
+    "concept_definition": "a piece left where it can be taken",
+    "takeaway": "Before moving a piece, check whether the square you send it to is defended.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": []
+   }
+  },
+  {
+   "fixture": "rep-hanging-bishop-c4:37",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3236,
+   "costUsd": 0.00026108,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "19.Nf4",
+    "probable_thought": "The knight moves from d3 to f4, escaping the c4 pawn’s attack while attacking Sam’s bishop on e6.",
+    "what_actually_happens": "The queen on e2 is left undefended against the knight on d4. Sam captures it with check; your rook takes that knight, but Sam’s other knight then moves to b7, and you have lost your queen for a knight.",
+    "why_better": "19.cxd4 takes the knight that could capture your queen. Sam can take your knight with the c4 pawn, but your queen recaptures that pawn.",
+    "concept_name": "Loose queen",
+    "concept_definition": "a queen left vulnerable to capture",
+    "takeaway": "Before moving a threatened piece, check whether your opponent can capture your queen with check.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": []
+   }
+  },
+  {
+   "fixture": "rep-hanging-bishop-c4:29",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2982,
+   "costUsd": 0.00023758,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "15.Re3",
+    "probable_thought": "The rook moves to e3 to attack Sam’s bishop on e6.",
+    "what_actually_happens": "The knight on d3 is still attacked by the c4 pawn. Sam captures it; after your queen recaptures, the bishop moves to c4 and attacks your queen, leaving you a knight down.",
+    "why_better": "15.Nf4 moves the knight out of danger and attacks the bishop on e6; after the bishop moves, you can push the d-pawn without losing material.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left vulnerable to capture",
+    "takeaway": "Before making an attack, check whether any of your pieces are already under attack.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 5,
+    "errors": []
+   }
+  },
+  {
+   "fixture": "rep-hanging-bishop-c4:33",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3101,
+   "costUsd": 0.000231705,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "17.Re1",
+    "probable_thought": "The rook moves from a1 to e1, bringing it toward the center.",
+    "what_actually_happens": "The knight on d3 is left undefended. Sam’s c-pawn takes it; your queen recaptures the pawn, but you have lost a knight for a pawn.",
+    "why_better": "17.Nf4 attacks the bishop on e6 and gets the knight out of the c-pawn’s reach; the line keeps the material unchanged.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left without enough protection",
+    "takeaway": "Before moving a defender, check whether it leaves another piece exposed.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "The knight on d3 was already undefended before Re1; Re1 did not newly leave it undefended, it simply failed to address the existing tactic."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-knight-fork-c7:33",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2695,
+   "costUsd": 0.000237205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "17.Nd4",
+    "probable_thought": "The knight moves from f3 to d4, where it has no listed attack or capture; it is a routine repositioning.",
+    "what_actually_happens": "The knight on d4 is undefended against the pawn on e5. Sam’s pawn captures it, leaving you down a knight.",
+    "why_better": "17.d4 challenges the pawn on e5; after the pawns trade, each side has lost one pawn and your knight stays safe.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left vulnerable to capture",
+    "takeaway": "Before moving a piece, check whether an opposing pawn can capture it on its new square.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 4,
+    "useful_takeaway": 5,
+    "errors": [
+     "Could mention bishop on b6 also eyes d4, reinforcing why the square is unsafe"
+    ]
+   }
+  },
+  {
+   "fixture": "rep-hanging-bishop-c4:25",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3375,
+   "costUsd": 0.000233455,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "13.Ne5",
+    "probable_thought": "The knight moves to e5, attacking the f7 and c4 pawns.",
+    "what_actually_happens": "Your pawn on c3 is left for capture. Sam's knight takes it, then moves to d5 when your queen steps away, leaving you a pawn down in this line.",
+    "why_better": "13.d5 attacks the bishop on e6 and keeps the position's material unchanged in the line shown.",
+    "concept_name": "Loose pawn",
+    "concept_definition": "a pawn left undefended and available to capture",
+    "takeaway": "Before moving a piece, check which pawns it was protecting.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't explain why Qc2 is forced or why the pawn can't be recovered after Nxc3, just states the outcome.",
+     "Doesn't note that Ne5 abandons defense of c3 specifically because it was the knight's only defender, which would strengthen the 'why'."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-knight-fork-c7:19",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2991,
+   "costUsd": 0.00024908,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "10.Nxa8",
+    "probable_thought": "The knight takes Sam’s rook on a8, winning a rook.",
+    "what_actually_happens": "Nothing in the refutation line wins your knight: Sam moves the king to d8, you advance the c-pawn, and they push the b-pawn to attack your bishop on c4. You still have the rook you took.",
+    "why_better": "10.Nd5+ checks the king and attacks the queen; after the king moves, the knight takes the queen, trading itself for it.",
+    "concept_name": "Missed win",
+    "concept_definition": "A chance to win more material",
+    "takeaway": "Before taking a rook, check whether a move can also check the king and attack the queen.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't note that Nxa8 traps the knight on a8 (though refutation line shows it escapes, this isn't addressed), and the explanation slightly glosses over why the knight itself is not lost but doesn't explain how it gets out."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-knight-fork-c7:27",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3128,
+   "costUsd": 0.00024333,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "14.Re1",
+    "probable_thought": "The rook moves from f1 to e1, a routine repositioning toward the center.",
+    "what_actually_happens": "Your bishop on c4 is still attacked by the queen on e6. Sam moves the queen to f6, attacking your knight on f3; after your bishop retreats to d5, the g-pawn advances to g5.",
+    "why_better": "14.Bxe6 takes Sam’s queen. After their bishop takes your bishop, your knight can move to h4 and you’ve traded a bishop for a queen.",
+    "concept_name": "Missed win",
+    "concept_definition": "A chance to win material goes unused",
+    "takeaway": "Before making a routine move, check whether you can capture their queen.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't explain why Black's Qf6/Bd5/g5 sequence leaves no material change, missing the key point that the trade is simply bishop-for-queen with no refutation issue.",
+     "Doesn't clarify that the queen and bishop mutually attacked each other on c4/e6, which is why Bxe6 works immediately."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-queen-blunder-g6:7",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2158,
+   "costUsd": 0.000240205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "4.Qxg6",
+    "probable_thought": "The queen takes the g6 pawn, removing the pawn that was attacking it and hitting the f7 pawn and g8 knight.",
+    "what_actually_happens": "The queen on g6 is undefended. Sam’s h-pawn takes it, trading a pawn for your queen.",
+    "why_better": "4.Qf3 keeps the queen safe and threatens checkmate on f7, while the line leaves material unchanged.",
+    "concept_name": "Losing exchange",
+    "concept_definition": "A capture on a defended square that still costs material.",
+    "takeaway": "Before taking a pawn, check whether the capturing piece can be taken back.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "The concept label 'capture on a defended square' is slightly misapplied since g6 wasn't defended by a piece but by the h7 pawn, which is a minor nuance not clarified."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-back-rank-net:13",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2927,
+   "costUsd": 0.00024008,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "7.Be2",
+    "probable_thought": "The bishop retreats from c4 to e2, away from the knight on d4.",
+    "what_actually_happens": "The king on e1 is left with no escape squares. Sam’s knight jumps from d4 to f3 with checkmate: your own pieces block the king’s squares, and nothing can capture the knight or block the check.",
+    "why_better": "7.Qe2 attacks Sam’s queen on e4. The line trades queens and knights, but avoids the immediate checkmate.",
+    "concept_name": "Missed mate threat",
+    "concept_definition": "a checkmate, or mate threat you cannot stop",
+    "takeaway": "Before moving a defender, check whether your king will have any escape squares.",
+    "severity_label": "Last chance"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 4,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "The probable_thought doesn't note that Be2 blocks the e2 escape/block square, which is the key point relevant to the mate."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-back-rank-net:9",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2641,
+   "costUsd": 0.000258705,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "5.Nxf7",
+    "probable_thought": "The knight takes the f7 pawn and attacks Sam’s rook on h8 and queen on g5.",
+    "what_actually_happens": "Your knight on e5 was attacked by the queen on g5, and taking the pawn leaves it exposed. Sam takes your g2 pawn with the queen; after your knight retreats to g5, the queen takes your rook on h1 with check.",
+    "why_better": "5.O-O castles your king to safety. Sam can then take the knight on e5, but the line ends with you losing only that knight.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left open to capture",
+    "takeaway": "Before moving a piece that is under attack, check what the opponent can take elsewhere.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "Doesn't explain why g2 is undefended/why Qxg2 works (the rook on h1 is only defended by the g2 pawn, which disappears).",
+     "Doesn't mention that Nxf7 ignores the queen's attack on e5 rather than addressing it, leaving the real reason the move fails unclear."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-opera-game-1858:15",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2394,
+   "costUsd": 0.00024333,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "8.Nc3",
+    "probable_thought": "The knight develops from b1 to c3, bringing it into play.",
+    "what_actually_happens": "The move leaves the pawn on b7 untouched. Sam can push the c-pawn to c6, and after your bishop goes to g5, the king steps to d8; no material changes hands.",
+    "why_better": "8.Qxb7 takes the pawn and attacks Sam’s rook, knight, and two pawns. The queens are then exchanged, leaving you a pawn ahead.",
+    "concept_name": "Missed win",
+    "concept_definition": "A chance to win material goes unused",
+    "takeaway": "Before developing a piece, check whether you can safely take an undefended pawn.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "why_better doesn't mention that Qxb4 Bxb4+ trades queens evenly with White gaining a pawn, slightly glossing over the forced sequence",
+     "doesn't explain why c6/Bg5/Kd8 is harmless for black, just states outcome"
+    ]
+   }
+  },
+  {
+   "fixture": "rep-missed-fork-win:17",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2331,
+   "costUsd": 0.00024158,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "9.O-O",
+    "probable_thought": "Castling moves the king to safety and brings the rook toward the center.",
+    "what_actually_happens": "The knight on b5 is left for Sam's a-pawn to capture. Your bishop takes that pawn, but Sam castles and you have lost a knight for a pawn.",
+    "why_better": "9.Nxc7+ checks the king while taking the c7 pawn. After the king moves to d8, the knight takes Sam's rook on a8.",
+    "concept_name": "Fork",
+    "concept_definition": "one piece attacks two targets at once",
+    "takeaway": "Before castling, check whether any of your pieces can be captured next move.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Concept label 'Fork' is misleading; Nxc7+ is a knight capture with check/discovered attack on rook, not really a fork on two pieces simultaneously threatened before the check resolves.",
+     "Explanation doesn't clarify why axb5 is forced/good for Black or why White can't avoid losing the knight after O-O."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-knight-fork-c7:37",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2680,
+   "costUsd": 0.00025508,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "19.Nf3",
+    "probable_thought": "The knight retreats to f3, keeping pressure on the e5 pawn while stepping away from the bishop on b6 and pawn on e5.",
+    "what_actually_happens": "The queen on e6 is left untouched. Sam advances the a-pawn to a5; after your b-pawn goes to b4, it reaches a4, with no material changing hands.",
+    "why_better": "19.Nxe6+ takes Sam’s queen with check. After the f-pawn captures your knight, your rook takes the a6 pawn, leaving you a queen and pawn ahead for a knight.",
+    "concept_name": "Loose queen",
+    "concept_definition": "a queen that can be captured",
+    "takeaway": "Before moving a piece under attack, scan for a check that captures their queen.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 3,
+    "useful_takeaway": 4,
+    "errors": [
+     "probable_thought says knight steps away from bishop and pawn attack, but knight moving to f3 is not really 'stepping away' meaningfully since it was already attacked; doesn't mention knight no longer attacks e5 pawn directly enough context omitted",
+     "Explanation doesn't address why the obvious defense (the position being 'winning' already) made this tempting or why the queen capture works via discovered tactics on the knight itself"
+    ]
+   }
+  },
+  {
+   "fixture": "rep-steady-draw:25",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2583,
+   "costUsd": 0.00024483,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "13.Kf1",
+    "probable_thought": "The king steps from g1 to f1, away from its current square.",
+    "what_actually_happens": "The bishop on d7 remains available to take. Sam moves the rook from f8 to d8, and the line leaves material unchanged.",
+    "why_better": "13.Rxd7 takes the bishop. After the rooks are exchanged on d8, you have lost a rook but Sam has lost a rook and a bishop.",
+    "concept_name": "Missed win",
+    "concept_definition": "a chance to win material goes unused",
+    "takeaway": "Before moving your king, check whether you can capture an undefended piece.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "Doesn't explain why the bishop on d7 is undefended/capturable, missing the key tactical reason",
+     "Doesn't clarify why Kf1 fails to address the hanging bishop"
+    ]
+   }
+  },
+  {
+   "fixture": "prod-dd5b4204:28",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2419,
+   "costUsd": 0.000245205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "14...Rxc4",
+    "probable_thought": "The rook takes the bishop on c4, aiming to win a piece while attacking the pawns on e4 and c3.",
+    "what_actually_happens": "The knight on d2 can take your rook on c4. You can move your knight from b4 to c6, but Sam then advances the h-pawn to h4; you have lost a rook for a bishop.",
+    "why_better": "14...Rd7 attacks the knight on d2 without giving up the rook; the line keeps the material unchanged.",
+    "concept_name": "Losing exchange",
+    "concept_definition": "A capture that costs more material than it wins",
+    "takeaway": "Before capturing, check whether an opponent's piece can take the capturing piece.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 5,
+    "errors": []
+   }
+  },
+  {
+   "fixture": "prod-6992cfc4:36",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [
+    "rook on c1"
+   ],
+   "servedBy": "OpenAI",
+   "ms": 2779,
+   "costUsd": 0.000284205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "18...Ne3",
+    "probable_thought": "The knight jumps to e3, attacking White’s pawn on g2, rook on f1, and queen on c2.",
+    "what_actually_happens": "The knight on c5 is left undefended. Sam takes it with the queen; your knight then captures the rook, but the queen moves to c3 and threatens checkmate on g7. Your knight on f1 cannot move away without allowing that mate.",
+    "why_better": "18...Nd7 gets the knight on c5 out of danger. After the rooks reposition, your queen attacks White’s pawn on g3 and rook on c1, with no material lost in the line.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left undefended and open to capture",
+    "takeaway": "Before making an attack, check whether another piece is left undefended.",
+    "severity_label": "Turning point"
+   },
+   "curated": {
+    "passed": true,
+    "failures": []
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": []
+   }
+  },
+  {
+   "fixture": "rep-steady-draw:29",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2688,
+   "costUsd": 0.000259705,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "15.Bd2",
+    "probable_thought": "The bishop moves from c1 to d2, a quiet developing move.",
+    "what_actually_happens": "The rook on d1 leaves the bishop on d7 untouched. Sam checks with the bishop from d7 to b5; after your king steps to e1, the knight lands on d5 and attacks your c3 pawn. No material changes hands in this line.",
+    "why_better": "15.Rxd7 takes the bishop. After the knight moves to d5, your bishop takes it; even when the pawn recaptures, your rook takes the b7 pawn.",
+    "concept_name": "Missed win",
+    "concept_definition": "A chance to win material goes unused",
+    "takeaway": "Before making a quiet move, check whether you can take an undefended piece.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 3,
+    "useful_takeaway": 4,
+    "errors": [
+     "The 'what_actually_happens' section describes the refutation of Rxd7 (the best move), not what actually happens after Bd2 was played, which is confusing and misattributes the Bb5+ check sequence to the played move's consequences.",
+     "Doesn't explain why Bxd5 is good (wins a piece since exd5 recapture still leaves White up material) nor why Black's bishop on d7 was undefended/capturable.",
+     "Doesn't explain why 15.Bd2 fails to address the hanging bishop on d7."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-f4070b20:43",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3072,
+   "costUsd": 0.00029033,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "22.b3",
+    "probable_thought": "The pawn moves to b3, where it can recapture if a piece takes the bishop on c4.",
+    "what_actually_happens": "The pawn on g4 is left undefended. Sam’s queen takes it while attacking your bishop on g3 and knight on f3; after the bishop retreats, Sam’s knight takes the bishop on c4, and the queen recaptures your pawn there.",
+    "why_better": "22.Be2 moves the bishop from c4 out of the queen’s double attack. After Sam takes g4, your bishop on g3 can take the c7 pawn and trade for the bishop on b6.",
+    "concept_name": "Double attack",
+    "concept_definition": "One move that hits two of your pieces at once.",
+    "takeaway": "Before moving a pawn, check whether it leaves another piece or pawn undefended.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 4,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "The queen's attack after Qxg4 hits the bishop on g3 and knight on f3, not the bishop on c4 directly; the explanation's 'why_better' slightly conflates the double attack target, though it's roughly consistent with facts."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-457ae85a:18",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2575,
+   "costUsd": 0.00026333,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "9...b5",
+    "probable_thought": "The pawn advances to b5 to attack the bishop on c4 and drive it away.",
+    "what_actually_happens": "The pawn on b5 can be taken by the knight on c3. Your queen then checks from b4, and after Sam's queen captures it, your bishop takes that queen with check; the pawn is lost, but queens are exchanged.",
+    "why_better": "9...Kd8 steps the king out of the way. Sam can still castle with check and take the f7 pawn, but your queen and pawn stay on the board.",
+    "concept_name": "Loose pawn",
+    "concept_definition": "a pawn that can be captured without being defended",
+    "takeaway": "Before advancing a pawn, check whether an opponent's piece can simply take it.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "Explanation says 'the pawn is lost, but queens are exchanged' as if this is a neutral outcome, but it actually loses a queen for a queen plus a pawn, which is a significant material loss not just an exchange.",
+     "Doesn't explain why b5 specifically loses to Nxb5 given b7 pawn was already attacked by Qb3, missing the key point that b5 doesn't address the original threat properly."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-b6654963:27",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2583,
+   "costUsd": 0.000239205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "14.g3",
+    "probable_thought": "The pawn advances to g3 and attacks the pawn on f4, challenging its hold on the kingside.",
+    "what_actually_happens": "The pawn on f4 can capture on g3. After your rook moves to e3, Sam's bishop goes from e7 to g5 and attacks it; you have lost a pawn, and Sam has lost nothing.",
+    "why_better": "14.Bg4 attacks the knight on d7. Sam's line with b6, a4, and a5 leaves the material unchanged.",
+    "concept_name": "Loose pawn",
+    "concept_definition": "a pawn that can be captured without reply",
+    "takeaway": "Before pushing a pawn, check whether an opposing pawn can capture it.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "Doesn't explain why fxg3 is actually good for Black (gains a pawn and opens lines) or why Re3 is forced/bad, just restates moves.",
+     "Doesn't mention that g3 weakens the king's position or that f4 pawn was already defended/poisoned, missing deeper reasoning."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-b6654963:37",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2882,
+   "costUsd": 0.000270955,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "19.Bb2",
+    "probable_thought": "The bishop moves from c1 to b2, developing onto the long diagonal.",
+    "what_actually_happens": "Your pawn on g3 is left exposed to the pawn on f4. Sam captures it; after the pawns trade on g3 and b4, Sam’s queen takes your bishop on f3.",
+    "why_better": "19.Bg2 moves the bishop on f3 out of the queen’s capture, so after the b-pawn trades, you keep your bishop.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left vulnerable to capture",
+    "takeaway": "Before moving one piece, check what your opponent can capture elsewhere.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "Doesn't explain that fxg3 opens the f-file/diagonal so Qxf3 becomes possible after bishop stays on f3; just says bishop is 'left exposed' without mechanism of g3 capture opening lines to f3.",
+     "Doesn't mention g3 pawn was already attacked by f4 pawn before the move, so Bb2 simply fails to address an existing threat rather than creating a new one."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-b6654963:57",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2386,
+   "costUsd": 0.000245705,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "29.Bc1",
+    "probable_thought": "The bishop retreats from b2 to c1, leaving it available to guard the position.",
+    "what_actually_happens": "The king on f1 is left in checkmate: Sam’s queen moves from h4 to e1, and the bishop on b4 covers e1 while the queen covers the king’s escape squares.",
+    "why_better": "29.Rf2+ checks Sam’s king and lets the bishop take the e5 pawn next; the line trades an e-pawn from each side.",
+    "concept_name": "Missed mate threat",
+    "concept_definition": "A checkmate, or a mate threat you cannot stop.",
+    "takeaway": "Before moving a defender, check whether your king can be mated immediately.",
+    "severity_label": "Quiet drift"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Explanation says bishop on b4 'covers e1' but queen itself delivers mate; b4 bishop actually just prevents king escape, not directly explained clearly.",
+     "Doesn't explain why Rf2+ avoids the mate (removes rook from g2 blocking escape, and deflects queen)."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-b6654963:47",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2308,
+   "costUsd": 0.000249955,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "24.Kf1",
+    "probable_thought": "The king steps away from the queen on h4, trying to get out of danger.",
+    "what_actually_happens": "Your rook on f3 is still available to capture. Sam takes it with check; after your queen takes that rook, the rook from a8 moves to f8 and attacks your queen on f3.",
+    "why_better": "24.Kg2 avoids the rook capture. Sam can check and take the e4 pawn, but your rook on f3 stays on the board.",
+    "concept_name": "Loose rook",
+    "concept_definition": "a rook that can be captured without protection",
+    "takeaway": "Before moving your king, check which of your pieces your opponent can capture with check.",
+    "severity_label": "Last chance"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't mention that Rxf3+ wins material because the rook on f3 was undefended/unprotected after Kf1 leaves it hanging; the explanation says 'still available to capture' but doesn't clarify why Kf1 specifically fails to address this versus Kg2.",
+     "The 'why_better' section doesn't explain that Kg2 keeps the king closer to defend f3 or why Qxe4 is a lesser evil than losing the rook outright."
+    ]
+   }
+  },
+  {
+   "fixture": "rep-steady-draw:37",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2599,
+   "costUsd": 0.00024683,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "19.h3",
+    "probable_thought": "The pawn moves to h3, away from the bishop on c7 that was attacking it.",
+    "what_actually_happens": "The bishop on c7 was attacking your h2 pawn, but that threat can wait: Sam gives check with the bishop from d7 to b5, making your king move to e1. The knight then lands on d5 and attacks your pawns on b4 and c3.",
+    "why_better": "19.Bxb7 takes a pawn and attacks the rook on c8. After the rook moves, your a-pawn advances; you keep the material and remain a pawn ahead.",
+    "concept_name": "Missed win",
+    "concept_definition": "a chance to win material goes unused",
+    "takeaway": "Before moving a threatened pawn, check whether your opponent has a forcing check.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 2,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "The Bb5+ Ke1 Nd5 sequence is actually a branch following 19.Bxb7 (if Black deviates from Rb8), not a consequence of playing 19.h3; the explanation wrongly presents it as what happens after h3.",
+     "The explanation never clarifies that after h3 the position is just equal/worse, not that this tactical sequence occurs on the board.",
+     "Doesn't explain why Bxb7 is safe (bishop can't be trapped) or why h3 lets the advantage slip beyond vague mention of a missed pawn grab."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-faf6c8a6:18",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2818,
+   "costUsd": 0.00013045,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "9...b5",
+    "probable_thought": "The b-pawn moves to b5, attacking the bishop on c4 and pushing the queen on b3 to respond.",
+    "what_actually_happens": "The pawn on b5 can be taken by the knight on c3. Your queen then checks from b4, inviting the queen trade, and your bishop on f8 recaptures the white queen with check; you have lost a pawn while Sam has lost nothing.",
+    "why_better": "9...Kd8 moves the king out of the way; after queenside castling with check, the line shows White can take your f7 pawn, but you keep your queen.",
+    "concept_name": "Loose pawn",
+    "concept_definition": "a pawn that can be taken without protection",
+    "takeaway": "Before pushing a pawn, check whether an opponent’s piece can simply take it.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "Doesn't explain why the knight can safely capture on b5 despite the pawn attacking the bishop on c4 first.",
+     "Doesn't explain why Qb4+ forces a queen trade rather than another response.",
+     "Why_better section doesn't clarify why keeping the queen is strategically better despite losing the f7 pawn."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-3067cfdc:18",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2793,
+   "costUsd": 0.00012695,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "9...b5",
+    "probable_thought": "The pawn advances from b7 to b5, attacking the bishop on c4 and trying to gain time against it.",
+    "what_actually_happens": "The pawn on b5 is undefended. Sam’s knight takes it, and your queen’s check on b4 forces Sam’s queen to take yours, allowing your bishop to recapture it with check; you have traded queens but lost a pawn.",
+    "why_better": "9...Kd8 sidesteps the immediate trouble; after queenside castling with check, you can move the king to c7, though Sam still takes the f7 pawn.",
+    "concept_name": "Loose pawn",
+    "concept_definition": "a pawn that can be taken without being defended",
+    "takeaway": "Before advancing a pawn, check whether the opponent can simply capture it.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "The explanation says 'you have traded queens but lost a pawn' which understates the outcome—queens are traded but Black ends up net down a pawn with no compensation, essentially losing material advantage stated as -2.83 to -5.48, implying it's worse than a simple trade suggests.",
+     "Doesn't explain why b5 specifically fails to actually gain time (knight simply takes it, bishop was never really threatened long-term)."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-1fd14050:15",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2570,
+   "costUsd": 0.000241955,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "8.Nc3",
+    "probable_thought": "The knight develops from b1 to c3, bringing it into play.",
+    "what_actually_happens": "The move leaves the pawn on b7 available. Sam can answer with c6, and the line ends with no material exchanged, so the chance to win that pawn is gone for now.",
+    "why_better": "8.Qxb7 takes the pawn and attacks Sam’s rook, knight, and two pawns; the queen exchange that follows leaves you ahead by a pawn.",
+    "concept_name": "Missed win",
+    "concept_definition": "a chance to gain material goes unused",
+    "takeaway": "Before making a routine move, check whether you can safely take an undefended pawn.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 3,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "why_better misstates outcome: after Qxb7 Qb4+ Qxb4 Bxb4+, White ends up losing queen for queen+pawn, not simply 'ahead by a pawn' overall material-wise it's queen+pawn for queen, which is roughly equal material gain of a pawn, but phrasing implies a cleaner advantage than the forced queen trade; also doesn't mention the check sequence forcing trade.",
+     "what_actually_happens section omits that the refutation (c6, Bg5, Kd8) doesn't actually punish White, it just shows no immediate tactic, understating why Nc3 is suboptimal.",
+     "Doesn't explain why c6 refutes an immediate capture attempt or why Qxb7 followed by Qb4+ forces the trade."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-944902ea:37",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2292,
+   "costUsd": 0.000252955,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "19.Rfe1",
+    "probable_thought": "The rook moves to e1, keeping its attack on the knight on e3.",
+    "what_actually_happens": "Your queen on c4 is undefended. Sam’s knight takes it; after your b-pawn chases the knight to b6, you have lost your queen for nothing.",
+    "why_better": "19.Qe4 attacks the knight while moving the queen out of danger; even when the knight takes your rook, your knight threatens checkmate on h7.",
+    "concept_name": "Hanging piece",
+    "concept_definition": "A piece of yours that nothing is defending",
+    "takeaway": "Before moving a piece, check which of your other pieces are undefended.",
+    "severity_label": "Last chance"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Why_better is slightly imprecise: after Qe4 Nxf1, it's Ng5 (not an existing knight threat) that creates the Qxh7# threat; explanation implies the threat already exists before Ng5."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-944902ea:31",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3895,
+   "costUsd": 0.000252205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "16.d5",
+    "probable_thought": "The pawn advances to d5, attacking Sam’s pawns on c6 and e6.",
+    "what_actually_happens": "Your bishop on c1 is still under attack by the bishop on f4. Sam takes it, and after your rook recaptures, their e-pawn takes your pawn on d5.",
+    "why_better": "16.Bxf4 takes the bishop on f4. Sam’s queen recaptures, leaving each side down a bishop rather than you losing a bishop and a pawn.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left where it can be captured",
+    "takeaway": "Before advancing a pawn, check whether any of your pieces are under attack.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": []
+   }
+  },
+  {
+   "fixture": "prod-7b20f069:15",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2871,
+   "costUsd": 0.00010938,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "8.Nc3",
+    "probable_thought": "The knight develops from b1 to c3, adding a piece to the center.",
+    "what_actually_happens": "The pawn on b7 is left untouched. Sam can play c6, and the line ends with no material changing hands.",
+    "why_better": "8.Qxb7 takes the pawn and attacks Sam’s rook, knight, and two pawns. After the queens are exchanged, you keep the extra pawn.",
+    "concept_name": "Missed win",
+    "concept_definition": "A chance to win material goes unused",
+    "takeaway": "Before developing, check whether you can safely take a loose pawn and attack other pieces.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 3,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "The explanation claims queens are exchanged after Qxb7 and that White keeps an extra pawn, but the actual best line shows Black plays Qb4+, trading queens with White ending up ahead material (winning queen+pawn vs queen), not simply 'keeping the extra pawn' after a simple trade.",
+     "It omits the key point that Qxb7 attacks the rook, knight, and pawns, forcing Qb4+ as the only check-saving resource, which is why the exchange favors White.",
+     "Does not explain why c6 refutes Nc3's purpose or why the line ends with no material change, missing the tactical reasoning."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-d93a5f01:25",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2502,
+   "costUsd": 0.00026683,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "13.Qf3",
+    "probable_thought": "The queen moves to f3 to add pressure to the pawn on f5.",
+    "what_actually_happens": "The knight on e4 is left undefended. Sam's knight lands on f6 and attacks it; after your bishop moves to f4, the f5 pawn takes the knight, and Sam's queen then takes your b2 pawn.",
+    "why_better": "13.Re3 moves the rook off the queen's attack. After the bishop challenges your knight, it can retreat to f3, attacking Sam's queen without losing material.",
+    "concept_name": "Loose piece",
+    "concept_definition": "a piece left undefended",
+    "takeaway": "Before moving your queen, check which pieces will be left undefended.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "why_better slightly mislabels: Re3 moves rook off attack by queen, but explanation says 'off the queen's attack' which is accurate but doesn't mention Nf3 also retreats from Nf6 attack after Be7, not bishop challenge directly causing retreat order is slightly off."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-944902ea:53",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 3174,
+   "costUsd": 0.00024608,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "27.Qa3",
+    "probable_thought": "The queen moves to a3, where it attacks the a7 pawn and the rook on f8.",
+    "what_actually_happens": "Your queen on c3 is under attack by the queen on e5. Sam checks from h5, and after your king moves to g2, the rook on d5 checks from d2.",
+    "why_better": "27.Qxe5 takes Sam’s queen. Their rook can take your queen too, so the queens come off while you keep your rook on c1 aimed at c6.",
+    "concept_name": "Hanging queen",
+    "concept_definition": "a queen left where it can be taken",
+    "takeaway": "Before moving a piece under attack, check whether it can capture the attacker.",
+    "severity_label": "Quiet drift"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't explain why Qa3 allows Qh5+ or why that check is dangerous (king stuck on h3)",
+     "Doesn't explain why queen trade via Qxe5 is better despite being down material - just states it leads to a trade"
+    ]
+   }
+  },
+  {
+   "fixture": "prod-d93a5f01:31",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2874,
+   "costUsd": 0.00027183,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "16.Qe3+",
+    "probable_thought": "The queen gives check from e3, keeping the king busy while the attack continues.",
+    "what_actually_happens": "The check leaves the c6 pawn and the targets around it untouched. Sam develops the bishop to e7; after your rook leaves a1, the f6 pawn takes your knight on g5, and your bishop can only take that pawn back.",
+    "why_better": "16.Qxc6+ takes a pawn with check and attacks several more. After the bishop blocks on d7, Re3+ keeps checking, and you finish the line having lost nothing while Sam has lost a pawn.",
+    "concept_name": "Missed win",
+    "concept_definition": "A chance to gain material goes unused",
+    "takeaway": "Before giving check, ask whether a check that also takes something is available.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "The explanation doesn't mention that after Bxg5 White threatens Qxe7# forcing Black's hand, which is why the line ends with White losing material instead of simply trading evenly."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-d93a5f01:35",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2270,
+   "costUsd": 0.00025858,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "18.Rd2",
+    "probable_thought": "The rook steps to d2, keeping it on the second rank without a clear attack or defense in the provided facts.",
+    "what_actually_happens": "The rook move leaves the queen on c3 attacking your queen on e3 and pawn on c2. Sam shifts the rook from a8 to b8, then checks with it on b1; no material changes in the line.",
+    "why_better": "18.Kf1 moves the king away from the queen's attack. If Sam trades queens, your rook from g3 recaptures, so the queens come off evenly.",
+    "concept_name": "Missed win",
+    "concept_definition": "A chance to secure a winning position goes unused",
+    "takeaway": "Before moving a rook, check whether your king can step out of an attack on your queen.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 3,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 3,
+    "errors": [
+     "The queen on c3 was not attacking White's queen on e3 or pawn c2 before the move (attacked_before_move for Rd2 was empty); that attack claim is invented.",
+     "Does not explain why Rd2 fails to stop Rb1+ or why the king is exposed on e1, missing the actual tactical point of the refutation.",
+     "Doesn't clarify why Kf1 specifically prevents the Rb1+ check (king safety on back rank)."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-d93a5f01:47",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2387,
+   "costUsd": 0.00027283,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "24.Rxe7+",
+    "probable_thought": "The rook takes the bishop with check, aiming to remove a defender and keep the attack going.",
+    "what_actually_happens": "The rook on e7 is undefended. Sam’s queen takes it, winning your rook for the bishop; your queen then attacks the h7 pawn, but Sam’s queen moves to d6 and attacks your rook on g3 and pawn on d4.",
+    "why_better": "24.Qxc7 takes a pawn and attacks both bishops. Sam can take your f2 pawn with check, but your king captures that rook, leaving you with a rook and pawn for two pawns.",
+    "concept_name": "Losing exchange",
+    "concept_definition": "A capture on a defended square that still costs material.",
+    "takeaway": "Before taking with a rook, check whether the opponent’s queen can capture it.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 4,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "why_better outcome says 'rook and pawn for two pawns' but actual material swing is losing a rook+pawn for a rook+bishop... net is up 2 pawns, not clearly phrased as such."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-fd7e23ef:40",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2931,
+   "costUsd": 0.000256205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "20...Rd8",
+    "probable_thought": "The rook moves from d7 to d8, away from the knight’s attack on e5.",
+    "what_actually_happens": "The knight on e5 can take the c6 pawn with check, attacking your rook on d8 and queen on e7 at once. After your king moves to a8, the knight takes your queen.",
+    "why_better": "20...Rc7 moves the rook out of the knight’s double attack. Sam’s g-pawn can chase your knight, but the line ends without material changing hands.",
+    "concept_name": "Double attack",
+    "concept_definition": "One move that hits two of your pieces at once.",
+    "takeaway": "Before moving an attacked piece, check whether your opponent can make a forcing move that attacks two targets.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 4,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Rd8 doesn't clearly move 'away from the knight's attack on e5' since Nxc6+ still forks it; this is slightly misleading phrasing but not technically false since e5 attacked d7 before the move."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-4e697417:40",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2544,
+   "costUsd": 0.00012542,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "20...Rd8",
+    "probable_thought": "The rook moves from d7 to d8, away from the knight attacking it.",
+    "what_actually_happens": "The knight on e5 can also take the c6 pawn with check. From c6 it attacks both your rook on d8 and queen on e7; after your king moves to a8, the knight takes your queen.",
+    "why_better": "20...Rc7 moves the rook off the knight’s target. If Sam pushes g4 to attack your h5 knight, it can retreat to f6; no material changes hands in this line.",
+    "concept_name": "Double attack",
+    "concept_definition": "One move that hits two of your pieces at once.",
+    "takeaway": "Before moving an attacked piece, check whether your opponent can give check while attacking another piece.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": []
+   }
+  },
+  {
+   "fixture": "prod-dd73fe8b:25",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [
+    "pawn on a5"
+   ],
+   "servedBy": "OpenAI",
+   "ms": 2739,
+   "costUsd": 0.000227705,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "13.c3",
+    "probable_thought": "The c-pawn steps forward to attack the pawn on d4.",
+    "what_actually_happens": "The pawn on d4 is not the only target to watch. Sam's knight moves from f6 to h5, then lands on f4 attacking your queen on e2, bishop on d3, and pawn on g2.",
+    "why_better": "13.Rab1 moves the rook out of the way; after the knight from d2 goes to c4, it attacks Sam's pawn on a5.",
+    "concept_name": "Loose pieces",
+    "concept_definition": "pieces left vulnerable to attack",
+    "takeaway": "Before pushing a pawn, check what your opponent's next move will attack.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't explain why c3 fails to prevent Nh5-Nf4 or why d4 push isn't actually a real threat being solved",
+     "Doesn't mention that eval swings to -3.06, i.e. the severity is understated relative to facts",
+     "Rab1 line explanation doesn't connect to why c3 specifically is bad, leaving causal link weak"
+    ]
+   }
+  },
+  {
+   "fixture": "prod-dd73fe8b:87",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2608,
+   "costUsd": 0.000229205,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "44.Rhh7",
+    "probable_thought": "The rook moves to h7, where it can take Sam’s rook if it comes to e7.",
+    "what_actually_happens": "Your rook on h7 is left vulnerable to Sam’s rook from e8, which attacks both your rooks. You can take that rook, but Sam’s pawn then captures your bishop on d3.",
+    "why_better": "44.Rh8# checkmates immediately: the rook’s check cannot be blocked or captured, and every escape square is covered.",
+    "concept_name": "Missed checkmate",
+    "concept_definition": "a checkmate available in one move",
+    "takeaway": "Before making a rook move, check whether you have a direct checkmate.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 2,
+    "useful_takeaway": 4,
+    "errors": [
+     "probable_thought implies foresight of capturing on e7, which overstates intent; should be neutral description of the move's immediate effect",
+     "doesn't explain why Rh8 is mate (king escape squares covered) beyond a brief mention, lacks specificity on why Rhh7 fails to stop Re7 fork"
+    ]
+   }
+  },
+  {
+   "fixture": "prod-4e697417:28",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2774,
+   "costUsd": 0.00013063,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "14...Nd7",
+    "probable_thought": "The knight moves from b6 to d7, stepping away from the attacks and targeting the knight on e5.",
+    "what_actually_happens": "The pawn on a5 can advance while attacking your pawn on b7, threatening checkmate with the queen on b3 taking b7. Your knight on d7 can take the knight on e5, but the pawn from d4 recaptures it, leaving you a knight down.",
+    "why_better": "14...Nc4 attacks several pieces and pawns. If Sam takes that knight with the knight from e5, your bishop takes the bishop on h2, leaving Sam a bishop down.",
+    "concept_name": "Threat overload",
+    "concept_definition": "One move creates several threats at once",
+    "takeaway": "Before moving an attacked piece, check what your opponent can threaten next.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't explain why Nd7 fails to address the queen/pawn threat on b7 (the mate threat), just states the sequence",
+     "Doesn't explain why Nc4 works tactically (it attacks the e5 knight, so White must choose which piece to save)"
+    ]
+   }
+  },
+  {
+   "fixture": "prod-7342a0d3:25",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2231,
+   "costUsd": 0.0001222,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "13.c3",
+    "probable_thought": "The c-pawn advances to attack the pawn on d4.",
+    "what_actually_happens": "Your pawn on c3 does not stop the knight from reaching f4. From there, the knight attacks your queen on e2, bishop on d3, and pawn on g2 at once.",
+    "why_better": "13.Rab1 moves the rook to b1 and keeps the position roughly equal; the line shows no material change.",
+    "concept_name": "Fork",
+    "concept_definition": "one piece attacks several targets at once",
+    "takeaway": "Before advancing a pawn, check whether your opponent can move a piece to attack several of yours at once.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 5,
+    "useful_takeaway": 3,
+    "errors": [
+     "Doesn't mention Nh5 and Rfc1 as intermediate moves, jumps straight to Nf4 fork without explaining the sequence.",
+     "Does not explain why c3 fails to prevent Nh5-f4 specifically (e.g., no control over f4/weakening of king safety)."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-7342a0d3:87",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2234,
+   "costUsd": 0.00011728,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "44.Rhh7",
+    "probable_thought": "The rook moves to h7, where it can take the rook if it comes to e7.",
+    "what_actually_happens": "The rook on h7 can be hit by the rook on e8. Sam plays ...Re7, attacking both your rooks; after you take that rook, the pawn on e4 takes your bishop on d3.",
+    "why_better": "44.Rh8# delivers checkmate: the king has no escape square, and nothing can capture the rook or block its check.",
+    "concept_name": "Missed checkmate",
+    "concept_definition": "a move that would end the game immediately",
+    "takeaway": "Before making a rook move, check whether it can give immediate checkmate.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 3,
+    "plausible_thought": 2,
+    "useful_takeaway": 4,
+    "errors": [
+     "probable_thought implies foresight of the attack ('where it can take the rook if it comes to e7'), which overstates intent not evidenced by the move itself.",
+     "why_better doesn't explain why Rhh7 fails to achieve the same safety (the rook being attacked), only restates the mate mechanics."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-fd7e23ef:28",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2570,
+   "costUsd": 0.00026908,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "14...Nd7",
+    "probable_thought": "The knight moves to d7, where it attacks White’s knight on e5 and gets out of the pawn’s attack.",
+    "what_actually_happens": "The pawn on a5 is still attacking your knight on b6. Sam advances it to a6, threatening checkmate with the queen taking b7; you take the knight on e5, but the d4 pawn recaptures your knight.",
+    "why_better": "14...Nc4 attacks the knight on e5 and the bishop on h2. If Sam takes your knight, your bishop takes theirs on h2, winning a bishop for a knight.",
+    "concept_name": "Fork",
+    "concept_definition": "one piece attacks two targets at once",
+    "takeaway": "Before moving an attacked piece, check whether another attacker can still take it.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 3,
+    "explains_why": 4,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Says 'the pawn on a5 is still attacking your knight on b6' but the knight already moved to d7, making this statement confusing and factually off.",
+     "Doesn't mention that Nc4 also attacks the queen's line (b2/d2) or clarify why Nd7 fails to address the b7 mating threat directly."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-62aa9c6e:87",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2704,
+   "costUsd": 0.00023883,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "44.Rhh7",
+    "probable_thought": "The rook moves to h7, staying active beside Sam’s king and keeping pressure on the back rank.",
+    "what_actually_happens": "The rook on h7 is exposed to Sam’s rook from e8. Sam attacks both your rook on h7 and the one on a7; when your h7 rook captures the e7 rook, the pawn on e4 takes your bishop on d3.",
+    "why_better": "44.Rh8# checkmates immediately: the rook checks from h8, and Sam’s king has no way to escape, capture it, or block the check.",
+    "concept_name": "Missed checkmate",
+    "concept_definition": "a move that checkmates was available",
+    "takeaway": "Before moving a rook, check whether it can give immediate checkmate.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 4,
+    "plausible_thought": 3,
+    "useful_takeaway": 4,
+    "errors": [
+     "probable_thought slightly overstates intent ('keeping pressure on the back rank') beyond what the move's facts show, bordering on inferred motive rather than pure description",
+     "why_better doesn't explicitly address why the e7 rook's covering stops escape/block, though mate_reason is implied"
+    ]
+   }
+  },
+  {
+   "fixture": "prod-62aa9c6e:25",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2338,
+   "costUsd": 0.00023333,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "13.c3",
+    "probable_thought": "The c-pawn advances to attack the pawn on d4 and challenge Black’s center.",
+    "what_actually_happens": "The knight on f6 gets a useful route to h5. After your rook moves from f1 to c1, the knight lands on f4 and attacks your pawn on g2, queen on e2, and bishop on d3 at once.",
+    "why_better": "13.Rab1 moves the rook from a1 to b1 and keeps the position steady; the line leaves material unchanged while your knight can challenge the a-pawn.",
+    "concept_name": "Fork",
+    "concept_definition": "one piece attacks several targets at once",
+    "takeaway": "Before pushing a pawn, check which squares it leaves open for their pieces.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "The explanation doesn't address why c3 specifically opens the route for Nh5-Nf4 (no longer controlling f4/e5 squares) nor why Nf4 is so strong (hits three pieces, no good square controls it), just lists resulting attacks without causal link to c3."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-814c44ee:86",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2963,
+   "costUsd": 0.00022683,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "43...Rb6",
+    "probable_thought": "The rook moves to b6 to attack White’s h6 pawn.",
+    "what_actually_happens": "The rook leaves b3 while the king remains on d5. Sam checks with the rook on d8, forcing your king to e6; then the h-pawn advances to h7, creating a dangerous passed pawn.",
+    "why_better": "43...Rb7 keeps the rook on the seventh rank; after the kings reposition, the check on d8 no longer comes with the same pawn advance immediately afterward.",
+    "concept_name": "King-and-pawn race",
+    "concept_definition": "Racing kings and pawns toward promotion",
+    "takeaway": "Before chasing a pawn, check whether your king can stop the opponent’s passed pawn.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": [
+     "Explanation claims Rb7 prevents the same check/pawn advance, but facts show Rd8+ still occurs in the best line too, just king escapes to d4 instead of e6; it doesn't explain why e6 is worse than d4 for stopping h7-pawn.",
+     "Eval swing from 0 to -5.54 and 'losing' standing is not mentioned or justified."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-a7671d4e:25",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2661,
+   "costUsd": 0.000261955,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "13.cxd5",
+    "probable_thought": "The pawn takes on d5, removing the pawn that was attacking it and hitting Black's pawns on c6 and e6.",
+    "what_actually_happens": "The knight on g4 is left in place. Sam checks with the rook on h1; after your king takes it, the queen checks from h4 and attacks your pawn on f2.",
+    "why_better": "13.Qxg4 takes the knight while it is still there. Sam can save the rook, but the line ends with you up a knight and having lost nothing.",
+    "concept_name": "Missed win",
+    "concept_definition": "a chance to win material goes unused",
+    "takeaway": "Before moving a pawn, check whether you can capture an undefended enemy piece first.",
+    "severity_label": "Missed win"
+   },
+   "judge": {
+    "accuracy": 4,
+    "explains_why": 2,
+    "plausible_thought": 4,
+    "useful_takeaway": 4,
+    "errors": [
+     "Doesn't explain why cxd5 fails to deal with the Rh1+/Kxh1/Qh4+ mating-style attack exposing the king, nor why capturing on g4 removes the attacker that enables Rh1+ in the first place.",
+     "Doesn't mention the king is left exposed on g1 near h2 rook, the core reason cxd5 loses."
+    ]
+   }
+  },
+  {
+   "fixture": "prod-a7671d4e:21",
+   "candidate": "gpt-6-luna",
+   "run": 1,
+   "valid": true,
+   "errors": [],
+   "phantoms": [],
+   "servedBy": "OpenAI",
+   "ms": 2456,
+   "costUsd": 0.000262955,
+   "reasoningTokens": 0,
+   "output": {
+    "played": "11.c4",
+    "probable_thought": "The c-pawn advances to challenge the pawn on d5 and open up the center.",
+    "what_actually_happens": "The bishop on d6 can take the h2 pawn with check. After your knight takes that bishop, Sam's queen reaches h4 and threatens checkmate on h2; your knight cannot escape because the queen can mate on h1.",
+    "why_better": "11.h3 attacks the knight on g4 before advancing c4, so the bishop cannot take h2 with check and leave that mating threat.",
+    "concept_name": "Mating threat",
+    "concept_definition": "a threat to deliver checkmate next move",
+    "takeaway": "Before moving a pawn that protects your king, check what captures become possible.",
+    "severity_label": "Turning point"
+   },
+   "judge": {
+    "accuracy": 5,
+    "explains_why": 4,
+    "plausible_thought": 5,
+    "useful_takeaway": 4,
+    "errors": []
+   }
+  }
+ ]
+}

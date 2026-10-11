@@ -26,8 +26,8 @@ the commits above. Before deploying, in this order:
    below). It is additive: one new `scans` table with RLS on and no policies.
 2. Deploy the engine (`docs/ENGINE_DEPLOYMENT.md`), then
    `node apps/engine/scripts/verify-deployment.mjs` and one real scan.
-3. Deploy the web Worker. The prompt changed (`2026-10-11.1`): rerun the
-   benchmark before claiming quality.
+3. Deploy the web Worker. Prompt `2026-10-11.1` was benchmarked on
+   2026-10-11 (49/49 valid; see the Analysis quality row below).
 4. Concept-tag gate passes on the labelled set (0.980 overall, 1.000 non-null
    precision; `pnpm --filter @chessplain/engine benchmark:concepts`). Rerun it
    after any change to `concepts.ts`.
@@ -50,7 +50,7 @@ completion, premium access, or cancellation.
 | Legacy accounts | 326 auth users from the previous version: 324 Google, 2 email; 321 real, confirmed accounts. All 321 were already Resend contacts from the March 2026 relaunch email ("It's your turn.", sent 6–8 March to about 229 people in three batches) | Resend segment `relaunch-2026-10` holds the 320 still subscribed (verified contact by contact, 2026-09-30). Draft broadcast "Relaunch, October 2026" exists but is **on hold until phase 1 ships** (owner decision, 2026-10-11; see [Strategy](STRATEGY.md)). Refresh the draft and recheck the segment before sending. 5 Resend contacts no longer have an account and were left out |
 | API smoke check | `node apps/engine/scripts/verify-deployment.mjs https://api.getchessplain.com`: 25 passed, 0 failed, 0 warnings (2026-09-30, after the deploy and again after the reboot) | Input rejection, authentication boundaries, health and headers; no paid checkout completion |
 | Analysis works end-to-end | Deployed `runAnalysisPipeline` run on the Ne3 production game completed with 1 moment and **0 fallback phrases** | Direct pipeline verification bypassed HTTP quota; OpenRouter usage increased as expected |
-| Analysis quality | 49-position benchmark rerun 2026-09-30 on prompt `2026-09-24.1` with `openai/gpt-6-luna`: 49/49 valid, 1 phantom piece, within noise of the 2026-09-23 run (`apps/engine/benchmark/results/2026-09-30T12-25-48-803Z.md`) | Benchmark judge scores are directional, not a guarantee |
+| Analysis quality | 49-position benchmark on prompt `2026-10-11.1` with `openai/gpt-6-luna`, 2026-10-11: 49/49 valid, 2 phantom pieces (1 on 2026-09-30), judge accuracy 4.06 (3.98), explains why 3.04 (3.04); the model named the code concept exactly in 9/9 tagged positions (`apps/engine/benchmark/results/2026-10-11T10-35-48-955Z.md`). The same day, the local engine produced 3 real reviews on this model and prompt from scans: 10 moments, 0 fallback, 0 failed validation, concept named exactly where tagged (3/3) | Judge scores are directional, not a guarantee. A game summary can describe the engine's continuation as if it happened in the game; the summary prompt was not changed for the pivot |
 | Database | `analysis_errors.analysis_id` exists; signup trigger installed once; no auth users without profiles; migrations 7 and 8 recorded | Production retains 71 older migration-history entries absent from this repo; see migration warning below |
 | LLM provider | **Current:** `openai/gpt-6-luna` via `https://openrouter.ai/api/v1`, `reasoning_effort: none`. Key replaced 2026-09-26: $10 limit, expires 2026-12-25; one 3-moment report cost $0.00127 | Replace before 2026-12-25 with `ssh london-ampere "chessplain-set-llm-key '<key>'"` (checks the key with OpenRouter before writing, backs up, restarts) |
 | Error telemetry | Migration 9 (`analysis_errors_stage_check` accepts `explaining_moment`, `explaining_summary`, `llm_credits_exhausted`) | Reverify after future schema changes |
