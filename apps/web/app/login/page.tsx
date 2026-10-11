@@ -1,94 +1,124 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowRight, Check, LoaderCircle } from 'lucide-react';
+import { Gremlin } from '../../components/Gremlin';
 import { supabase } from '../../lib/supabase';
 import { safeNextPath, useSession } from '../../lib/use-session';
+import './login.css';
 
 export default function LoginPage() {
   const router = useRouter();
   const { session, ready } = useSession();
-  // Already signed in: carry on to where they were headed, else to their account.
+  const emailRef = useRef<HTMLInputElement>(null);
+  const googleRef = useRef<HTMLButtonElement>(null);
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState<'google' | 'email' | null>(null);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     if (!session) return;
     const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
     router.replace(next === '/' ? '/account' : next);
   }, [session, router]);
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
+
+  function nextPath() {
+    return safeNextPath(new URLSearchParams(window.location.search).get('next'));
+  }
 
   async function sendLink(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
-    setBusy(true); setError('');
-    const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
+    setBusy('email');
+    setError('');
+    const next = nextPath();
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error: authError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
       });
-      if (error) throw error;
+      if (authError) throw authError;
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'We couldn’t send your sign-in link. Please try again.');
-    } finally { setBusy(false); }
+      setError(err instanceof Error ? err.message : 'Oops, we couldn’t send that link. Try again?');
+      emailRef.current?.focus();
+    } finally { setBusy(null); }
   }
 
   async function signInWithGoogle() {
     if (busy) return;
-    setBusy(true); setError('');
-    const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
+    setBusy('google');
+    setError('');
+    const next = nextPath();
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
       });
-      if (error) throw error;
+      if (authError) throw authError;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'We couldn’t start Google sign-in. Please try again.');
-      setBusy(false);
+      setError(err instanceof Error ? err.message : 'Oops, Google didn’t open. Try again?');
+      setBusy(null);
+      googleRef.current?.focus();
     }
   }
 
-
   return (
-    <div className="page-width login-page">
-      {!ready ? (
-        <p role="status" className="text-sm text-[var(--w-ink2)]">Checking your account…</p>
-      ) : session ? (
-        <p role="status" className="text-sm text-[var(--w-ink2)]">Taking you to your account…</p>
-      ) : sent ? (
-        <div role="status">
-          <h1 className="t-heading">Check your inbox.</h1>
-          <p className="login-lede">We sent a sign-in link to <strong>{email}</strong>. Open it in this browser to finish.</p>
-          <button className="text-link mt-4" onClick={() => setSent(false)}>Use a different email</button>
-        </div>
-      ) : (
-        <>
-          <h1 className="t-heading">Sign in or create an account.</h1>
-          <p className="login-lede">Use Google, or enter your email and we’ll send you a link. No password. If you’re new, either option creates your account.</p>
-          <button type="button" className="secondary-button w-full justify-center" onClick={signInWithGoogle} disabled={busy}>
-            {busy ? <><LoaderCircle size={16} className="spin" />Opening Google…</> : <>Continue with Google <ArrowRight size={16} /></>}
-          </button>
-          <div className="login-divider" aria-hidden="true"><span>or use email</span></div>
-          <form onSubmit={sendLink} className="login-form">
-            <label htmlFor="login-email" className="block text-sm font-semibold">Email</label>
-            <input id="login-email" className="email-input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required disabled={busy} autoFocus />
-            <button className="primary-button" disabled={busy}>
-              {busy ? <><LoaderCircle size={16} className="spin" />Sending link…</> : <>Email me a sign-in link <ArrowRight size={16} /></>}
+    <div className="page login">
+      <div className="panel login-panel bg-concept" data-concept="hanging_piece">
+        {!ready ? (
+          <p role="status">Chessplain is checking your sign-in…</p>
+        ) : session ? (
+          <p role="status">You’re in. Taking you to your account…</p>
+        ) : sent ? (
+          <div className="login-copy" role="status">
+            <h1 className="h1">Check your inbox!</h1>
+            <p className="lede">We sent a sign-in link to <strong translate="no">{email}</strong>. Open it in this browser.</p>
+            <button type="button" className="btn btn--quiet" onClick={() => setSent(false)}>Use a different email</button>
+          </div>
+        ) : (
+          <div className="login-copy">
+            <h1 className="h1 login-title">Want the gremlin to stay?</h1>
+            <p className="lede">Use Google, or get an email link. No password. New here? Either one creates your account.</p>
+            <button ref={googleRef} type="button" className="btn btn--key" onClick={signInWithGoogle} disabled={!!busy}>
+              Continue with Google
             </button>
-            {error && <p className="form-error" role="alert">{error}</p>}
-          </form>
-          <ul className="login-perks">
-            <li><Check size={16} aria-hidden="true" />Two free reviews every week on your own account, not shared with your network.</li>
-            <li><Check size={16} aria-hidden="true" />Your subscription, if you choose one, follows your email.</li>
-          </ul>
-        </>
-      )}
+            {busy === 'google' && <p className="field-note" role="status">Opening Google…</p>}
+            <div className="login-or" aria-hidden="true">or email</div>
+            <form onSubmit={sendLink} className="login-form">
+              <label htmlFor="login-email">Email</label>
+              <input
+                ref={emailRef}
+                id="login-email"
+                className="input"
+                name="email"
+                type="email"
+                autoComplete="email"
+                inputMode="email"
+                value={email}
+                onChange={event => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                spellCheck={false}
+                required
+                disabled={!!busy}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'login-error' : undefined}
+              />
+              <button className="btn" disabled={!!busy} aria-busy={busy === 'email'}>
+                Email me a sign-in link <span className="arrow" aria-hidden="true">→</span>
+              </button>
+              {busy === 'email' && <p className="field-note" role="status">Sending your link…</p>}
+              {error && <p id="login-error" className="field-note" data-tone="error" role="alert">{error}</p>}
+            </form>
+            <ul className="login-points small muted">
+              <li>Two scans and two reviews every 7 days stay on your account, not your network.</li>
+              <li>A subscription follows this email.</li>
+            </ul>
+          </div>
+        )}
+        <Gremlin className="login-gremlin" concept="hanging_piece" size={220} priority />
+      </div>
     </div>
   );
 }

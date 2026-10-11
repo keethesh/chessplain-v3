@@ -1,0 +1,19 @@
+.status-page { padding-block: clamp(32px, 6vw, 88px); }
+
+.status-panel {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr);
+  gap: clamp(16px, 3vw, 40px);
+  align-items: end;
+  max-width: 980px;
+}
+
+.status-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; min-width: 0; }
+
+.status-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+@media (max-width: 640px) {
+  .status-panel { grid-template-columns: 1fr; }
+  .status-gremlin { order: -1; width: 140px; }
+  .status-actions .btn { width: 100%; }
+}

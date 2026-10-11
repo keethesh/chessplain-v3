@@ -1,0 +1,12 @@
+.auth-page {
+  padding-block: clamp(48px, 8vw, 104px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 40rem;
+}
+
+@media (max-width: 560px) {
+  .auth-page .btn { width: 100%; }
+}

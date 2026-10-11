@@ -12,8 +12,8 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://getchesspla
 // human (deletion requests, refunds). This mailbox must actually exist.
 export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@getchessplain.com';
 
-const TITLE = 'Chess game review, explained | Chessplain';
-const DESCRIPTION = 'Chessplain explains the few moments that changed your chess game, lets you explore them on the board, and gives you one useful lesson for your next game.';
+const TITLE = 'Find the mistake you keep making | Chessplain';
+const DESCRIPTION = 'Chessplain reads your last 10 Chess.com games, finds the mistake that keeps costing you, shows it on the board and gives you one check for your next game.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   icons: { icon: '/icon.svg', apple: '/icon.svg' },
   applicationName: 'Chessplain',
-  keywords: ['chess game review', 'chess analysis', 'chess improvement', 'explain chess mistakes', 'AI chess coach'],
+  keywords: ['chess coach', 'recurring chess mistakes', 'chess improvement', 'chess game review', 'hanging pieces', 'Chess.com analysis'],
   openGraph: {
     type: 'website',
     siteName: 'Chessplain',
@@ -30,13 +30,13 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     url: SITE_URL,
     locale: 'en_US',
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little more understanding, every game.' }],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: find the mistake you keep making.' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: TITLE,
     description: DESCRIPTION,
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: a little more understanding, every game.' }],
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'Chessplain: find the mistake you keep making.' }],
   },
   robots: { index: true, follow: true },
 };
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#111310',
+  themeColor: '#ffffff',
 };
 
 const STRUCTURED_DATA = {
@@ -76,31 +76,31 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&display=swap" rel="stylesheet" />
+        <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }} />
       </head>
-      <body className="min-h-screen flex flex-col font-sans">
+      <body className="flex min-h-dvh flex-col">
         <a href="#main-content" className="skip-link">Skip to content</a>
         <header className="site-header">
-          <div className="site-nav page-width">
-            <Link href="/" className="wordmark" aria-label="Chessplain home">
-              <svg aria-hidden="true" width="29" height="30" viewBox="0 0 29 30" fill="none">
-                <path d="M5 25h19M7 21h15L18 15V8H11v7l-4 6ZM10 8h9M14.5 2v6M11.5 5h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              chessplain
-            </Link>
+          <div className="site-header__inner page">
+            <Link href="/" className="wordmark" aria-label="Chessplain home">Chessplain</Link>
             <SiteNav />
           </div>
         </header>
         <main id="main-content" className="flex-1">
           <PostHogProvider>{children}</PostHogProvider>
         </main>
-        <footer className="site-footer page-width">
-          <p>Chessplain. A little more understanding, every game.</p>
-          <div>
-            <Link href="/pricing">Pricing</Link>
-            <Link href="/privacy">Privacy &amp; cookies</Link>
-            <Link href="/terms">Terms</Link>
+        <footer className="site-footer">
+          <div className="site-footer__inner page">
+            <p className="m-0">Chessplain. Find the mistake you keep making.</p>
+            <nav className="site-footer__links" aria-label="Footer">
+              <Link href="/report/demo">Sample review</Link>
+              <Link href="/pricing">Pricing</Link>
+              <Link href="/privacy">Privacy &amp; cookies</Link>
+              <Link href="/terms">Terms</Link>
+            </nav>
           </div>
         </footer>
       </body>

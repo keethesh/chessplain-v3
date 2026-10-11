@@ -1,234 +1,425 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ArrowLeft, RotateCcw, BookOpen } from 'lucide-react';
 import { Chess } from 'chess.js';
-import type { ReportDetail, MomentReport } from '../lib/api';
-import { ChessboardView } from './ChessboardView';
-import { MomentCard, MomentSkeleton, stageTexts } from './MomentCard';
+import type { Me, MomentReport, ReportDetail } from '../lib/api';
+import { GREMLINS } from '../lib/gremlins';
 import { assignSquareColors } from '../lib/squares';
+import { captureEvent } from '../lib/posthog';
+import { ChessboardView } from './ChessboardView';
+import { Gremlin } from './Gremlin';
+import { SquareText } from './SquareText';
 
-type LessonStage = 'before' | 'played' | 'alternative' | 'takeaway';
+type Mode = 'owner' | 'shared' | 'demo';
+type Kind = 'prompt' | 'checked' | 'played' | 'other' | 'shown';
 
-interface SharedReportInteractiveViewProps {
-  report: ReportDetail;
-  shareId?: string;
-  isOwner?: boolean;
-  actions?: ReactNode;
-  children?: ReactNode;
-  onSelectMoment?: (index: number) => void;
+interface Attempt {
+  kind: Kind;
+  fen?: string;
+  san?: string;
+  from?: string;
+  to?: string;
+  line?: number;
 }
 
-function positionSteps(moment: MomentReport) {
-  const steps = [{ fen: moment.fen_before, label: 'Before your move' }];
+interface Frame { fen: string; san: string; from: string; to: string; }
+
+const BLUE = '#2f6bff';
+const RED = '#ff4d6d';
+
+function stripSan(move: string): string {
+  return move.replace(/^\d+\.+\s*/, '').trim();
+}
+
+function pgnHeader(pgn: string | undefined, key: string): string | null {
+  if (!pgn) return null;
+  const match = pgn.match(new RegExp(`\\[${key}\\s+"([^"]*)"\\]`, 'i'));
+  const value = match?.[1]?.trim();
+  return value || null;
+}
+
+/** Chess.com username and game URL when this report is one of that player's games. */
+export function chesscomIdentity(report: ReportDetail, me: Me | null): { username: string | null; gameUrl: string | null } {
+  const mine = me?.reviews.find(review => review.id === report.id);
+  const link = pgnHeader(report.source_games?.pgn, 'Link');
+  const site = pgnHeader(report.source_games?.pgn, 'Site');
+  const httpChess = (value: string | null) => Boolean(value && /^https?:\/\/([^/]+\.)?chess\.com/i.test(value));
+  const gameUrl = mine?.game_url || (httpChess(link) ? link : null) || (httpChess(site) ? site : null);
+  const chesscom = Boolean(gameUrl) || /chess\.com/i.test(`${site ?? ''} ${link ?? ''}`);
+  if (!chesscom) return { username: null, gameUrl: null };
+  const headerName = pgnHeader(report.source_games?.pgn, report.player_color === 'black' ? 'Black' : 'White');
+  const username = headerName || (mine?.game_url ? me?.chesscom_username ?? null : null) || report.player_name || null;
+  return { username, gameUrl };
+}
+
+export function sameGame(a: string, b: string): boolean {
+  if (a === b) return true;
+  const id = (url: string) => url.split('?')[0].split('/').filter(Boolean).pop() ?? '';
+  const left = id(a);
+  return /^\d+$/.test(left) && left === id(b);
+}
+
+function formatDate(iso?: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date);
+}
+
+function reportWhen(report: ReportDetail, mode: Mode): string | null {
+  const raw = pgnHeader(report.source_games?.pgn, 'Date');
+  if (raw && /^\d{4}\.\d{2}\.\d{2}$/.test(raw)) return formatDate(raw.replace(/\./g, '-'));
+  if (mode === 'demo') return null;
+  return formatDate(report.created_at);
+}
+
+function resultLabel(result?: string): string | null {
+  if (result === '1-0') return 'White won';
+  if (result === '0-1') return 'Black won';
+  if (result === '1/2-1/2') return 'Draw';
+  return null;
+}
+
+function lineFrames(moment: MomentReport): Frame[] {
   try {
     const game = new Chess(moment.fen_before);
-    const played = game.move(moment.played.replace(/^\d+\.+\s*/, ''));
-    if (!played) return steps;
-    steps.push({ fen: game.fen(), label: `You played ${played.san}` });
-    const moves = moment.refutation_line.replace(/\d+\.(?:\.\.)?/g, ' ').trim().split(/\s+/);
-    for (const san of moves) {
-      if (!san || ['1-0', '0-1', '1/2-1/2', '*'].includes(san)) continue;
-      const move = game.move(san);
+    const played = game.move(stripSan(moment.played));
+    if (!played) return [];
+    const frames: Frame[] = [{ fen: game.fen(), san: played.san, from: played.from, to: played.to }];
+    for (const token of moment.refutation_line.replace(/\d+\.+\s*/g, ' ').trim().split(/\s+/)) {
+      if (!token || token === '1-0' || token === '0-1' || token === '1/2-1/2' || token === '*') continue;
+      const move = game.move(token);
       if (!move) break;
-      steps.push({ fen: game.fen(), label: `${(move.color === 'w' ? 'white' : 'black') === moment.player_color ? 'Your continuation' : 'Opponent’s reply'}: ${move.san}` });
+      frames.push({ fen: game.fen(), san: move.san, from: move.from, to: move.to });
     }
+    return frames;
   } catch {
-    // Only show positions successfully replayed from the actual board.
-  }
-  return steps;
-}
-
-/**
- * The game summary, one sentence per line. "Move 19" opens that position, so a
- * claim can be checked on the board instead of replayed in the reader's head.
- */
-function StoryLines({ story, moments, onPick }: { story: string; moments: MomentReport[]; onPick: (index: number) => void }) {
-  const sentences = story.replace(/([.!?])\s+(?=[A-Z])/g, '$1\u0000').split('\u0000').filter(Boolean);
-  return (
-    <ol className="story-lines">
-      {sentences.map((sentence, i) => (
-        <li key={i}>
-          {sentence.split(/(\b[Mm]ove \d+\b)/).map((part, j) => {
-            const number = part.match(/^[Mm]ove (\d+)$/)?.[1];
-            const index = number ? moments.findIndex(m => m.move_number === Number(number)) : -1;
-            return index >= 0 ? <button key={j} type="button" className="story-move focus-ring" onClick={() => onPick(index)}>{part}</button> : part;
-          })}
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-export function SharedReportInteractiveView({ report, shareId, isOwner = false, actions, children, onSelectMoment }: SharedReportInteractiveViewProps) {
-  const moments = report.moments || [];
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [orientation, setOrientation] = useState<'white' | 'black'>(report.player_color || 'white');
-  const [step, setStep] = useState(0);
-  const [showAlternative, setShowAlternative] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [focusSquare, setFocusSquare] = useState<string | null>(null);
-  const stageHeadingRef = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { if (report.player_color) setOrientation(report.player_color); }, [report.player_color]);
-  const current = moments[activeIndex] || moments[0];
-  const steps = useMemo(() => current ? positionSteps(current) : [], [current]);
-  const alternative = useMemo(() => {
-    if (!current?.best_move) return null;
-    try { const board = new Chess(current.fen_before); const move = board.move(current.best_move.replace(/^\d+\.+\s*/, '')); return move ? { fen: board.fen(), label: 'Alternative: ' + move.san } : null; } catch { return null; }
-  }, [current]);
-  const activeStep = showAlternative && alternative ? alternative : steps[Math.min(step, steps.length - 1)];
-  const isDemo = shareId ? shareId === 'demo-sample' : report.id === 'demo';
-  const complete = report.status === 'completed';
-  const lessonStage: LessonStage = showAlternative ? 'alternative' : step === 0 ? 'before' : step === 1 ? 'played' : step === steps.length - 1 ? 'takeaway' : 'played';
-  const nextLabel = step === 0 ? 'Show what changed' : step >= steps.length - 1 ? 'Line complete' : 'Continue';
-  // Move focus to the lesson heading only when the reader picks another moment,
-  // not on every Back/Continue press, which would drop them off the stepper.
-  useEffect(() => {
-    if (hasInteracted) stageHeadingRef.current?.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeIndex]);
-  useEffect(() => setFocusSquare(null), [activeIndex, step, showAlternative]);
-  // Board outlines only for squares the visible text names; the colour map
-  // also covers the full explanation so a square keeps one colour everywhere.
-  const visibleTexts = useMemo(() => current ? stageTexts(current, lessonStage) : [], [current, lessonStage]);
-  const squareColors = useMemo(() => current ? assignSquareColors([...visibleTexts, current.probable_thought, current.what_actually_happens, current.why_better ?? '', current.takeaway]) : {}, [current, visibleTexts]);
-  const markedSquares = useMemo(() => {
-    const visible = assignSquareColors(visibleTexts);
-    return Object.fromEntries(Object.keys(visible).map(sq => [sq, squareColors[sq]]));
-  }, [visibleTexts, squareColors]);
-  const selectMoment = (index: number) => {
-    setActiveIndex(index);
-    setStep(0);
-    setShowAlternative(false);
-    setHasInteracted(true);
-    onSelectMoment?.(index);
-  };
-
-  const playedMove = useMemo(() => {
-    if (!current) return null;
-    try { return new Chess(current.fen_before).move(current.played.replace(/^\d+\.+\s*/, '')); } catch { return null; }
-  }, [current]);
-
-  const nextMove = useMemo(() => {
-    if (!playedMove || !current) return null;
-    try {
-      const board = new Chess(current.fen_before);
-      board.move(current.played.replace(/^\d+\.+\s*/, ''));
-      const san = current.refutation_line.replace(/^\d+\.+\s*/, '').trim().split(/\s+/)[0];
-      return san ? board.move(san) : null;
-    } catch { return null; }
-  }, [current, playedMove]);
-
-  const selectStage = (nextStep: number, alternative = false) => {
-    setHasInteracted(true);
-    setShowAlternative(alternative);
-    setStep(nextStep);
-  };
-
-  const playedArrow = useMemo(() => {
-    if (!playedMove || showAlternative || step > 1) return [];
-    return [{ startSquare: playedMove.from, endSquare: playedMove.to, color: 'var(--w-error)' }];
-  }, [playedMove, step, showAlternative]);
-
-  const alternativeArrow = useMemo(() => {
-    if (!alternative || !showAlternative) return [];
-    try {
-      const board = new Chess(current.fen_before);
-      const move = board.move(current.best_move.replace(/^\d+\.+\s*/, ''));
-      return move ? [{ startSquare: move.from, endSquare: move.to, color: 'var(--w-success)' }] : [];
-    } catch { return []; }
-  }, [alternative, showAlternative, current]);
-
-  const highlightedSquares = useMemo(() => {
-    if (step === 0 && playedMove) return [playedMove.from, playedMove.to];
-    if (showAlternative && alternative) {
-      try {
-        const move = new Chess(current.fen_before).move(current.best_move.replace(/^\d+\.+\s*/, ''));
-        return move ? [move.from, move.to] : [];
-      } catch { return []; }
-    }
-    if (step >= 1 && nextMove) return [nextMove.from, nextMove.to];
     return [];
-  }, [step, showAlternative, playedMove, nextMove, alternative, current]);
+  }
+}
 
-  const activeArrows = showAlternative ? alternativeArrow : playedArrow;
-  const result = report.result === '1-0' ? 'White won' : report.result === '0-1' ? 'Black won' : report.result === '1/2-1/2' ? 'Draw' : null;
+function classify(san: string, moment: MomentReport): Kind {
+  if (san === stripSan(moment.best_move)) return 'checked';
+  if (san === stripSan(moment.played)) return 'played';
+  return 'other';
+}
+
+export function SharedReportInteractiveView({
+  report, mode = 'owner', focusPly, progressNote, onMoment, children,
+}: {
+  report: ReportDetail;
+  mode?: Mode;
+  focusPly?: number;
+  progressNote?: string;
+  onMoment?: (index: number) => void;
+  children?: ReactNode;
+}) {
+  const moments = report.moments || [];
+  const complete = report.status === 'completed';
+  const [index, setIndex] = useState(() => {
+    if (focusPly == null) return 0;
+    const found = moments.findIndex(moment => moment.ply === focusPly);
+    return found >= 0 ? found : 0;
+  });
+  const jumped = useRef(moments.some(moment => moment.ply === focusPly));
+  const [tries, setTries] = useState<Record<number, Attempt>>({});
+  const [typed, setTyped] = useState('');
+  const [note, setNote] = useState('');
+  const [focusSquare, setFocusSquare] = useState<string | null>(null);
+  const [shareNote, setShareNote] = useState('');
+  const [shareUrl, setShareUrl] = useState('');
+  const moveRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (jumped.current || focusPly == null) return;
+    const found = moments.findIndex(moment => moment.ply === focusPly);
+    if (found < 0) return;
+    jumped.current = true;
+    setIndex(found);
+  }, [moments, focusPly]);
+
+  const safe = moments.length ? Math.min(index, moments.length - 1) : 0;
+  const moment = moments[safe];
+  const attempt: Attempt = moment ? tries[moment.ply] ?? { kind: 'prompt' } : { kind: 'prompt' };
+  const revealed = attempt.kind !== 'prompt';
+  const frames = useMemo(() => (moment ? lineFrames(moment) : []), [moment]);
+  const line = Math.min(attempt.line ?? (frames.length > 1 ? 1 : 0), Math.max(0, frames.length - 1));
+  const best = moment ? stripSan(moment.best_move) : '';
+  const played = moment ? stripSan(moment.played) : '';
+  const side = moment?.fen_before.split(' ')[1] === 'b' ? 'Black' : 'White';
+  const conceptId = moment?.concept?.id ?? moment?.concept_id ?? null;
+  const gremlinName = moment?.concept?.gremlin ?? (conceptId ? GREMLINS[conceptId]?.name : null);
+  const habit = moment?.concept?.habit || (revealed ? report.summary?.focus_habit : null) || null;
+  const atEnd = complete && (moments.length === 0 || safe === moments.length - 1);
+  const moveLabel = moment ? `${moment.move_number}${side === 'Black' ? '…' : '.'}${played}` : '';
+
+  const squareColors = useMemo(() => {
+    if (!revealed || !moment) return {};
+    return assignSquareColors([moment.probable_thought, moment.what_actually_happens, moment.why_better ?? '']);
+  }, [revealed, moment]);
+
+  useEffect(() => { setTyped(''); setNote(''); setFocusSquare(null); }, [moment?.ply]);
+
+  function commit(san: string, fen: string, from?: string, to?: string) {
+    if (!moment) return;
+    const kind = classify(san, moment);
+    let next: Attempt = { kind, fen, san, from, to, line: kind === 'played' && frames.length > 1 ? 1 : 0 };
+    if (kind === 'other') {
+      try {
+        const game = new Chess(moment.fen_before);
+        const move = game.move(best);
+        if (move) next = { kind, fen: game.fen(), san, from: move.from, to: move.to };
+      } catch { /* Keep the move they played; the sentence names the one we checked. */ }
+    }
+    setTries(prev => ({ ...prev, [moment.ply]: next }));
+    setNote('');
+    setTyped('');
+  }
+
+  function showMe() {
+    if (!moment) return;
+    try {
+      const game = new Chess(moment.fen_before);
+      const move = game.move(best);
+      setTries(prev => ({
+        ...prev,
+        [moment.ply]: move
+          ? { kind: 'shown', fen: game.fen(), san: move.san, from: move.from, to: move.to }
+          : { kind: 'shown', fen: moment.fen_before, san: best },
+      }));
+    } catch {
+      setTries(prev => ({ ...prev, [moment.ply]: { kind: 'shown', fen: moment.fen_before, san: best } }));
+    }
+    setNote('');
+  }
+
+  function onDrop(from: string, to: string): boolean {
+    if (!moment) return false;
+    try {
+      const game = new Chess(moment.fen_before);
+      // ponytail: queen promotion only; type the SAN for an underpromotion
+      const move = game.move({ from, to, promotion: 'q' });
+      if (!move) return false;
+      commit(move.san, game.fen(), move.from, move.to);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function onType(event: FormEvent) {
+    event.preventDefault();
+    if (!moment) return;
+    const san = typed.trim();
+    if (!san) return;
+    try {
+      const game = new Chess(moment.fen_before);
+      const move = game.move(san);
+      if (!move) throw new Error('illegal');
+      commit(move.san, game.fen(), move.from, move.to);
+    } catch {
+      setNote('That move isn’t legal from here. Try another, or press Show me.');
+      moveRef.current?.focus();
+    }
+  }
+
+  function resetTry() {
+    if (!moment) return;
+    setTries(prev => ({ ...prev, [moment.ply]: { kind: 'prompt' } }));
+    setNote('');
+    setTyped('');
+  }
+
+  async function share() {
+    const url = window.location.origin + (mode === 'demo' ? '/report/demo' : '/r/' + report.share_id);
+    setShareNote('');
+    setShareUrl('');
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareNote('Link copied.');
+      captureEvent('report_shared', { report_id: report.id, is_demo: mode === 'demo', method: 'clipboard' });
+    } catch {
+      setShareUrl(url);
+      setShareNote('Copy this link.');
+    }
+  }
+
+  function go(next: number) {
+    setIndex(next);
+    onMoment?.(next);
+    const ply = moments[next]?.ply;
+    if (ply == null) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('focus', String(ply));
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+  }
+
+  const boardFen = !moment ? ''
+    : attempt.kind === 'played' ? (frames[line]?.fen ?? moment.fen_after)
+    : attempt.kind === 'prompt' ? moment.fen_before
+    : (attempt.fen ?? moment.fen_before);
+
+  const arrow = !moment || attempt.kind === 'prompt' ? []
+    : attempt.kind === 'played' && frames[line]
+      ? [{ startSquare: frames[line].from, endSquare: frames[line].to, color: RED }]
+      : attempt.from && attempt.to
+        ? [{ startSquare: attempt.from, endSquare: attempt.to, color: BLUE }]
+        : [];
+
+  const outcome = attempt.kind === 'checked' ? 'That’s the move we checked.'
+    : attempt.kind === 'played' ? `The line after ${played}.`
+    : attempt.kind === 'other' ? `Different from the line we checked. We only verified ${best}.`
+    : attempt.kind === 'shown' ? `The move we checked is ${best}.`
+    : '';
+
+  const players = [report.player_name, report.opponent_name].filter(Boolean).join(' vs ');
+  const when = reportWhen(report, mode);
+  const result = resultLabel(report.result);
+  const headline = report.summary?.headline || (complete ? 'This game.' : 'Reading this game.');
+  const noteId = moment ? `try-note-${moment.ply}` : 'try-note';
 
   return (
-    <div className="report-shell mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10">
-      {(isDemo || !isOwner) && (
-        <div className="report-notice mb-5 flex flex-col justify-between gap-3 border-b border-[var(--w-border)] pb-4 sm:flex-row sm:items-center">
-          <div>
-            <p className="text-sm font-semibold">{isDemo ? 'Sample review' : 'Shared game review'}</p>
-            <p className="mt-1 max-w-lg text-sm text-[var(--w-ink2)]">
-              {isDemo ? 'Paul Morphy’s Opera Game, read from Black’s side. Two moments decided it.' : 'Anyone with this link can view the review, including the player names.'}
+    <article className="page report">
+      <header className="report-head">
+        <div className="report-head-copy">
+          <div className="report-kicker">
+            <p className="report-meta">
+              {mode === 'demo' && <span className="tag">Sample</span>}
+              {players && <span translate="no">{players}</span>}
+              {result && <span>{result}</span>}
+              {when && <span>{when}</span>}
             </p>
+            {conceptId && gremlinName && (
+              <p className="report-badge" data-concept={conceptId}>
+                <Gremlin concept={conceptId} size={48} priority />
+                <span>{gremlinName}</span>
+              </p>
+            )}
           </div>
-          <Link href="/#analyze" className="primary-button min-h-11 shrink-0">Review your own game <ArrowRight aria-hidden="true" className="h-4 w-4" /></Link>
+          <h1 className="h2 report-title">{headline}</h1>
+        </div>
+        {report.share_id && (
+          <div className="report-share">
+            <button type="button" className="btn btn--key btn--sm" onClick={share}>Copy link</button>
+            {shareNote && <p role="status">{shareNote}</p>}
+            {shareUrl && <input className="input" aria-label="Share link" readOnly value={shareUrl} onFocus={event => event.target.select()} />}
+          </div>
+        )}
+      </header>
+
+      {progressNote && <p className="report-status" role="status">{progressNote}</p>}
+      {moments.length > 1 && <p className="report-count">Moment {safe + 1} of {moments.length}</p>}
+
+      {moment ? (
+        <div className="report-grid">
+          <div className="report-board-col">
+            <p className="report-board-label" translate="no">{attempt.kind === 'prompt' ? `${side} to move` : attempt.kind === 'played' ? (frames[line]?.san ?? played) : best}</p>
+            <ChessboardView
+              fen={boardFen}
+              orientation={moment.player_color || report.player_color || 'white'}
+              boardWidth={560}
+              arrows={arrow}
+              markedSquares={squareColors}
+              focusSquare={focusSquare}
+              onPieceDrop={attempt.kind === 'prompt' ? onDrop : undefined}
+            />
+            {attempt.kind === 'played' && frames.length > 0 && (
+              <ol className="report-line" translate="no" aria-label={`The line after ${played}`}>
+                {frames.map((frame, frameIndex) => (
+                  <li key={`${frame.san}-${frameIndex}`}>
+                    <button type="button" className="move" aria-pressed={frameIndex === line} onClick={() => setTries(prev => ({ ...prev, [moment.ply]: { ...attempt, line: frameIndex } }))}>
+                      {frame.san}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+
+          <div className="report-copy">
+            <p className={outcome ? 'report-outcome' : 'sr-only'} role="status" data-outcome={outcome ? attempt.kind : undefined}>{outcome}</p>
+            {attempt.kind === 'prompt' ? (
+              <>
+                <h2 className="h3">Your move.</h2>
+                <p className="lede report-context">
+                  In the game, {mode === 'owner' ? 'you' : side} played <span className="move" translate="no">{moveLabel}</span> here.
+                  {gremlinName ? <> That let <strong translate="no">{gremlinName}</strong> in.</> : null}
+                  {' '}Find a better move: drag a piece, or type it.
+                </p>
+                <form className="report-try-form" onSubmit={onType}>
+                  <label className="report-try-label" htmlFor={noteId + '-input'}>
+                    Type a move
+                    <input
+                      ref={moveRef}
+                      id={noteId + '-input'}
+                      name="move"
+                      className="input"
+                      value={typed}
+                      onChange={event => { setTyped(event.target.value); setNote(''); }}
+                      placeholder="e.g. Nf3"
+                      autoComplete="off"
+                      inputMode="text"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      aria-invalid={note ? true : undefined}
+                      aria-describedby={note ? noteId : undefined}
+                    />
+                  </label>
+                  <button type="submit" className="btn btn--key">Play</button>
+                  <button type="button" className="btn" onClick={showMe}>Show me</button>
+                </form>
+                {note && <p id={noteId} className="field-note" data-tone="error" role="alert">{note}</p>}
+              </>
+            ) : (
+              <>
+                <div className="report-explain">
+                  <h2 className="h3">The idea</h2>
+                  <div className="report-prose"><SquareText text={moment.probable_thought} colors={squareColors} onFocusSquare={setFocusSquare} /></div>
+                  <h3 className="h3">What happens</h3>
+                  <div className="report-prose"><SquareText text={moment.what_actually_happens} colors={squareColors} onFocusSquare={setFocusSquare} /></div>
+                  {moment.why_better && (
+                    <>
+                      <h3 className="h3">Why it works</h3>
+                      <div className="report-prose"><SquareText text={moment.why_better} colors={squareColors} onFocusSquare={setFocusSquare} /></div>
+                    </>
+                  )}
+                </div>
+                <button type="button" className="btn btn--quiet" onClick={resetTry}>Try again</button>
+              </>
+            )}
+          </div>
+        </div>
+      ) : complete ? (
+        <div>
+          <h2 className="h2">Nothing decisive in this game.</h2>
+          <p className="lede">No move changed the result enough to single out.</p>
+        </div>
+      ) : null}
+
+      {revealed && habit && (
+        <section className="report-check" data-concept={conceptId ?? undefined} aria-label="Your check for the next game">
+          <h2 className="h3">Your check for the next game.</h2>
+          <p className="big">{habit}</p>
+        </section>
+      )}
+
+      {moments.length > 1 && (
+        <div className="report-stepper">
+          <button type="button" className="btn btn--key" onClick={() => go(Math.max(0, safe - 1))} disabled={safe === 0}>Previous</button>
+          {safe < moments.length - 1 && (
+            <button type="button" className="btn" onClick={() => go(safe + 1)}>Next moment <span className="arrow" aria-hidden="true">→</span></button>
+          )}
         </div>
       )}
 
-      <header className="mb-9">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-4 text-sm text-[var(--w-ink2)]">
-          <p>{report.player_name || 'Your game'}{report.opponent_name ? ` vs ${report.opponent_name}` : ''}{result ? ` · ${result}` : ''}{report.move_count ? ` · ${report.move_count} moves` : ''}{report.time_control ? ` · ${report.time_control}` : ''}</p>
-          {actions}
-        </div>
-        <h1 className="t-heading max-w-4xl text-4xl leading-[1.1] sm:text-5xl lg:text-[3.5rem]">{report.summary?.headline || (complete ? 'Your game, a little clearer.' : 'Finding the moments that matter.')}</h1>
-        {moments.length > 0 && (
-          <div className="moment-strip" role="group" aria-label={moments.length === 1 ? 'The moment to learn from' : `The ${moments.length} moments to learn from`}>
-            {moments.map((moment, index) => (
-              <button key={moment.ply} type="button" aria-pressed={index === activeIndex} onClick={() => selectMoment(index)} className="moment-chip focus-ring">
-                <span className="moment-chip-kicker">{moment.severity_label || 'Moment'}</span>
-                <span className="moment-chip-move t-notation">{moment.move_number}{moment.player_color === 'black' ? '…' : '.'} {moment.played.replace(/^\d+\.+\s*/, '')}</span>
-                <span className="moment-chip-idea">{moment.concept_name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {report.summary?.story && (
-          <div className="story-block">
-            <span className="story-kicker">How the game went</span>
-            <StoryLines story={report.summary.story} moments={moments} onPick={selectMoment} />
-          </div>
-        )}
-        <p className="mt-4 max-w-2xl text-xs leading-relaxed text-[var(--w-ink3)]">Engine evidence points to an explanation; it isn’t a certainty. Use the board to check the idea yourself.</p>
-      </header>
-
-      {moments.length > 0 ? (
-        <section aria-label="Explore the key moments" className="report-analysis border-t border-[var(--w-border)] pt-6">
-          <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
-            <div id="board-view" className="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+16px)]">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p aria-live="polite" className="text-sm font-medium">{activeStep?.label}</p>
-                <button onClick={() => setOrientation(prev => prev === 'white' ? 'black' : 'white')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded px-3 text-sm text-[var(--w-ink2)] hover:bg-[var(--w-surface-subtle)] active:scale-[0.98] transition-transform" aria-label={`Flip board; currently ${orientation} at bottom`}><RotateCcw aria-hidden="true" className="h-4 w-4" />Flip board</button>
-              </div>
-              {activeStep && <ChessboardView fen={activeStep.fen} orientation={orientation} boardWidth={520} arrows={activeArrows} highlightSquares={highlightedSquares} markedSquares={markedSquares} focusSquare={focusSquare} />}
-              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2" aria-label="Step through the played line" role="group" onKeyDown={event => {
-                if (event.altKey || event.ctrlKey || event.metaKey) return;
-                if (event.key === 'ArrowRight') { event.preventDefault(); selectStage(Math.min(steps.length - 1, step + 1)); }
-                if (event.key === 'ArrowLeft') { event.preventDefault(); selectStage(Math.max(0, step - 1)); }
-              }}>
-                <button aria-disabled={step === 0 && !showAlternative} onClick={() => { if (step === 0 && !showAlternative) return; selectStage(Math.max(0, step - 1)); }} className="focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1 rounded border border-[var(--w-border)] bg-[var(--w-surface)] px-2 text-sm text-[var(--w-ink1)] hover:bg-[var(--w-surface-subtle)] aria-disabled:cursor-not-allowed aria-disabled:opacity-40 sm:gap-2 sm:px-3"><ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0" /><span>Back</span></button>
-                <span className="text-center text-xs tabular-nums text-[var(--w-ink2)]">{showAlternative ? 'Alternative' : `${Math.min(step + 1, steps.length)} / ${steps.length}`}</span>
-                <button aria-disabled={step >= steps.length - 1} onClick={() => { if (step >= steps.length - 1) return; selectStage(Math.min(steps.length - 1, step + 1)); }} className="focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1 rounded bg-[var(--w-accent)] px-2 py-1 text-sm font-semibold text-[var(--w-on-accent)] hover:bg-[var(--w-accent-hover)] aria-disabled:cursor-not-allowed aria-disabled:opacity-40 sm:gap-2 sm:px-3"><span className="text-center leading-tight text-[var(--w-on-accent)]">{nextLabel}</span><ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--w-on-accent)]" /></button>
-              </div>
-              {alternative && <button type="button" aria-pressed={showAlternative} onClick={() => selectStage(step, !showAlternative)} className="focus-ring text-link underline mt-3">{showAlternative ? 'Return to the played line' : 'Compare alternative: ' + current.best_move}</button>}
-              {current.refutation_line && <p className="mt-4 break-words text-sm leading-relaxed text-[var(--w-ink2)]"><span className="font-medium">The continuation:</span> <span className="t-notation">{current.refutation_line}</span></p>}
-              <a href="#lesson-explanation" className="lg:hidden mt-3 inline-flex min-h-11 items-center gap-1 text-sm text-[var(--w-accent)] font-medium underline">Read lesson explanation ↓</a>
-            </div>
-            <div id="lesson-explanation" className="min-w-0 pt-1 lg:pt-3">
-              <MomentCard moment={current} index={activeIndex} stage={lessonStage} headingRef={stageHeadingRef} squareColors={squareColors} onFocusSquare={setFocusSquare} />
-              <a href="#board-view" className="lg:hidden mt-6 inline-flex min-h-11 items-center gap-1 text-sm text-[var(--w-accent)] font-medium underline">↑ Back to chessboard</a>
-            </div>
-          </div>
+      {atEnd && mode === 'owner' && children}
+      {atEnd && mode !== 'owner' && (
+        <section className="report-end">
+          <h2 className="h2">Find your own gremlin.</h2>
+          <Link className="btn" href="/#scan">Find your own gremlin</Link>
         </section>
-      ) : complete ? (
-        <div className="border-t border-[var(--w-border)] py-10"><h2 className="t-heading text-2xl">No major turning point found.</h2><p className="mt-3 max-w-2xl text-base leading-relaxed text-[var(--w-ink2)]">None of your moves changed the game enough to single out. That is useful evidence too—try another game if you want a lesson to explore.</p><Link href="/#analyze" className="mt-5 inline-flex text-sm font-semibold text-[var(--w-accent)] underline">Review another game</Link></div>
-      ) : <MomentSkeleton />}
-
-      {complete && report.summary?.focus_habit && moments.length > 1 && <section className="mt-12 border-y border-[var(--w-border)] py-8 sm:py-10"><h2 className="mb-3 text-sm font-semibold text-[var(--w-accent)]">One habit for your next game</h2><p className="t-heading max-w-3xl text-2xl leading-snug sm:text-3xl">{report.summary.focus_habit}</p></section>}
-      {children}
-    </div>
+      )}
+    </article>
   );
 }

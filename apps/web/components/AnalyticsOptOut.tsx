@@ -9,11 +9,11 @@ export function AnalyticsOptOut() {
   if (optedOut === null) return null;
 
   return (
-    <p className="text-sm text-[var(--w-ink2)] mt-3">
-      Analytics is <strong>{optedOut ? 'off' : 'on'}</strong> in this browser.{' '}
+    <p className="legal-optout small">
+      Analytics is <strong>{optedOut ? 'off' : 'on'}</strong> in this browser.
       <button
         type="button"
-        className="underline text-[var(--w-accent)] min-h-11"
+        className="btn btn--quiet btn--sm"
         onClick={() => { setAnalyticsOptOut(!optedOut); setOptedOut(analyticsOptedOut()); }}
       >
         {optedOut ? 'Turn analytics back on' : 'Turn analytics off'}

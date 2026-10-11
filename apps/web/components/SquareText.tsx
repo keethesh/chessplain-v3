@@ -31,7 +31,7 @@ export function SquareText({ text, colors, onFocusSquare }: SquareTextProps) {
       <button
         key={i}
         type="button"
-        className="sq-chip"
+        className="report-sq"
         style={{ '--sq': colors[part.square] } as CSSProperties}
         aria-label={`${part.square}, show on the board`}
         onMouseEnter={() => onFocusSquare?.(part.square)}

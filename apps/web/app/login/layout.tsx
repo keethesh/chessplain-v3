@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Sign in | Chessplain',
-  description: 'Sign in to Chessplain to use your account’s free chess game reviews and manage your subscription.',
+  description: 'Sign in with Google or an email link so your gremlin and your plan stay on your account.',
   alternates: { canonical: '/login' },
   robots: { index: false, follow: true },
 };

@@ -4,21 +4,27 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMe } from '../lib/use-session';
 
-/** The header links. What they offer depends on who is looking: a visitor is sold the product; a signed-in player is taken to their own things. */
+/** Header links. A visitor is offered the scan; a signed-in player is taken to their open idea. */
 export function SiteNav() {
   const { signedIn, ready, me } = useMe();
   const pathname = usePathname() ?? '/';
-  // A review page already carries its own "review your own game" button.
-  const onReview = pathname === '/report/demo' || pathname.startsWith('/r/');
   const next = pathname !== '/' && pathname !== '/login' && pathname !== '/auth/callback' ? `?next=${encodeURIComponent(pathname)}` : '';
   const premium = me?.tier === 'premium';
+  const onHome = pathname === '/';
 
   return (
-    <nav className="nav-links" aria-label="Main navigation">
-      {!signedIn && <Link href="/report/demo" className="nav-sample">Sample review</Link>}
-      {!premium && <Link href="/pricing">Pricing</Link>}
-      {ready && (signedIn ? <Link href="/account">Your reviews</Link> : <Link href={`/login${next}`}>Sign in</Link>)}
-      {!onReview && <Link href="/#analyze" className="nav-cta">Review a game</Link>}
+    <nav className="nav" aria-label="Main navigation">
+      {!premium && (
+        <Link href="/pricing" className="nav__link nav__link--secondary" aria-current={pathname === '/pricing' ? 'page' : undefined}>Pricing</Link>
+      )}
+      {ready && (signedIn
+        ? <Link href="/account" className="nav__link" aria-current={pathname === '/account' ? 'page' : undefined}>Account</Link>
+        : <Link href={`/login${next}`} className="nav__link">Sign in</Link>)}
+      {!(onHome && signedIn) && (
+        <Link href={signedIn ? '/' : '/#scan'} className="btn btn--sm" aria-label={signedIn ? undefined : 'Find my gremlin'}>
+          {signedIn ? 'Your gremlin' : <><span className="nav__cta-long">Find my gremlin</span><span className="nav__cta-short">Scan</span></>}
+        </Link>
+      )}
     </nav>
   );
 }

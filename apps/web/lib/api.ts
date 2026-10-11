@@ -46,6 +46,82 @@ export interface MomentReport {
   best_move: string;
   refutation_line: string;
   eval_swing: number;
+  /** Code-derived concept; null when no fixed concept fits. Absent on reports from before 2026-10-11. */
+  concept_id?: ConceptId | null;
+  /** Added by the API at read time from concept_id. */
+  concept?: ConceptInfo | null;
+}
+
+export type ConceptId = 'hanging_piece' | 'double_attack' | 'missed_mate_threat' | 'weak_back_rank' | 'losing_exchange';
+
+export interface ConceptInfo {
+  id: ConceptId;
+  name: string;
+  gremlin: string;
+  definition: string;
+  habit: string;
+}
+
+export interface ScanTurningPoint {
+  ply: number;
+  move_number: number;
+  san: string;
+  best_move: string;
+  eval_swing: number;
+  concept_id: ConceptId | null;
+}
+
+export interface ScanGame {
+  url: string;
+  ended_at: string;
+  time_class: 'rapid' | 'blitz' | 'daily';
+  player_color: 'white' | 'black';
+  outcome: 'win' | 'loss' | 'draw';
+  opponent: string;
+  opponent_rating: number | null;
+  player_rating: number | null;
+  analyzed: boolean;
+  turning_points: ScanTurningPoint[];
+}
+
+export interface ScanResult {
+  games_scanned: number;
+  top: null | { concept: ConceptInfo; games_with_concept: number; recurring: boolean };
+  concept_counts: Array<{ concept_id: ConceptId; games: number }>;
+  example: null | { game_url: string; ply: number; concept_id: ConceptId | null };
+  nothing_decisive: boolean;
+}
+
+export interface Checkin {
+  concept_id: ConceptId;
+  answer: 'remembered' | 'forgot' | 'did_not_come_up';
+  at: string;
+}
+
+export interface ScanDetail {
+  id: string;
+  share_id: string;
+  status: 'pending' | 'fetching' | 'analyzing' | 'completed' | 'failed';
+  chesscom_username: string;
+  progress: { done: number; total: number };
+  games: ScanGame[];
+  result: ScanResult | null;
+  example_report_id: string | null;
+  checkin: Checkin | null;
+  previous: null | { scan_id: string; concept: ConceptInfo; scanned_at: string };
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface OpenIdea {
+  scan_id: string;
+  concept: ConceptInfo;
+  games_with_concept: number;
+  games_scanned: number;
+  example_report_id: string | null;
+  scanned_at: string;
+  last_checkin: Checkin | null;
+  chesscom_username: string;
 }
 
 export interface GameSummary {
@@ -159,16 +235,43 @@ export interface MeReview {
   black_player: string | null;
 }
 
+export interface Allowance {
+  limit: number;
+  used: number;
+  next_slot_at: string | null;
+}
+
 export interface Me {
   email: string | null;
   tier: 'free' | 'premium';
-  /** null for premium. */
-  allowance: { limit: number; used: number; next_slot_at: string | null } | null;
+  /** Reviews; null for premium. */
+  allowance: Allowance | null;
+  /** Scans; null for premium. */
+  scan_allowance: Allowance | null;
   chesscom_username: string | null;
+  open_idea: OpenIdea | null;
+  scans: Array<{ id: string; created_at: string; status: string; top_concept_id: ConceptId | null; games_with_concept: number }>;
   reviews: MeReview[];
-  patterns: Array<{ concept: string; count: number }>;
+  patterns: Array<{ concept: ConceptInfo; count: number }>;
 }
 
 export function getMe(token: string): Promise<Me> {
   return request('/api/me', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
+}
+
+function authHeaders(token?: string | null): Record<string, string> {
+  return token ? { Authorization: 'Bearer ' + token } : {};
+}
+
+export function startScan(username: string, token?: string | null): Promise<{ id: string; share_id: string; status: string }> {
+  return request('/api/scans', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(token) }, body: JSON.stringify({ chesscom_username: username }) });
+}
+export function getScan(id: string): Promise<ScanDetail> {
+  return request('/api/scans/' + encodeURIComponent(id), { cache: 'no-store' });
+}
+export function checkinScan(id: string, body: { concept_id: ConceptId; answer: Checkin['answer'] }, token?: string | null): Promise<{ checkin: Checkin }> {
+  return request('/api/scans/' + encodeURIComponent(id) + '/checkin', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(token) }, body: JSON.stringify(body) });
+}
+export function claimScan(id: string, token: string): Promise<{ success: boolean }> {
+  return request('/api/scans/' + encodeURIComponent(id) + '/claim', { method: 'POST', headers: authHeaders(token) });
 }

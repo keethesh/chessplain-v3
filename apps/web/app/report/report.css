@@ -1,0 +1,128 @@
+/* Report: the exact register. Board and words, square corners, one pastel for the check. */
+
+.report { padding-block: clamp(28px, 4vw, 64px); display: flex; flex-direction: column; gap: clamp(28px, 4vw, 48px); }
+.report-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px 32px; }
+.report-head-copy { min-width: 0; flex: 1; }
+.report-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 14px; }
+.report-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0; color: var(--ink-2); }
+.h2.report-title { max-width: 16em; font-size: clamp(32px, 3.2vw, 48px); }
+.report-share { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.report-share .input { width: min(100%, 420px); }
+
+.report-badge {
+  display: inline-flex; align-items: flex-end; gap: 4px;
+  margin: 0; padding: 0 14px 0 0;
+  border: var(--line); background: var(--concept-tint, var(--butter));
+  font: 800 18px/1 var(--font-display); font-stretch: 125%; text-transform: uppercase;
+  transform: rotate(-1.5deg);
+}
+@media (prefers-reduced-motion: reduce) { .report-badge { transform: none; } }
+
+.report-count { margin: 0; font-weight: 700; }
+
+.report-grid {
+  display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.95fr);
+  gap: clamp(20px, 3vw, 64px); align-items: start;
+}
+.report-board-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.report-board-label { margin: 0; font-weight: 700; }
+
+.report-copy { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.report-copy .lede { max-width: 36ch; }
+
+.report-outcome { margin: 0; font-size: clamp(22px, 2vw, 30px); font-weight: 700; line-height: 1.25; max-width: 28ch; }
+.report-outcome[data-outcome="checked"] { color: var(--blue); }
+@media (prefers-reduced-motion: no-preference) {
+  .report-outcome[data-outcome] { animation: report-in var(--dur-ui) var(--ease-out); }
+}
+@keyframes report-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.report-try-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.report-try-label { display: flex; flex-direction: column; gap: 8px; flex: 1 1 200px; font-weight: 700; font-size: 15px; }
+.report-try-label .input { width: 100%; }
+
+.report-line { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.report-line button {
+  min-height: 44px; padding: 0 14px;
+  border: var(--line); border-radius: 999px; background: var(--paper); color: var(--ink);
+  transition: background-color var(--dur-ui) ease, color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out);
+}
+.report-line button:active { transform: scale(0.97); }
+.report-line button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+@media (hover: hover) and (pointer: fine) {
+  .report-line button:hover { background: var(--butter); }
+  .report-line button[aria-pressed="true"]:hover { background: var(--ink); color: var(--paper); }
+}
+
+.report-explain { display: flex; flex-direction: column; gap: 8px; }
+.report-explain h3 { margin-top: 18px; }
+.report-explain h3:first-child { margin-top: 0; }
+.report-prose { margin: 0; max-width: 62ch; }
+
+.report-sq {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 26px; margin: 0 1px; padding: 0 7px;
+  border: var(--line); border-radius: 999px;
+  background: var(--sq, var(--butter)); color: var(--ink);
+  font: 700 15px/1 var(--font-sans); font-variant-numeric: tabular-nums;
+  vertical-align: 0.05em; cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-ui) ease, color var(--dur-ui) ease;
+}
+.report-sq::after { content: ''; position: absolute; inset: -9px -6px; } /* 44px touch target without inflating the line */
+.report-prose { line-height: 1.7; }
+.report-context strong { font-weight: 700; }
+.report-sq:active { transform: scale(0.97); }
+.report button, .report a.btn, .report-sq { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) and (pointer: fine) {
+  .report-sq:hover { background: var(--ink); color: var(--paper); }
+}
+
+.report-check { border: var(--line); background: var(--concept-tint, var(--butter)); padding: clamp(20px, 3vw, 40px); }
+.report-check .big { max-width: 36ch; margin-top: 12px; }
+
+.report-stepper { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.report-end { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+.report-games { width: 100%; }
+.report-game {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; align-items: center;
+  padding: 14px 12px; border-top: var(--line);
+}
+.report-game .btn { grid-column: 1 / -1; justify-self: start; }
+.report-game[data-current="true"] { background: var(--butter); }
+.report-game-who { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.report-game-meta { margin: 0; }
+.report-skeletons { display: flex; flex-direction: column; gap: 10px; }
+.report-skeletons .skeleton { height: 56px; }
+
+.report-wait { padding-block: clamp(48px, 8vw, 120px); max-width: 640px; }
+.report-steps { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.report-steps li { margin: 0; color: var(--ink-2); font-weight: 500; }
+.report-steps li[data-state="current"],
+.report-steps li[data-state="done"] { color: var(--ink); }
+.report-steps li[data-state="current"] { font-weight: 700; }
+.report-retry { margin-top: 28px; }
+.report-status { margin: 0; }
+
+.report-missing { padding-block: clamp(48px, 10vw, 120px); display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+.report-missing .lede { max-width: 34ch; }
+
+@media (max-width: 900px) {
+  .report-grid { grid-template-columns: 1fr; }
+}
+@media (min-width: 720px) {
+  .report-game { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .report-game .btn { grid-column: auto; }
+}
+@media (max-width: 560px) {
+  .report-head { flex-direction: column; }
+  .report-try-form .btn,
+  .report-try-label,
+  .report-stepper .btn,
+  .report-end .btn,
+  .report-share .btn,
+  .report-wait .btn,
+  .report-missing .btn,
+  .report-game .btn { width: 100%; }
+}

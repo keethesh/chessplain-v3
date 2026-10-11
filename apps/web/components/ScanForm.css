@@ -1,0 +1,7 @@
+.home-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; width: 100%; max-width: 640px; }
+.home-form .field-note { grid-column: 1 / -1; }
+.home-form .field-note a { font-weight: 700; }
+@media (max-width: 560px) {
+  .home-form { grid-template-columns: 1fr; }
+  .home-form .btn { width: 100%; }
+}

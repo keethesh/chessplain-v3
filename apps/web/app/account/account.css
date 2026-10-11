@@ -1,0 +1,106 @@
+.acct {
+  padding-block: clamp(28px, 4vw, 64px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(28px, 4vw, 56px);
+}
+
+.acct-idea {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 260px);
+  gap: clamp(16px, 3vw, 40px);
+  align-items: end;
+}
+
+.acct-idea__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  min-width: 0;
+}
+
+.acct-habit {
+  margin: 4px 0 8px;
+  max-width: 42ch;
+  padding: 16px 20px;
+  border: var(--line);
+  background: var(--paper);
+  transform: rotate(-1deg);
+}
+
+.acct-habit p { margin: 0; font-weight: 700; }
+
+.acct-gremlin { justify-self: end; }
+
+.acct-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(28px, 4vw, 64px);
+  align-items: start;
+}
+
+.acct-block { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.acct-block .h2 { margin-bottom: 8px; }
+
+.acct-list { list-style: none; margin: 0; padding: 0; }
+
+.acct-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 20px;
+  align-items: baseline;
+  min-height: 56px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line-soft);
+  text-decoration: none;
+}
+
+.acct-list li:first-child .acct-row { border-top: 0; padding-top: 4px; }
+
+.acct-row__title { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+
+.acct-patterns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.acct-pattern.surface {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 16px;
+  border: 0;
+  background: var(--concept-tint, var(--butter));
+}
+
+.acct-pattern p { margin: 0; }
+
+.acct-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.acct-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+.acct-skel { display: flex; flex-direction: column; gap: 12px; }
+.acct-skel .skeleton { height: 88px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .acct-row:hover .acct-row__title { text-decoration: underline; }
+}
+
+@media (max-width: 800px) {
+  .acct-split { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .acct-idea { grid-template-columns: 1fr; }
+  .acct-gremlin { order: -1; justify-self: start; width: 140px; }
+  .acct-idea .btn, .acct-actions .btn { width: 100%; }
+  .acct-row { grid-template-columns: 1fr; gap: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acct-habit { transform: none; }
+}

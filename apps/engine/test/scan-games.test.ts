@@ -47,8 +47,9 @@ describe('fetchScanGames', () => {
     expect(games[0].pgn).toContain('g3');
     expect(games[0].opponent).toBe('opp');
 
+    // The review game picker offers the same games a scan reads: no bullet.
     const listed = await listRecentChessComGames('me');
-    expect(listed[0].timeClass).toBe('bullet');
+    expect(listed.map(g => g.timeClass)).toEqual(['daily', 'rapid', 'blitz']);
   });
 
   it('reports an unknown player and a player with only bullet as input errors', async () => {

@@ -2,6 +2,7 @@
 // signed-in pages: a fake Supabase session plus canned /api/me and game-list responses.
 // Nothing reaches the engine. Long names test wrapping at 320px. The runner replaces
 // the tier token below from AUDIT_TIER=free|exhausted|premium (default free).
+// Add ?open=0 to the page URL to lay out the home with no open idea.
 (() => {
   const now = Date.now();
   const iso = days => new Date(now - days * 86_400_000).toISOString();
@@ -12,16 +13,30 @@
   localStorage.setItem('sb-jgtxprfulkbtzkcvinph-auth-token', JSON.stringify({ access_token: token, token_type: 'bearer', expires_in: 86_400, expires_at: exp, refresh_token: 'x', user }));
 
   const tier = '__AUDIT_TIER__';
+  const sleeper = { id: 'weak_back_rank', name: 'Weak back rank', gremlin: 'The Back-Rank Sleeper', definition: 'A back rank left open to a rook or queen.', habit: 'Before you move a back-rank piece, see what still guards the king.' };
+  const trouble = { id: 'double_attack', name: 'Double attack', gremlin: 'Double Trouble', definition: 'One move that threatens two things at once.', habit: 'Before you develop a piece, look for a fork on the next move.' };
+  const allowance = tier === 'premium' ? null : tier === 'exhausted' ? { limit: 2, used: 2, next_slot_at: new Date(now + 5 * 86_400_000).toISOString() } : { limit: 2, used: 1, next_slot_at: null };
   const me = {
     email: user.email, tier: tier === 'premium' ? 'premium' : 'free',
-    allowance: tier === 'premium' ? null : tier === 'exhausted' ? { limit: 2, used: 2, next_slot_at: new Date(now + 5 * 86_400_000).toISOString() } : { limit: 2, used: 1, next_slot_at: null },
+    allowance, scan_allowance: allowance,
     chesscom_username: 'a_long_chess_username',
+    open_idea: location.search.includes('open=0') ? null : {
+      scan_id: 'scan1', concept: sleeper, games_with_concept: 4, games_scanned: 10,
+      example_report_id: 'r1', scanned_at: iso(1), chesscom_username: 'a_long_chess_username',
+      last_checkin: { concept_id: 'weak_back_rank', answer: 'forgot', at: iso(2) },
+    },
+    scans: [
+      { id: 'scan1', created_at: iso(1), status: 'completed', top_concept_id: 'weak_back_rank', games_with_concept: 4 },
+      { id: 'scan2', created_at: iso(4), status: 'completed', top_concept_id: null, games_with_concept: 0 },
+      { id: 'scan3', created_at: iso(0), status: 'analyzing', top_concept_id: null, games_with_concept: 0 },
+      { id: 'scan4', created_at: iso(9), status: 'failed', top_concept_id: null, games_with_concept: 0 },
+    ],
     reviews: [
       { id: 'r1', share_id: 's1', status: 'completed', created_at: iso(1), headline: 'Two natural moves, each one already outnumbered.', moment_count: 2, game_url: 'https://www.chess.com/game/live/1', player_color: 'white', white_player: 'a_long_chess_username', black_player: 'an_opponent_with_a_long_name' },
       { id: 'r2', share_id: 's2', status: 'pending', created_at: iso(0), headline: null, moment_count: 0, game_url: null, player_color: null, white_player: null, black_player: null },
       ...[3, 4, 5].map(n => ({ id: 'r' + n, share_id: 's' + n, status: 'completed', created_at: iso(n), headline: 'Review number ' + n + ' with a headline long enough to wrap onto a second line on a narrow phone.', moment_count: 1, game_url: null, player_color: 'white', white_player: 'a_long_chess_username', black_player: 'opponent' + n })),
     ],
-    patterns: [{ concept: 'Attackers and defenders', count: 3 }, { concept: 'Double attack', count: 2 }],
+    patterns: [{ concept: sleeper, count: 3 }, { concept: trouble, count: 2 }],
   };
   const games = { games: [
     { url: 'https://www.chess.com/game/live/1', endedAt: iso(1), timeClass: 'blitz', playerColor: 'white', outcome: 'loss', playerRating: 1210, opponent: 'an_opponent_with_a_long_name', opponentRating: 1250 },

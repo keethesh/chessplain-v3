@@ -45,6 +45,9 @@ export const DEMO_REPORT: ReportDetail = {
       concept_name: 'Double attack',
       concept_definition: 'one move making two threats',
       takeaway: 'Before you develop a piece, look for the square where the opponent’s queen could attack two things at once.',
+      concept_id: 'double_attack',
+      // Same copy as the engine's CONCEPTS.double_attack (apps/engine/src/analysis/concepts.ts).
+      concept: { id: 'double_attack', name: 'Double attack', gremlin: 'Double Trouble', definition: 'One move that hits two of your pieces at once.', habit: 'Before you move, ask: can one enemy piece hit two of mine?' },
     },
     {
       ply: 18, move_number: 9, played: 'b5', fen_before: b5.before, fen_after: b5.after,
@@ -56,6 +59,8 @@ export const DEMO_REPORT: ReportDetail = {
       concept_name: 'Attackers and defenders',
       concept_definition: 'pieces attacking a square versus defending it',
       takeaway: 'Before you push a pawn, count the pieces that attack its new square and the pieces that defend it.',
+      // A pawn push into three attackers is not one of the fixed concepts (losing_exchange needs the player to start the captures).
+      concept_id: null,
     },
   ],
 };

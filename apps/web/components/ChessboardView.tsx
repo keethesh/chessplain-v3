@@ -16,6 +16,8 @@ interface ChessboardViewProps {
   focusSquare?: string | null;
   /** Piece movement duration; 0 disables animation. */
   animationMs?: number;
+  /** Enables dragging; return true to accept the move. Used by the try-it board. */
+  onPieceDrop?: (from: string, to: string) => boolean;
 }
 
 export function ChessboardView({
@@ -27,20 +29,21 @@ export function ChessboardView({
   markedSquares = {},
   focusSquare = null,
   animationMs,
+  onPieceDrop,
 }: ChessboardViewProps) {
   const customSquareStyles: Record<string, React.CSSProperties> = {};
 
   for (const sq of highlightSquares) {
     customSquareStyles[sq] = {
-      backgroundColor: 'color-mix(in srgb, var(--w-error) 45%, transparent)',
+      backgroundColor: 'color-mix(in srgb, var(--red-fill) 40%, transparent)',
       borderRadius: '0',
-      boxShadow: 'inset 0 0 0 3px var(--w-error)',
+      boxShadow: 'inset 0 0 0 3px var(--red-fill)',
     };
   }
   for (const [sq, color] of Object.entries(markedSquares)) {
     customSquareStyles[sq] = {
       ...customSquareStyles[sq],
-      boxShadow: `inset 0 0 0 3px ${color}, inset 0 0 0 5px rgb(17 19 16 / 45%)`,
+      boxShadow: `inset 0 0 0 3px ${color}, inset 0 0 0 5px rgb(10 10 10 / 35%)`,
       ...(sq === focusSquare ? { backgroundColor: `color-mix(in srgb, ${color} 60%, transparent)` } : {}),
     };
   }
@@ -48,7 +51,7 @@ export function ChessboardView({
   const customArrows = arrows.map((a) => ({
     startSquare: a.startSquare,
     endSquare: a.endSquare,
-    color: a.color || 'var(--w-accent)',
+    color: a.color || 'var(--red-fill)',
   }));
   const turn = fen.split(' ')[1] === 'w' ? 'White' : 'Black';
   let positionLabel = `${turn} to move`;
@@ -73,17 +76,18 @@ export function ChessboardView({
 
 
   return (
-    <div className="w-full select-none overflow-hidden rounded-md bg-[var(--w-surface)]" style={{ maxWidth: boardWidth }}>
+    <div className="w-full select-none overflow-hidden board-frame" style={{ maxWidth: boardWidth }}>
       <div className="w-full" role="img" aria-label={`Chess position, ${orientation} pieces nearest you. ${positionLabel}. ${piecePlacement}`}>
         <Chessboard
           options={{
             position: fen,
             boardOrientation: orientation,
-            allowDragging: false,
+            allowDragging: Boolean(onPieceDrop),
+            ...(onPieceDrop ? { onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => (targetSquare ? onPieceDrop(sourceSquare, targetSquare) : false) } : {}),
             squareStyles: customSquareStyles,
             arrows: customArrows,
-            darkSquareStyle: { backgroundColor: '#566956' },
-            lightSquareStyle: { backgroundColor: '#d9dfca' },
+            darkSquareStyle: { backgroundColor: '#a6d7ff' },
+            lightSquareStyle: { backgroundColor: '#ffffff' },
             ...(animationMs === undefined ? {} : { animationDurationInMs: animationMs, showAnimations: animationMs > 0 }),
           }}
         />

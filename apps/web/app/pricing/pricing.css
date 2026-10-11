@@ -1,0 +1,104 @@
+.price {
+  padding-block: clamp(28px, 4vw, 64px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 40px);
+}
+
+.price-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 260px);
+  gap: 12px 32px;
+  align-items: end;
+}
+
+.price-hero__copy { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; min-width: 0; }
+
+.price-gremlin { justify-self: end; }
+
+.price-interval { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.price-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.price-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  height: 100%;
+}
+
+.price-amount { margin: 0; }
+
+.price-includes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.price-includes li { margin: 0; }
+
+.price-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: var(--line);
+}
+
+.price-soon p { margin: 0; max-width: 36ch; }
+
+.price-cta { margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; }
+.price-cta .btn--quiet { white-space: normal; text-align: center; height: auto; padding-block: 14px; }
+.price-cta p { overflow-wrap: anywhere; max-width: 100%; }
+.price-note a { font-weight: 700; }
+
+.price-note {
+  margin: 0;
+  padding: 16px 20px;
+  border: var(--line);
+  max-width: 70ch;
+}
+
+.price-faq { border-top: var(--line); }
+.price-faq h2 { margin: 28px 0 8px; }
+
+.price-faq details { border-bottom: var(--line); }
+
+.price-faq summary {
+  min-height: 56px;
+  padding: 14px 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.price-faq details p { margin: 0 0 18px; max-width: 62ch; }
+
+.price-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; max-width: 68ch; }
+.price-foot p { margin: 0; }
+
+@media (hover: hover) and (pointer: fine) {
+  .price-faq summary:hover { text-decoration: underline; }
+}
+
+@media (max-width: 800px) {
+  .price-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .price-hero { grid-template-columns: 1fr; }
+  .price-gremlin { order: -1; justify-self: start; width: 140px; }
+  .price-plan .btn, .price-interval .btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .price-gremlin { animation: price-arrive 560ms var(--ease-out) both; }
+}
+
+@keyframes price-arrive {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}

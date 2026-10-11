@@ -2,18 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Check, ArrowRight, LoaderCircle } from 'lucide-react';
 import { createCheckoutSession, createBillingPortal, getMe } from '../../lib/api';
 import { captureEvent } from '../../lib/posthog';
 import { supabase } from '../../lib/supabase';
 import { invalidateMe, useMe } from '../../lib/use-session';
+import { Gremlin } from '../../components/Gremlin';
+import { Reveal } from '../../components/Reveal';
+import './pricing.css';
+
+const YEARLY_SAVING = '19.89';
 
 export default function PricingPage() {
   const { session, ready: authReady, me, failed } = useMe();
   const premium = me?.tier === 'premium';
   const [upgradedNow, setUpgradedNow] = useState(false);
   const [returnedFromCheckout, setReturnedFromCheckout] = useState(false);
-  const [interval, setInterval] = useState<'month' | 'year'>('month');
+  const [planInterval, setPlanInterval] = useState<'month' | 'year'>('month');
   const [busy, setBusy] = useState<'checkout' | 'portal' | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -21,24 +25,25 @@ export default function PricingPage() {
   useEffect(() => {
     captureEvent('paywall_viewed');
     const query = new URLSearchParams(window.location.search);
-    if (query.get('interval') === 'year') setInterval('year');
+    if (query.get('interval') === 'year') setPlanInterval('year');
     if (query.get('checkout') === 'success') setReturnedFromCheckout(true);
-    if (query.get('checkout') === 'cancelled') setNotice('Checkout was cancelled. You can still use your free reviews.');
+    if (query.get('checkout') === 'cancelled') setNotice('Checkout cancelled. Your free scans and reviews are still here.');
   }, []);
 
-  // The plan changes when Stripe's webhook lands, a few seconds after checkout. Wait for it
-  // rather than leaving the reader to guess whether the payment worked.
   const token = session?.access_token;
   useEffect(() => {
     if (!returnedFromCheckout || !token) return;
     let active = true;
     let tries = 0;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timer: number | undefined;
     const check = async () => {
       try {
-        if ((await getMe(token)).tier === 'premium') { if (active) { setUpgradedNow(true); invalidateMe(); } return; }
-      } catch { /* Keep waiting; the account page shows the plan either way. */ }
-      if (active && ++tries < 20) timer = setTimeout(check, 3000);
+        if ((await getMe(token)).tier === 'premium') {
+          if (active) { setUpgradedNow(true); invalidateMe(); }
+          return;
+        }
+      } catch { /* The account page shows the plan either way. */ }
+      if (active && ++tries < 20) timer = window.setTimeout(check, 3000);
     };
     void check();
     return () => { active = false; clearTimeout(timer); };
@@ -46,81 +51,165 @@ export default function PricingPage() {
 
   async function billing(action: 'checkout' | 'portal') {
     if (busy || !session) return;
-    setBusy(action); setError('');
+    setBusy(action);
+    setError('');
     try {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) throw new Error('Your session expired. Sign in again to continue.');
-      const result = action === 'checkout' ? await createCheckoutSession({ interval, token: data.session.access_token }) : await createBillingPortal(data.session.access_token);
+      if (!data.session) throw new Error('Your session expired. Sign in again?');
+      const result = action === 'checkout'
+        ? await createCheckoutSession({ interval: planInterval, token: data.session.access_token })
+        : await createBillingPortal(data.session.access_token);
       const url = new URL(result.url);
-      if (url.protocol !== 'https:' || !['checkout.stripe.com', 'billing.stripe.com'].includes(url.hostname)) throw new Error('We couldn’t open secure checkout. Please try again.');
-      captureEvent(action === 'checkout' ? 'paywall_clicked' : 'billing_portal_opened', { interval });
+      if (url.protocol !== 'https:' || !['checkout.stripe.com', 'billing.stripe.com'].includes(url.hostname)) {
+        throw new Error('Oops, we couldn’t open secure checkout. Try again?');
+      }
+      captureEvent(action === 'checkout' ? 'paywall_clicked' : 'billing_portal_opened', { interval: planInterval });
       window.location.assign(url.href);
-    } catch (error) { setError(error instanceof Error ? error.message : 'Couldn’t open billing. Please try again.'); setBusy(null); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Oops, we couldn’t open billing. Try again?');
+      setBusy(null);
+    }
   }
 
-  return <div className="page-width py-12 sm:py-16">
-    <div className="pricing-heading"><h1>{premium ? <>You’re on Premium.</> : <>Make understanding<br />part of your game.</>}</h1><p>{premium ? 'Reviews have no weekly limit. Thank you for supporting Chessplain.' : 'Start with two free reviews. If the lessons help, make room for more.'}</p>
-      {!premium && <div className="billing-choice" aria-label="Billing interval"><button aria-pressed={interval === 'month'} disabled={!!busy} onClick={() => setInterval('month')}>Monthly</button><button aria-pressed={interval === 'year'} disabled={!!busy} onClick={() => setInterval('year')}>Yearly</button></div>}
-    </div>
-    {returnedFromCheckout && <div className="max-w-3xl mx-auto mb-6 p-5 rounded-md bg-[var(--w-accent-soft)] text-sm leading-relaxed" role="status">{upgradedNow || premium ? 'You’re Premium now. Reviews have no weekly limit.' : 'Payment received. Switching your account to Premium, this usually takes a few seconds…'} <Link href="/#analyze" className="underline">Review a game</Link></div>}
-    {notice && <div className="max-w-3xl mx-auto mb-6 p-5 rounded-md bg-[var(--w-accent-soft)] text-sm leading-relaxed" role="status">{notice} <Link href="/#analyze" className="underline">Review a game</Link></div>}
-    <div className="pricing-grid">
-      <section className="price-plan"><h2>{session && !premium ? 'Your current plan' : 'A place to start'}</h2><p>{session ? 'No card needed.' : 'No account. No card.'}</p><div className="price-value">$0</div><p>2 reviews every 7 days</p>
-        <ul>{['Plain-English explanations of key moments', 'An interactive board to check the ideas', 'One practical habit for your next game', 'A link you can revisit or share'].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
-        <Link className="secondary-button" href="/#analyze">Review a game {session ? '' : 'free '}<ArrowRight size={16} /></Link>
-      </section>
-      <section className="price-plan paid"><h2>A regular habit</h2><p>For the games you want to understand.</p><div className="price-value">{interval === 'month' ? '$9.99' : '$99.99'} <small>/ {interval === 'month' ? 'month' : 'year'}</small></div><p>{interval === 'month' ? 'Billed monthly. Renews until cancelled.' : 'Billed $99.99 yearly. Renews until cancelled.'}</p>
-        <ul>{['Everything in the free review', 'No weekly report quota for personal use', 'The same careful, readable explanations', 'Manage or cancel anytime through Stripe'].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul>
-        {!authReady ? (
-          <p role="status" className="text-sm text-[var(--w-ink2)]">Checking your account…</p>
-        ) : session && premium ? (
-          <div className="space-y-3">
-            <p className="rounded bg-[var(--w-accent-soft)] p-2.5 text-xs font-semibold text-[var(--w-accent)]">✓ Your current plan</p>
-            <button className="secondary-button w-full justify-center" disabled={!!busy} onClick={() => billing('portal')}>
-              {busy === 'portal' ? <><LoaderCircle className="spin" size={16} />Opening billing…</> : 'Manage subscription'}
-            </button>
-          </div>
-        ) : session ? (
-          <div className="space-y-3">
-            <button className="primary-button w-full justify-center" disabled={!!busy} onClick={() => billing('checkout')}>
-              {busy === 'checkout' ? <><LoaderCircle className="spin" size={16} />Opening Stripe checkout…</> : <>Continue to Stripe checkout <ArrowRight size={16} /></>}
-            </button>
-            <p className="text-xs text-[var(--w-ink2)] text-center">Signed in as {session.user.email}</p>
-            <button className="text-link justify-center text-xs w-full" disabled={!!busy} onClick={() => billing('portal')}>
-              {busy === 'portal' ? 'Opening billing…' : 'Already subscribed? Manage subscription'}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <Link className="primary-button w-full justify-center" href={`/login?next=${encodeURIComponent(`/pricing?interval=${interval}`)}`}>
-              Sign in to continue <ArrowRight size={16} />
-            </Link>
-            <p className="text-xs text-[var(--w-ink2)] text-center">Use Google or an email sign-in link. You’ll return here to open Stripe checkout.</p>
-          </div>
-        )}
-        {(error || failed) && <p className="form-error mt-4" role="alert">{error || 'We couldn’t check your current plan. Refresh to try again.'}</p>}
-      </section>
-    </div>
+  const yearly = planInterval === 'year';
 
-    {/* Pricing FAQ */}
-    <div className="max-w-2xl mx-auto mt-14 pt-10 border-t border-[var(--w-border)]">
-      <h2 className="t-heading text-2xl mb-6 text-center">Common questions</h2>
-      <div className="space-y-4 text-left">
-        <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
-          <h3 className="font-semibold text-sm mb-1">Can I cancel at any time?</h3>
-          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Yes. Cancel with Manage subscription on this page or at link.com whenever you want. You keep premium access until the end of your paid billing period.</p>
+  function chooseInterval(next: 'month' | 'year') {
+    setPlanInterval(next);
+    const url = new URL(window.location.href);
+    if (next === 'year') url.searchParams.set('interval', 'year');
+    else url.searchParams.delete('interval');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  return (
+    <div className="page price">
+      <header className="price-hero">
+        <div className="price-hero__copy">
+          <h1 className="h1">Drop the <span className="hl">weekly limit</span>!</h1>
+          <p className="lede">Free is two scans and two full reviews every 7 days. Premium removes both limits.</p>
         </div>
-        {!session && <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
-          <h3 className="font-semibold text-sm mb-1">Do I need an account for the free tier?</h3>
-          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">No account or credit card needed. You can review 2 games every 7 days directly on the homepage.</p>
-        </div>}
-        <div className="rounded-md border border-[var(--w-border)] bg-[var(--w-surface)] p-4">
-          <h3 className="font-semibold text-sm mb-1">How does billing work?</h3>
-          <p className="text-xs leading-relaxed text-[var(--w-ink2)]">Prices are in US dollars. Checkout can show your local currency and shows your total, including any tax where you live, before you pay. Purchases are sold through Onelink, Stripe&apos;s merchant-of-record service, so your receipt and bank statement show Onelink (LINK.COM). Subscriptions renew automatically each month or year until cancelled.</p>
+        <Gremlin className="price-gremlin" concept="hanging_piece" size={240} />
+      </header>
+
+      {returnedFromCheckout && (
+        <p className="price-note bg-mint" role="status">
+          {upgradedNow || premium
+            ? 'You’re Premium! Scans and reviews have no weekly limit.'
+            : 'Payment received. Chessplain is switching you to Premium. This usually takes a few seconds.'}{' '}
+          <Link href="/#scan">Find your gremlin</Link>
+        </p>
+      )}
+      {notice && (
+        <p className="price-note bg-butter" role="status">{notice} <Link href="/#scan">Find your gremlin</Link></p>
+      )}
+
+      {!premium && (
+        <div className="price-interval" role="group" aria-label="Billing interval">
+          <button type="button" className={yearly ? 'btn btn--sm btn--key' : 'btn btn--sm'} aria-pressed={!yearly} disabled={!!busy} onClick={() => chooseInterval('month')}>Monthly</button>
+          <button type="button" className={yearly ? 'btn btn--sm' : 'btn btn--sm btn--key'} aria-pressed={yearly} disabled={!!busy} onClick={() => chooseInterval('year')}>Yearly</button>
         </div>
+      )}
+
+      <div className="price-grid">
+        <section className="panel price-plan" aria-labelledby="price-free">
+          <h2 id="price-free" className="h2">Free</h2>
+          <p className="price-amount h2">$0</p>
+          <p className="muted">No card.</p>
+          <ul className="price-includes">
+            <li>A scan of your last 10 Chess.com games</li>
+            <li>2 scans and 2 full reviews every 7 days</li>
+            <li>Try the better move on the board</li>
+            <li>One check for your next game</li>
+          </ul>
+          <div className="price-cta">
+            {session && premium ? (
+              <p className="small muted">Included with Premium.</p>
+            ) : (
+              <Link className="btn btn--key" href="/#scan">Find my gremlin <span className="arrow" aria-hidden="true">→</span></Link>
+            )}
+          </div>
+        </section>
+
+        <section className="panel price-plan bg-butter" aria-labelledby="price-premium">
+          <h2 id="price-premium" className="h2">Premium</h2>
+          {session && premium ? (
+            <>
+              <p className="tag">Your plan</p>
+              <p className="lede">No weekly limit. $9.99 a month or $99.99 a year.</p>
+            </>
+          ) : (
+            <>
+              <p className="price-amount h2">{yearly ? '$99.99' : '$9.99'}</p>
+              <p className="muted">
+                {yearly
+                  ? `A year, billed once. $${YEARLY_SAVING} less than twelve monthly payments. Renews until you cancel.`
+                  : 'A month. Renews until you cancel.'}
+              </p>
+            </>
+          )}
+          <ul className="price-includes">
+            <li>Unlimited scans and full reviews</li>
+            <li>The same checked explanations</li>
+            <li>Cancel any time in the billing portal</li>
+          </ul>
+          <div className="price-soon">
+            <p className="tag">Coming</p>
+            <p>Chessplain checks every new game for your gremlin automatically. Not included today.</p>
+          </div>
+          <div className="price-cta">
+            {!authReady ? (
+              <p role="status">Chessplain is checking your plan…</p>
+            ) : session && premium ? (
+              <button type="button" className="btn" disabled={!!busy} onClick={() => billing('portal')}>
+                {busy === 'portal' ? 'Opening billing…' : 'Manage subscription'}
+              </button>
+            ) : session ? (
+              <>
+                <button type="button" className="btn" disabled={!!busy} onClick={() => billing('checkout')}>
+                  Continue to checkout <span className="arrow" aria-hidden="true">→</span>
+                </button>
+                <p className="small muted">Signed in as <span translate="no">{session.user.email}</span></p>
+                <button type="button" className="btn btn--quiet" disabled={!!busy} onClick={() => billing('portal')}>
+                  {busy === 'portal' ? 'Opening billing…' : 'Already subscribed? Manage subscription'}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link className="btn" href={`/login?next=${encodeURIComponent(`/pricing?interval=${planInterval}`)}`}>
+                  Sign in to continue <span className="arrow" aria-hidden="true">→</span>
+                </Link>
+                <p className="small muted">Google or an email link. You come back here to open checkout.</p>
+              </>
+            )}
+            {(error || failed) && <p className="field-note" data-tone="error" role="alert">{error || 'Oops, we couldn’t check your plan. Refresh and try again?'}</p>}
+          </div>
+        </section>
+      </div>
+
+      <Reveal className="price-faq">
+        <h2 className="h2">Questions</h2>
+        <details>
+          <summary>Can I cancel?</summary>
+          <p>Yes. Use Manage subscription on this page, or at link.com. You keep Premium until the end of the period you already paid for.</p>
+        </details>
+        <details>
+          <summary>Do I need an account?</summary>
+          <p>No. The free scan and the two weekly reviews work without an account or a card. Sign in when you want the gremlin to stay with you.</p>
+        </details>
+        <details>
+          <summary>What does Premium do today?</summary>
+          <p>Unlimited scans and unlimited full reviews, started by you. We do not check new games automatically yet. That line above is labelled Coming, and it is not part of the plan today.</p>
+        </details>
+        <details>
+          <summary>How does billing work?</summary>
+          <p>Prices are in US dollars. Checkout can show your local currency, and it shows the total, including any tax where you live, before you pay. Purchases are sold through Onelink, Stripe's merchant-of-record service, so your receipt and bank statement show Onelink (LINK.COM). Subscriptions renew each month or year until you cancel.</p>
+        </details>
+      </Reveal>
+
+      <div className="price-foot">
+        <Link className="btn btn--quiet" href="/report/demo">Read a sample game</Link>
+        <p className="small muted">Anonymous free scans and reviews are counted by network. Signed-in ones are counted on your account. A review link works for anyone who has it. Paid use still takes time to finish and is subject to fair use. <Link href="/terms">Terms</Link></p>
       </div>
     </div>
-
-    <div className="max-w-3xl mx-auto mt-10 text-center"><Link className="text-link" href="/report/demo">Read a sample before deciding <ArrowRight size={15} /></Link><p className="text-xs text-[var(--w-ink2)] mt-4 leading-relaxed">Anonymous free reviews are counted by network; signed-in reviews are counted by account. Reviews are accessible to anyone with the link.<br />Paid reviews still take time to process and are subject to fair use. <Link href="/terms" className="underline">Terms</Link></p></div>
-  </div>;
+  );
 }

@@ -152,7 +152,7 @@ function summarizeGame(username: string, game: ChessComGameItem): {
 
 export async function listRecentChessComGames(username: string): Promise<ChessComGameSummary[]> {
   const cleanUsername = username.trim().toLowerCase();
-  const { games } = await fetchRecentStandardGames(username);
+  const { games } = await fetchRecentStandardGames(username, { timeClasses: SCAN_TIME_CLASSES });
   return games.map((g) => {
     const { playerColor, player, opponent, outcome } = summarizeGame(cleanUsername, g);
     return {
@@ -206,7 +206,7 @@ export async function fetchScanGames(username: string): Promise<ChessComScanGame
 /** The player's latest standard game, or the recent game at `gameUrl`. */
 export async function fetchRecentChessComGame(username: string, gameUrl?: string): Promise<ChessComGameResult> {
   const cleanUsername = username.trim().toLowerCase();
-  const { rating, games } = await fetchRecentStandardGames(username);
+  const { rating, games } = await fetchRecentStandardGames(username, { timeClasses: SCAN_TIME_CLASSES });
   const game = gameUrl ? games.find((g) => g.url === gameUrl) : games[0];
   if (!game) {
     throw new ChessComInputError('That game is no longer among your 10 most recent. Pick another, or paste its PGN.');

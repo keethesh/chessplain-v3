@@ -1,92 +1,39 @@
 import { ImageResponse } from 'next/og';
 import { DEMO_REPORT } from '../../../lib/demo-report';
 import { getReportByShareId } from '../../../lib/api';
+import { ogFont } from '../../og-font';
 
-// A shared review is the main organic distribution path: someone posts their
-// link on X or in a Discord and the preview has to earn the click. Render the
-// report's real headline rather than the generic site card.
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const alt = 'A Chessplain game review';
 
-function clamp(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
-}
-
 export default async function ShareOpengraphImage({ params }: { params: Promise<{ shareId: string }> }) {
   const { shareId } = await params;
-  let report = null;
+  const reportPromise = shareId === 'demo-sample'
+    ? Promise.resolve(DEMO_REPORT)
+    : getReportByShareId(shareId).catch(() => null);
+  const [report, font] = await Promise.all([reportPromise, ogFont]);
 
-  try {
-    report = shareId === 'demo-sample' ? DEMO_REPORT : await getReportByShareId(shareId);
-  } catch {
-    // Fall through to the generic wording below.
-  }
-
-  const headline = clamp(report?.summary?.headline?.trim() || 'A chess game, a little clearer.', 96);
-  const players = [report?.player_name, report?.opponent_name].filter(Boolean).join('  vs  ');
-  const momentCount = report?.moments?.length ?? 0;
-  const meta = [
-    players || 'A reviewed game',
-    momentCount === 1 ? '1 key moment' : momentCount > 0 ? `${momentCount} key moments` : null,
-    report?.move_count ? `${report.move_count} moves` : null,
-  ]
-    .filter(Boolean)
-    .join('   ·   ');
+  const headlineSource = report?.summary?.headline?.trim() || 'Find the mistake you keep making.';
+  const headline = headlineSource.length > 90 ? `${headlineSource.slice(0, 89).trimEnd()}…` : headlineSource;
+  const playerLine = [report?.player_name, report?.opponent_name].filter(Boolean).join('  vs  ') || 'A reviewed game';
+  const players = playerLine.length > 64 ? `${playerLine.slice(0, 63).trimEnd()}…` : playerLine;
+  const fontSize = headline.length > 60 ? 52 : headline.length > 36 ? 64 : 76;
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          backgroundColor: '#111310',
-          padding: '68px 76px',
-          fontFamily: 'Helvetica, Arial, sans-serif',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: '#f0f1e9', fontSize: 30, fontWeight: 600 }}>
-            <svg width="36" height="37" viewBox="0 0 29 30" fill="none">
-              <path
-                d="M5 25h19M7 21h15L18 15V8H11v7l-4 6ZM10 8h9M14.5 2v6M11.5 5h6"
-                stroke="#c9f36d"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span>chessplain</span>
-          </div>
-          <div style={{ fontSize: 24, color: '#aab1a3' }}>Game review</div>
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: '#ffffff', padding: '64px 72px', color: '#0A0A0A', fontFamily: 'Archivo' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', fontSize: 30, fontWeight: 900, letterSpacing: -0.5 }}>CHESSPLAIN</div>
+          <div style={{ display: 'flex', background: '#FEFFB0', fontSize: 22, fontWeight: 900, letterSpacing: 1, padding: '8px 14px' }}>GAME REVIEW</div>
         </div>
-
-        <div
-          style={{
-            display: 'flex',
-            fontSize: headline.length > 60 ? 62 : 74,
-            fontWeight: 600,
-            lineHeight: 1.06,
-            color: '#f0f1e9',
-            letterSpacing: -2.5,
-            maxWidth: 1000,
-          }}
-        >
-          {headline}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ width: 56, height: 3, backgroundColor: '#c9f36d' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 25, color: '#aab1a3' }}>
-            <span>{clamp(meta, 74)}</span>
-            <span style={{ color: '#c9f36d' }}>getchessplain.com</span>
-          </div>
+        <div style={{ display: 'flex', fontSize, fontWeight: 900, lineHeight: 0.95, letterSpacing: -1, textTransform: 'uppercase', maxWidth: 1040 }}>{headline}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 26, color: '#4A4A4A' }}>
+          <div style={{ display: 'flex' }}>{players}</div>
+          <div style={{ display: 'flex' }}>getchessplain.com</div>
         </div>
       </div>
     ),
-    size
+    { ...size, fonts: [{ name: 'Archivo', data: font, weight: 900, style: 'normal' }] },
   );
 }

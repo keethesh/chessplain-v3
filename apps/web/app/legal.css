@@ -1,0 +1,40 @@
+.legal {
+  padding-block: clamp(32px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 68ch;
+}
+
+.legal h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.legal section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: var(--line);
+  scroll-margin-top: calc(var(--header-h) + 16px);
+}
+
+.legal p, .legal li { margin: 0; }
+.legal ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; }
+.legal a { font-weight: 700; }
+
+.legal-optout { margin-top: 4px; }
+.legal-optout .btn { margin-left: 8px; }
+
+.legal-end { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding-top: 8px; }
+
+@media (max-width: 560px) {
+  .legal-end .btn, .legal-optout .btn { width: 100%; margin-left: 0; }
+}

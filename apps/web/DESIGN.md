@@ -1,162 +1,185 @@
 ---
 name: Chessplain
-description: Evidence-first game review for the move that changed everything.
+description: Gremlin Club. A playful, illustrated coach for the mistake you keep making.
 colors:
-  graphite: "#111310"
-  panel: "#191d19"
-  panel-raised: "#20261f"
-  rule: "#343b32"
-  text: "#f0f1e9"
-  muted: "#aab1a3"
-  lime: "#c9f36d"
-  lime-soft: "#dff5a2"
-  coral: "#ff725c"
-  cream: "#e9e8dc"
-  board-light: "#d9dfca"
-  board-dark: "#566956"
+  ink: "#0A0A0A"
+  paper: "#FFFFFF"
+  ink-2: "#4A4A4A"
+  butter: "#FEFFB0"
+  pink: "#FFDEED"
+  mint: "#DDFFF1"
+  sky: "#A6D7FF"
+  lilac: "#E9E0FF"
+  red: "#D4213F"
+  red-fill: "#FF4D6D"
+  blue: "#1F4FD8"
+  blue-fill: "#2F6BFF"
+  board-light: "#FFFFFF"
+  board-dark: "#A6D7FF"
 typography:
   display:
-    fontFamily: "IBM Plex Sans, system-ui, sans-serif"
-    fontSize: "clamp(52px, 6.5vw, 88px)"
-    fontWeight: 600
-    lineHeight: "0.98"
-    letterSpacing: "-0.035em"
+    fontFamily: "Archivo (wdth 125), Arial Black, sans-serif"
+    fontWeight: 900
+    textTransform: uppercase
+    lineHeight: "0.9"
+    fontSize: "clamp(52px, 10vw, 180px)"
+  h1:
+    fontFamily: "Archivo (wdth 125)"
+    fontWeight: 900
+    fontSize: "clamp(40px, 6.4vw, 104px)"
+  h2:
+    fontFamily: "Archivo (wdth 125)"
+    fontWeight: 900
+    fontSize: "clamp(30px, 4vw, 60px)"
+  h3:
+    fontFamily: "Archivo (wdth 125)"
+    fontWeight: 800
+    fontSize: "clamp(20px, 1.8vw, 26px)"
   body:
-    fontFamily: "IBM Plex Sans, system-ui, sans-serif"
-    fontSize: "15px"
-    fontWeight: 400
-    lineHeight: "1.5"
-  label:
-    fontFamily: "IBM Plex Mono, ui-monospace, monospace"
-    fontSize: "12px"
-    fontWeight: 500
+    fontFamily: "Satoshi, system-ui, sans-serif"
+    fontSize: "18px"
     lineHeight: "1.45"
+  label:
+    fontFamily: "Satoshi"
+    fontWeight: 700
+    fontSize: "13px"
+    letterSpacing: "0.06em"
+    textTransform: uppercase
 rounded:
-  control: "4px"
-  panel: "6px"
-spacing:
-  small: "8px"
-  medium: "16px"
-  large: "32px"
-  section: "68px"
-components:
-  button-primary:
-    backgroundColor: "{colors.lime}"
-    textColor: "{colors.graphite}"
-    rounded: "{rounded.control}"
-    padding: "0 18px"
-    height: "54px"
-  button-primary-hover:
-    backgroundColor: "{colors.lime-soft}"
-  input:
-    backgroundColor: "{colors.panel}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.control}"
-    padding: "0 16px"
-    height: "54px"
-  analysis-panel:
-    backgroundColor: "{colors.panel}"
-    rounded: "{rounded.panel}"
-    padding: "14px"
+  panel: "0"
+  control: "999px"
+borders:
+  line: "2px solid ink"
+motion:
+  ease-out: "cubic-bezier(0.23, 1, 0.32, 1)"
+  ease-in-out: "cubic-bezier(0.77, 0, 0.175, 1)"
+  ease-drawer: "cubic-bezier(0.32, 0.72, 0, 1)"
+  ease-stamp: "cubic-bezier(0.34, 1.56, 0.64, 1)"
+  press: "140ms"
+  ui: "200ms"
+  reveal: "560ms"
 ---
 
 # Design System: Chessplain
 
-## Overview
+## North star: "Gremlin Club"
 
-**Creative North Star: "The Forensic Match Report"**
+Chessplain finds the mistake a player keeps making and turns it into a character: a
+**gremlin**. The Hanger walks off with undefended pieces, Double Trouble forks, The Mate
+Misser never sees the mate coming, The Back-Rank Sleeper naps on the back rank, The Bad
+Trader offers trades that are never fair. Externalising the mistake makes it memorable,
+shareable and non-judgemental ("The Hanger showed up again", not "you blundered").
 
-Chessplain is an evidence-first debrief for a player who knows a move felt wrong and wants to understand why. The interface belongs to the analysis room, not a wellness app and not an engine cockpit. Every visual element should point to a concrete fact: a square, a move, a threat, a consequence, or a question to carry into the next game.
+The visual language is a white page, black ink, heavy wide capitals and flat pastel scenes,
+in the register of a confident consumer app (reference for energy and craft: macadam.app).
+Warmth comes from authored illustration, not from gradients, glass or dark-mode moodiness.
 
-The first surface creates curiosity through tension, then earns trust through correct chess evidence. A valid board, readable notation, and linked annotations matter more than decorative atmosphere. The system is dark because it should feel like focused post-game analysis; lime identifies useful insight and action, while coral identifies the played mistake and its consequence.
+**Two registers, one system**
 
-**Key Characteristics:**
-- Graphite analysis-room canvas with layered panels and defined rules.
-- Chess-native grammar: 8x8 grid, coordinates, arrows, notation, and marked squares.
-- Lime means useful insight or action; coral means played mistake and consequence.
-- No invented telemetry, decorative grain, or accuracy-score theater.
+- **Playful** (homepage, scan, results, empty states, share cards, emails): gremlins, big
+  type, pastel scene panels, stickers, short punchy lines.
+- **Exact** (the board, the explanation, the try-it): same palette and type, no characters on
+  the board, calm layout. Every claim is checked; the board is the proof. Never let cartoon
+  energy leak into chess facts.
 
-## Colors
+## Colour
 
-A dark evidence palette. Lime and coral carry fixed semantic meaning.
-
-### Primary
-- **Signal Lime** ({colors.lime}): primary action, recommended continuation, and useful insight.
-- **Mistake Coral** ({colors.coral}): played mistake, overlooked threat, and causal break.
-
-### Neutral
-- **Graphite** ({colors.graphite}): page ground and analysis-room atmosphere.
-- **Panel** ({colors.panel}): primary working surface.
-- **Raised Panel** ({colors.panel-raised}): selected rows and hover states.
-- **Text** ({colors.text}): primary reading color.
-- **Muted Ink** ({colors.muted}): supporting explanation and metadata.
-- **Rule** ({colors.rule}): structural separators.
-- **Cream** ({colors.cream}): board pieces and high-priority evidence.
-
-**The Two-Signal Rule.** Lime is useful insight or action. Coral is the played mistake. Never swap them within one surface.
+- **Paper** white is the page. **Ink** near-black is text, borders and primary buttons.
+- **Pastels** (butter, pink, mint, sky, lilac) fill scene panels, one per scene. Never mix
+  two pastels inside one panel.
+- **Concept tints**: each gremlin owns one pastel, applied with `data-concept` +
+  `.bg-concept`: hanging_piece lilac, double_attack pink, missed_mate_threat butter,
+  weak_back_rank sky, losing_exchange mint.
+- **Red** marks what went wrong (the played move, losses); **Blue** marks the checked
+  line and focus. They are semantic, never decoration. Use `--red`/`--blue` for text and the
+  `-fill` variants for arrows and board marks.
+- Secondary text is `--ink-2` (#4A4A4A), which passes AA on white and every pastel. Never
+  use light grey text.
+- Board: white light squares, sky dark squares, 2px ink frame.
 
 ## Typography
 
-**Display Font:** IBM Plex Sans (with system sans fallback)
-**Body Font:** IBM Plex Sans (with system sans fallback)
-**Label/Mono Font:** IBM Plex Mono (with ui-monospace fallback)
+- **Display**: Archivo Expanded (wdth 125) Black, uppercase, tight leading. Headlines are
+  short sentences with a full stop. One `.hl` butter highlight per headline at most.
+- **Celebration type** (`.display--extruded`): white letters, ink outline, a pastel and an ink
+  offset layer. Only for big moments: the gremlin reveal, an answered check-in, an idea
+  retired. Never for ordinary headings.
+- **Body**: Satoshi Medium (500) by default, 700 for emphasis, 18px base. Labels and buttons are Satoshi 700 uppercase with
+  0.06em tracking.
+- Moves and numbers use `.move` (tabular figures, never wrap).
+- Fonts load with `<link>` in `app/layout.tsx` (Google Fonts for Archivo, Fontshare for
+  Satoshi). Never `next/font/google` (Workers constraint).
 
-Instrument-like and precise without becoming a developer console. Mono is reserved for actual notation, coordinates, and compact measurement.
+## Shape and surface
 
-### Hierarchy
-- **Display** (600, fluid 52px to 88px, 0.98 line-height): player tension and conversion promise.
-- **Body** (400, 15px, 1.5 line-height): explanations and supporting copy.
-- **Label** (500, 12px, 1.45 line-height): notation, coordinates, and compact evidence metadata.
+- **Persuade surfaces** (homepage scenes, pricing, share cards): framed `.panel`s, square
+  corners, 2px ink border on the white page.
+- **Operate surfaces** (scan progress, account, lists, report chrome): `.surface`, a soft
+  neutral `#F1F4F7` card (or `.surface--white` with a hairline) with 16px radius and no heavy
+  border.
+- Controls are pills everywhere (`.btn`, `.input`, `.tag`). That is the whole radius system.
+- `.btn` is the black pill (hover inverts on pointer devices). `.btn--key` is the white
+  "keyboard key" with a hard 4px ink shadow that presses down; use it for secondary actions
+  and game controls. Hard shadows appear nowhere else.
+- No cards inside cards, no soft drop shadows, no gradients, no glass.
+- Slight rotations (≤ 2°) are allowed on stickers, slips and quote cards to feel hand-placed.
 
-**The No-Costume-Mono Rule.** Mono is data language only.
+## Gremlins
+
+- Rendered only through `components/Gremlin.tsx` (one place to swap in Rive later).
+- Character art lives in `public/gremlins/<concept_id>.png` (transparent, thick ink outline,
+  flat pastel fills, sneakers). New characters must match that style exactly.
+- A gremlin can sit in front of display type (the Macadam move) or stand on a panel's
+  baseline. Never place a gremlin on the chess board or over explanation text.
+- Names and taglines for marketing live in `lib/gremlins.ts`; chess truth (definition,
+  habit) always comes from the engine's `ConceptInfo`.
+
+## Motion
+
+Motion is authored and purposeful (Emil Kowalski's rules). The premium feel comes from a few
+authored big moments (character animation, reveals), while UI chrome stays simple: fades and
+short slides.
+
+- Custom curves only: `--ease-out` for entering and UI, `--ease-in-out` for on-screen
+  movement, `--ease-stamp` (overshoot) only for rare celebratory moments (a sticker landing,
+  the gremlin reveal). UI transitions stay ≤ 200ms; buttons press to `scale(0.97)` in 140ms.
+- Never `transition: all`, never `scale(0)`, never `ease-in`.
+- Content is visible by default; `<Reveal>` hides and reveals only after hydration and only
+  below the fold. Stagger 60ms. Reduced motion removes movement entirely.
+- Signature moments: the gremlin walks onto the hero headline; scan slips settle one by one
+  and stickers stamp onto the games where the gremlin appeared; the result reveals the
+  gremlin with a short overshoot. Frequent interactions (board stepping, tabs) do not animate
+  beyond the piece move itself.
+- Hover effects are gated behind `(hover: hover) and (pointer: fine)`.
+- Rive animations for gremlins will replace the stills later; until then a stepped "walk"
+  bob is acceptable for the hero only.
 
 ## Layout
 
-The homepage uses a two-column evidence composition: the player’s question and submission path on the left, a truthful annotated position on the right. The container caps at 1240px. Below the hero, the experience moves from turning point to method to retained question. At tablet widths the composition stacks; mobile keeps controls and notation visible.
+- `.page` container, max 1440px, 16–32px side padding. Scenes are framed `.panel`s sitting on
+  the white page with space between them.
+- Every screen ends with one obvious next step. No dead ends, no blank forms after a result.
+- Mobile: one column, display type sized in `vw`, buttons full width under 560px.
 
-Report pages prioritize the board, with move selection and explanation adjacent on desktop and sequenced on mobile. Pricing remains a simple comparison surface, not an analysis dashboard.
+## Copy voice
 
-## Elevation & Depth
+Plain, warm, a little cheeky, never mocking the player. The gremlin takes the blame. Short
+sentences in second person; titles may be a question or an exclamation ("Found it!", "Did
+it come up?", "Oops, Chess.com didn't answer. Try again?", "Nothing decisive. Nice!").
+Loading copy names what is happening ("Chessplain is reading your games…"). Empty states
+point forward. Say "your last 10 games", "the move", "the check for your next game". Avoid
+"accuracy", "blunder" (except quoting players), "AI-powered", "insights", and anything
+about coins, streaks or rewards. Never invent numbers: counts come from the scan, sample
+data is labelled as a sample.
 
-Depth comes from graphite tonal layers, one-pixel rules, and restrained offset shadows on surfaces that need separation. The board itself is the highest-contrast object because it carries the product evidence.
+Calibration reference: macadam.app's design system, motion and voice (the owner's
+reverse-engineered notes). Reference only: none of its fonts, Rive files, sounds,
+characters or copy ship in Chessplain.
 
-## Shapes
+## Accessibility
 
-Controls use compact 4px corners. Analysis panels use 6px corners. Board squares stay square. Structural rules stay precise; organic curvature is reserved for hand-drawn judgment marks.
-
-## Components
-
-### Buttons
-- **Primary:** Signal Lime fill with Graphite text, 54px minimum height.
-- **Hover / Focus:** Lime Soft hover; 2px lime focus ring with offset.
-- **Secondary:** text or rule-based treatment.
-
-### Inputs / Fields
-- **Style:** Panel fill, Rule border, 4px corners.
-- **Focus:** Signal Lime border and outer ring.
-- **Error:** Coral and plain-language recovery that preserves input.
-
-### Analysis Panel
-- **Structure:** board, coordinates, move notation, played move, alternative, and explanation form one evidence chain.
-- **State:** the same position source drives board, notation, arrows, side-to-move, and explanation.
-- **Annotation:** coral marks played mistake; lime marks useful continuation; highlight the referenced square.
-- **Square chips:** every square named in explanation text renders as a small mono chip in one of five mark colours (sky `#7cc4ff`, amber `#ffc15e`, violet `#c6a0ff`, teal `#5fdcc4`, pink `#ff9ad5`), assigned in order of first mention. The board outlines the same squares in the same colour; hovering or tapping a chip fills its square. Mark colours never replace lime or coral meanings.
-- **Stage text:** each debrief stage shows only its own text (idea and what it missed; why the alternative works; the habit). The full explanation stays behind "Read the full explanation".
-
-### Analysis Wait State
-- A 300px board replays Morphy's Opera Game (Paris 1858) on a loop with short captions, beside the stage stepper and one rotating habit. Motion is piece movement only, with a visible Pause/Play replay control. Reduced motion holds the opening position until the reader chooses to play, and disables piece animation and caption fades.
-
-## Do's and Don'ts
-
-### Do:
-- Derive positions from valid FEN or the real chessboard component.
-- Show the square and arrow named by the explanation.
-- Make sample evidence truthful before making it atmospheric.
-- Respect reduced motion and keyboard focus.
-
-### Don't:
-- Use invented game IDs, timestamps, or evaluation numbers as texture.
-- Ship a board whose pieces disagree with notation.
-- Make accuracy-score conventions the primary product language.
-- Use lime for a mistake or coral for a recommendation.
-
+- Focus ring: 3px blue outline, 3px offset, on everything focusable.
+- 44px minimum targets; inputs and buttons are 56px.
+- Colour never carries meaning alone: results also say W/L/D, the checked move is named in text.
+- Board has an accessible description of the position; try-it outcomes are announced in a
+  live region.
