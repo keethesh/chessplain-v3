@@ -1,6 +1,7 @@
 import { EloBand, GameAnalysisReport, MomentReport } from '../types.js';
 import { parsePgn } from './pgn.js';
 import { sweepPositions } from './sweep.js';
+import { classifyMoment } from './concepts.js';
 import { selectCandidateMoments } from './select.js';
 import { verifyCandidates } from './verify.js';
 import {
@@ -63,6 +64,9 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
   if (onStageChange) await onStageChange('verifying');
   const rawCandidates = selectCandidateMoments(parsedGame.positions, evalMap, parsedGame.playerColor);
   const verifiedCandidates = await verifyCandidates(rawCandidates);
+  for (const candidate of verifiedCandidates) {
+    candidate.concept_id = classifyMoment(candidate);
+  }
   const verifiedAt = Date.now();
 
   // 3. Stage 3: LLM Explanation
@@ -90,6 +94,7 @@ export async function runAnalysisPipeline(options: PipelineOptions): Promise<Pip
       stats.unexplainedMoments++;
     }
     if (explained) {
+      explained.concept_id = candidate.concept_id ?? null;
       completedMoments.push(explained);
       // Sort in ply order
       completedMoments.sort((a, b) => a.ply - b.ply);

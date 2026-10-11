@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { conceptInfo } from '../src/analysis/concepts.js';
 import '../src/http/server.js';
 
 const state = vi.hoisted(() => ({
   signedIn: true,
   tier: 'free',
   rows: [] as unknown[],
+  scans: [] as Array<Record<string, unknown>>,
 }));
 const routes = vi.hoisted(() => ({ handlers: {} as Record<string, unknown> }));
 
@@ -31,12 +33,25 @@ vi.mock('../src/db/supabase.js', () => ({
       getUser: async () => state.signedIn ? { data: { user: { id: 'user-1', email: 'a@b.c' } } } : { data: { user: null } },
     },
     from: (table: string) => {
-      const result = table === 'profiles'
-        ? { data: { subscription_tier: state.tier }, error: null }
-        : { data: state.rows, error: null };
+      const log: Array<[string, unknown[]]> = [];
       const builder: Record<string, unknown> = {};
-      for (const method of ['select', 'eq', 'order', 'limit', 'maybeSingle']) builder[method] = () => builder;
-      builder.then = (ok: (v: unknown) => unknown, bad: (r: unknown) => unknown) => Promise.resolve(result).then(ok, bad);
+      for (const method of ['select', 'eq', 'neq', 'gte', 'order', 'limit', 'maybeSingle']) {
+        builder[method] = (...args: unknown[]) => { log.push([method, args]); return builder; };
+      }
+      builder.then = (ok: (v: unknown) => unknown, bad: (r: unknown) => unknown) => {
+        let result: { data: unknown; error: null };
+        if (table === 'profiles') result = { data: { subscription_tier: state.tier }, error: null };
+        else if (table === 'scans' && log.some(e => e[0] === 'gte')) {
+          const since = Date.parse(String(log.find(e => e[0] === 'gte')![1][1]));
+          let scans = state.scans.filter(s => Date.parse(String(s.created_at)) >= since);
+          if (log.some(e => e[0] === 'neq' && e[1][0] === 'status' && e[1][1] === 'failed')) {
+            scans = scans.filter(s => s.status !== 'failed');
+          }
+          result = { data: scans.map(s => ({ created_at: s.created_at })), error: null };
+        } else if (table === 'scans') result = { data: state.scans, error: null };
+        else result = { data: state.rows, error: null };
+        return Promise.resolve(result).then(ok, bad);
+      };
       return builder;
     },
   },
@@ -72,7 +87,7 @@ const row = (over: Record<string, unknown>) => ({
 
 describe('GET /api/me', () => {
   beforeEach(() => {
-    state.signedIn = true; state.tier = 'free'; state.rows = [];
+    state.signedIn = true; state.tier = 'free'; state.rows = []; state.scans = [];
   });
 
   it('counts the weekly allowance like the submit quota and reports when a slot frees', async () => {
@@ -93,17 +108,58 @@ describe('GET /api/me', () => {
     state.rows = [row({ source_games: { external_id: null, source: 'pgn', metadata: {} } }), row({ id: 'z' })];
     const { body } = await call();
     expect(body.allowance).toBeNull();
+    expect(body.scan_allowance).toBeNull();
+    expect(body.open_idea).toBeNull();
     expect(body.chesscom_username).toBe('me');
   });
 
-  it('surfaces only concepts seen in two or more completed reviews', async () => {
+  it('does not count a scan example report toward the review allowance', async () => {
     state.rows = [
-      row({ id: '1', moments: [{ concept_name: 'Loose pieces' }, { concept_name: 'Once' }, { concept_name: 'Position to review' }] }),
-      row({ id: '2', moments: [{ concept_name: ' loose Pieces ' }, { concept_name: 'loose pieces' }, { concept_name: 'Position to review' }] }),
-      row({ id: '3', status: 'failed', moments: [{ concept_name: 'Once' }] }),
+      row({ id: 'scan-report', hero_variant: 'scan', created_at: daysAgo(0) }),
+      row({ id: 'real', created_at: daysAgo(1) }),
     ];
     const { body } = await call();
-    expect(body.patterns).toEqual([{ concept: 'Loose pieces', count: 2 }]);
+    expect(body.allowance.used).toBe(1);
+    expect(body.allowance.next_slot_at).toBeNull();
+  });
+
+  it('groups completed reviews by concept_id, once per review, from two reviews up', async () => {
+    state.rows = [
+      row({ id: '1', moments: [{ concept_id: 'hanging_piece' }, { concept_id: 'double_attack' }, { concept_id: null }] }),
+      row({ id: '2', moments: [{ concept_id: 'hanging_piece' }, { concept_id: 'hanging_piece' }] }),
+      row({ id: '3', status: 'failed', moments: [{ concept_id: 'double_attack' }] }),
+    ];
+    const { body } = await call();
+    expect(body.patterns).toEqual([{ concept: conceptInfo('hanging_piece'), count: 2 }]);
+  });
+
+  it('opens on the latest completed scan that has a top concept', async () => {
+    state.scans = [
+      { id: 'bad', status: 'failed', created_at: daysAgo(0), result: null, chesscom_username: 'me' },
+      {
+        id: 'new', status: 'completed', created_at: daysAgo(1), completed_at: daysAgo(1), chesscom_username: 'me',
+        example_report_id: 'ex', checkin: { concept_id: 'hanging_piece', answer: 'forgot', at: daysAgo(1) },
+        result: { games_scanned: 10, top: { concept: { id: 'hanging_piece' }, games_with_concept: 4 } },
+      },
+      {
+        id: 'old', status: 'completed', created_at: daysAgo(9), completed_at: daysAgo(9), chesscom_username: 'me',
+        result: { games_scanned: 8, top: { concept: { id: 'double_attack' }, games_with_concept: 2 } },
+      },
+    ];
+    const { body } = await call();
+    expect(body.open_idea).toMatchObject({
+      scan_id: 'new',
+      concept: conceptInfo('hanging_piece'),
+      games_with_concept: 4,
+      games_scanned: 10,
+      example_report_id: 'ex',
+      chesscom_username: 'me',
+      last_checkin: { answer: 'forgot' },
+    });
+    expect(body.scans.map((s: { id: string }) => s.id)).toEqual(['bad', 'new', 'old']);
+    expect(body.scans[1]).toMatchObject({ top_concept_id: 'hanging_piece', games_with_concept: 4 });
+    expect(body.scan_allowance.used).toBe(1);
+    expect(body.scan_allowance.next_slot_at).toBeNull();
   });
 
   it('rejects an unauthenticated caller', async () => {

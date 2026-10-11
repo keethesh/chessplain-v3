@@ -8,6 +8,7 @@ import { runAnalysisPipeline } from '../analysis/pipeline.js';
 import { PROMPT_VERSION } from '../analysis/prompts.js';
 import { EloBand } from '../types.js';
 import { parsePgn } from '../analysis/pgn.js';
+import { processNextScan, reclaimStaleScanLeases } from './scan-worker.js';
 
 // Analytics is optional: with no key configured, posthog-node throws on
 // construction, so skip it rather than stop the worker from booting.
@@ -241,7 +242,11 @@ export async function startWorker(): Promise<void> {
 
   await enginePool.init();
   await reclaimStaleLeases();
-  reclaimTimer = setInterval(() => { void reclaimStaleLeases(); }, config.staleLeaseMinutes * 60_000);
+  await reclaimStaleScanLeases();
+  reclaimTimer = setInterval(() => {
+    void reclaimStaleLeases();
+    void reclaimStaleScanLeases();
+  }, config.staleLeaseMinutes * 60_000);
   reclaimTimer.unref();
   console.log(`[Worker] Background queue worker started: ${config.workerConcurrency} job loop(s) sharing ${enginePool.totalCount} engine instances.`);
 
@@ -250,10 +255,15 @@ export async function startWorker(): Promise<void> {
   // same row.
   // ponytail: loops race for the oldest pending row and the loser idles 1 s;
   // claim with SKIP LOCKED in a Postgres function if the backlog grows large.
+  // Alternate which queue is polled first so a scan backlog cannot starve reports.
+  let preferScan = false;
   await Promise.all(Array.from({ length: config.workerConcurrency }, async () => {
     while (isRunning) {
+      const scanFirst = (preferScan = !preferScan);
       try {
-        const processed = await processNextJob();
+        const processed = scanFirst
+          ? (await processNextScan()) || (await processNextJob())
+          : (await processNextJob()) || (await processNextScan());
         if (!processed) await sleep(1000);
       } catch (err) {
         console.error('[Worker] Loop exception:', err);

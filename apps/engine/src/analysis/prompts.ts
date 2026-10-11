@@ -1,5 +1,6 @@
 import { CandidateMoment, EloBand, MomentExplanation, GameSummary } from '../types.js';
 import { buildTacticalContext } from './chess-facts.js';
+import { classifyMoment, conceptInfo } from './concepts.js';
 
 /**
  * The player's standing in words, from a player-relative evaluation. Computed
@@ -15,6 +16,7 @@ export function describeStanding(evalPawns: number): string {
 
 /** The exact user message production sends for one moment; the benchmark reuses it. */
 export function buildMomentPayload(moment: CandidateMoment, eloBand: EloBand, opponentName: string) {
+  const concept = conceptInfo(moment.concept_id !== undefined ? moment.concept_id : classifyMoment(moment));
   return {
     position_before_fen: moment.fenBefore,
     played_move: moment.san,
@@ -30,6 +32,7 @@ export function buildMomentPayload(moment: CandidateMoment, eloBand: EloBand, op
     material_note: moment.materialNote,
     phase: moment.phase,
     opponent_name: opponentName,
+    ...(concept ? { code_concept: { name: concept.name, definition: concept.definition } } : {}),
   };
 }
 
@@ -44,7 +47,7 @@ export function cleanJsonString(str: string): string {
   return match ? match[0] : unquoted;
 }
 
-export const PROMPT_VERSION = '2026-09-24.1';
+export const PROMPT_VERSION = '2026-10-11.1';
 
 export const MOMENT_SYSTEM_PROMPT = `You are the explanation engine for Chessplain, a game-review product for adult
 casual players (roughly 600–1200) who want to understand their losses, not be
@@ -75,6 +78,10 @@ INPUT (JSON):
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
 - material_note, phase ("opening"|"middlegame"|"endgame"), opponent_name
+- code_concept, when present: { name, definition } of the pattern this moment is.
+  concept_name must be exactly code_concept.name. Still explain only from
+  tactical_context; do not invent a different pattern. When code_concept is
+  absent, name the pattern yourself.
 
 THINK IN THIS ORDER, SILENTLY:
 1. Read tactical_context carefully: notice exactly which piece moved (e.g. "Black knight from b6 to d7"),
@@ -111,7 +118,7 @@ OUTPUT — strict JSON, nothing else:
   "probable_thought": "…",         // what the played move is going for, third person
   "what_actually_happens": "…",    // why the move's aim fails, ≤45 words
   "why_better": "…",               // why best_move works, ≤35 words
-  "concept_name": "…",             // 1–3 words, the teachable pattern
+  "concept_name": "…",             // 1–3 words; exactly code_concept.name when that field is present
   "concept_definition": "…",       // ≤8 words, for someone who never heard it
   "takeaway": "…",                 // ONE checkable habit, imperative
   "severity_label": "…"            // exactly one of the four labels below

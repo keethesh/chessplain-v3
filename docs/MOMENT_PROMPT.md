@@ -12,7 +12,7 @@ wins; re-sync this document rather than trusting it. Remaining prompt work
 decision) is tracked in
 [`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md).
 
-- **`PROMPT_VERSION` constant: `2026-09-24.1`** (`prompts.ts`). Bump on every
+- **`PROMPT_VERSION` constant: `2026-10-11.1`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**
   anywhere — no `game_analyses` write includes it, despite an earlier version
   of this document claiming it is stored per-row. Wire it into
@@ -59,6 +59,10 @@ INPUT (JSON):
 - eval_before_pawns, eval_after_pawns   (engine numbers — NEVER shown to the player)
 - best_move (SAN), refutation_line (SAN)
 - material_note, phase ("opening"|"middlegame"|"endgame"), opponent_name
+- code_concept, when present: { name, definition } of the pattern this moment is.
+  concept_name must be exactly code_concept.name. Still explain only from
+  tactical_context; do not invent a different pattern. When code_concept is
+  absent, name the pattern yourself.
 
 THINK IN THIS ORDER, SILENTLY:
 1. Read tactical_context carefully: notice exactly which piece moved (e.g. "Black knight from b6 to d7"),
@@ -95,7 +99,7 @@ OUTPUT — strict JSON, nothing else:
   "probable_thought": "…",         // what the played move is going for, third person
   "what_actually_happens": "…",    // why the move's aim fails, ≤45 words
   "why_better": "…",               // why best_move works, ≤35 words
-  "concept_name": "…",             // 1–3 words, the teachable pattern
+  "concept_name": "…",             // 1–3 words; exactly code_concept.name when that field is present
   "concept_definition": "…",       // ≤8 words, for someone who never heard it
   "takeaway": "…",                 // ONE checkable habit, imperative
   "severity_label": "…"            // exactly one of the four labels below
@@ -168,7 +172,9 @@ number.
 
 User message = `JSON.stringify(buildMomentPayload(...))` (`prompts.ts`),
 nothing else. The benchmark (`scripts/benchmark-models.ts`) sends the same
-payload, so benchmark results transfer to production.
+payload, so benchmark results transfer to production. When `classifyMoment`
+tags the moment, the payload includes `code_concept: { name, definition }`
+from `concepts.ts`, and `concept_name` must be that name.
 
 **Known gaps** (tracked in the roadmap doc): the model receives one FEN with
 no move history and no clock time. `elo_band` comes from the Chess.com API

@@ -118,6 +118,7 @@ export function createFallbackMoment(moment: CandidateMoment): MomentReport {
     best_move: moment.bestMoveSan,
     refutation_line: moment.refutationLineSan,
     eval_swing: moment.swing,
+    concept_id: moment.concept_id ?? null,
   };
 }
 
@@ -189,6 +190,7 @@ export async function explainMoment(
         best_move: moment.bestMoveSan,
         refutation_line: moment.refutationLineSan,
         eval_swing: moment.swing,
+        concept_id: moment.concept_id ?? null,
       };
     }
 
@@ -228,6 +230,7 @@ export async function explainMoment(
         best_move: moment.bestMoveSan,
         refutation_line: moment.refutationLineSan,
         eval_swing: moment.swing,
+        concept_id: moment.concept_id ?? null,
       };
     }
 

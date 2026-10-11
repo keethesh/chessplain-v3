@@ -49,6 +49,7 @@ vi.mock('../src/config.js', () => ({
 vi.mock('../src/analysis/chesscom.js', () => ({
   ChessComInputError: class extends Error {},
   listRecentChessComGames: vi.fn(),
+  fetchScanGames: vi.fn(async () => []),
   fetchRecentChessComGame: vi.fn(async (_user: string, url?: string) => ({
     pgn: '1. e4 e5 2. Nf3 Nc6 *', eloBand: 'intermediate', rating: 1200, playerColor: 'white', opponentUsername: 'x', gameUrl: url ?? null,
   })),
@@ -158,6 +159,7 @@ describe('free-report quota keying', () => {
     const { reply, quotaLog, eqColumns } = await run(true);
     expect(eqColumns).toEqual(['user_id']);
     expect(quotaLog).toContainEqual(['neq', ['status', 'failed']]);
+    expect(quotaLog).toContainEqual(['or', ['hero_variant.is.null,hero_variant.neq.scan']]);
     expect(quotaLog.find(e => e[0] === 'gte')?.[1][0]).toBe('created_at');
     expect(reply.statusCode).toBe(201); // count 0 → allowed through to insert
   });
@@ -166,6 +168,7 @@ describe('free-report quota keying', () => {
     const { reply, quotaLog, eqColumns } = await run(false);
     expect(eqColumns).toEqual(['ip']);
     expect(quotaLog).toContainEqual(['neq', ['status', 'failed']]);
+    expect(quotaLog).toContainEqual(['or', ['hero_variant.is.null,hero_variant.neq.scan']]);
     expect(quotaLog.find(e => e[0] === 'gte')?.[1][0]).toBe('created_at');
     expect(reply.statusCode).toBe(201);
   });
@@ -218,5 +221,23 @@ describe('retrying a failed report', () => {
     expect((await submit()).statusCode).toBe(201);
     expect(state.quotaBuilders).toHaveLength(1);
     expect(state.requeueUpdate).toHaveProperty('created_at');
+    expect(state.requeueUpdate).toMatchObject({ hero_variant: null });
+  });
+});
+
+describe('client hero_variant', () => {
+  beforeEach(() => {
+    state.signedIn = false;
+    state.quotaCount = 0;
+    state.insertedAnalyses = 0;
+    state.priorStatus = null;
+  });
+
+  it('rejects a client-supplied scan hero so only the scan worker can set it', async () => {
+    const reply = fakeReply();
+    const request = { ...fakeRequest(false), body: { pgn: '1. e4 e5 2. Nf3 Nc6 *', hero_variant: 'scan' } };
+    await (await reportsHandler())(request, reply);
+    expect(reply.statusCode).toBe(400);
+    expect(state.insertedAnalyses).toBe(0);
   });
 });

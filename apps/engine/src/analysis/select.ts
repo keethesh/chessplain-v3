@@ -67,7 +67,8 @@ export const MIN_QUIET_DRIFT_SWING = -0.75;
 export function selectCandidateMoments(
   positions: PositionInfo[],
   evalMap: Map<string, EngineEvalResult>,
-  playerColor: 'white' | 'black'
+  playerColor: 'white' | 'black',
+  options?: { quietDriftFallback?: boolean }
 ): CandidateMoment[] {
   const playerPerspectiveMultiplier = playerColor === 'white' ? 1 : -1;
   const rawCandidates: CandidateMoment[] = [];
@@ -144,7 +145,9 @@ export function selectCandidateMoments(
   // drift" — but only if it is genuinely their worst move and not merely
   // engine noise. Keep the same floor during depth-20 verification so the
   // fallback preserves its intended low-swing band without publishing noise.
-  if (deduplicated.length === 0) {
+  // Scans pass quietDriftFallback:false so "nothing decisive" stays empty.
+  // verify.ts only filters this list; it never manufactures a Quiet drift.
+  if (deduplicated.length === 0 && options?.quietDriftFallback !== false) {
     let worstPos: PositionInfo | null = null;
     let worstSwing = 0;
     let worstBefore = 0;

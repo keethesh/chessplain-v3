@@ -1,3 +1,5 @@
+import type { ConceptId } from './analysis/concepts.js';
+
 export type EloBand = 'under_1000' | '1000_1400' | 'above_1400';
 export type SeverityLabel = 'Turning point' | 'Last chance' | 'Missed win' | 'Quiet drift';
 export type GamePhase = 'opening' | 'middlegame' | 'endgame';
@@ -51,6 +53,8 @@ export interface CandidateMoment {
   phase: GamePhase;
   materialNote: string;
   candidateType: SeverityLabel;
+  /** Set by the pipeline before explanation. Absent until then. */
+  concept_id?: ConceptId | null;
   verified?: boolean;
 }
 
@@ -80,6 +84,7 @@ export interface MomentReport extends MomentExplanation {
   best_move: string;
   refutation_line: string;
   eval_swing: number;
+  concept_id: ConceptId | null;
 }
 
 export interface GameAnalysisReport {
