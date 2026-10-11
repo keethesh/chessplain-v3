@@ -28,8 +28,9 @@ the commits above. Before deploying, in this order:
    `node apps/engine/scripts/verify-deployment.mjs` and one real scan.
 3. Deploy the web Worker. The prompt changed (`2026-10-11.1`): rerun the
    benchmark before claiming quality.
-4. Concept-tag accuracy has no labelled set yet; the Phase 1 stop condition
-   (90% on the labelled set) is still open (`docs/STRATEGY.md` §11).
+4. Concept-tag gate passes on the labelled set (0.980 overall, 1.000 non-null
+   precision; `pnpm --filter @chessplain/engine benchmark:concepts`). Rerun it
+   after any change to `concepts.ts`.
 5. Then the held relaunch email (section 0) can go, rewritten for the scan.
 
 Earlier rows keep dated evidence where it is still useful; don't treat old

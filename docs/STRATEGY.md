@@ -397,6 +397,11 @@ Built and committed, not deployed (see the deploy order in
 - Verified end to end locally on real usernames (local Supabase, Stockfish 19):
   a 10-game scan took about 40 s and named a recurring concept.
 
-Still open before the stop condition is met: the labelled set and the 90%
-concept-tag gate, the concierge test (H1/H2), and the benchmark rerun for the
-new prompt. The build matches the "Not in this cut" list in §11.
+- Concept-tag gate: 0.980 overall and 1.000 precision on non-null tags over 99
+  labelled real moments, two labellers (one blind), disagreements settled with
+  Stockfish (`pnpm --filter @chessplain/engine benchmark:concepts`; details in
+  [the analysis roadmap](ANALYSIS_QUALITY_ROADMAP.md)). Missed-mate recall is
+  1/3 and back-rank cases are unmeasured.
+
+Still open: the concierge test (H1/H2), the benchmark rerun for the new
+prompt, and deployment. The build matches the "Not in this cut" list in §11.
