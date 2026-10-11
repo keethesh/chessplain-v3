@@ -319,21 +319,32 @@ against `apps/engine/benchmark/concepts/labelled.json`. The gate fails under
 Method: 99 verified turning points (`quietDriftFallback: false`, real
 sweep at 15k nodes and depth-20 verify) from recent rapid, blitz, and daily
 games of public Chess.com club members and their recent opponents, ratings
-753–2071. One person labelled each moment from the position and the
-refutation line, without looking at `classifyMoment`, using the five
-definitions in `CONCEPTS` and the same precedence as the code (back rank,
-then mate, then hanging piece, then double attack, then losing exchange).
-Ambiguous positions are `null`. A wrong tag was dropped rather than kept:
-a back-rank mate threat that the recorded better line still allows is not
-tagged (`goalkeeper_luk` 36.Qxb7).
+753–2071. A first labeller labelled each moment from the position and the
+refutation line using the five definitions in `CONCEPTS`. Because that
+labeller knew the classifier's rules, a second labeller relabelled all 99
+blind (positions, lines and definitions only; no code, no first labels).
+They agreed on 97/99, including all 14 non-null tags. The integrator
+reviewed every non-null label by hand and settled the two disagreements
+with Stockfish (depth 24). That review also found and fixed a classifier
+bug: `losing_exchange` counted recaptures inside a capture sequence the
+opponent started, and a forced trade later in the line; it now counts only
+the capture sequence the played move starts. Two labels that had mirrored
+the bug were corrected to `null`.
 
-Class balance on this set: null 83, double attack 7, hanging piece 4,
-losing exchange 4, missed mate threat 1, weak back rank 0. Overall accuracy
-1.000 (99/99) and non-null precision 1.000 (16/16) after that fix. Per-concept
-precision and recall are 1.000 on the four concepts that appear; weak back
-rank has no labelled cases here, so its recall is unmeasured.
+Result (2026-10-11): overall accuracy 0.980 (97/99), non-null precision
+1.000 (14/14). Class balance: null 82, double attack 7, hanging piece 4,
+missed mate threat 3, losing exchange 2, weak back rank 0. Per concept:
+hanging piece, double attack and losing exchange 1.000 precision and recall;
+missed mate threat precision 1.000, recall 0.333 (1/3); weak back rank has no
+labelled cases, so its precision and recall are unmeasured.
 
-Limits: one labeller, 99 moments, mostly blitz, and almost no mates, so the
-90% figure is not a balanced estimate of the rare tags. Positional turning
-points correctly stay `null`. Re-label before treating a new concept rule
-as cleared.
+The two misses are both forced mates deeper than the stored refutation line
+(mate in 3 and mate in 5 after the played move). The classifier stays `null`
+there by design: a missed tag costs a lesson, a wrong tag costs trust.
+Catching them needs the verify step's mate score passed into the candidate,
+not a guess from a truncated line.
+
+Limits: 99 moments, mostly blitz, few mates and no back-rank cases, so the
+figure is not a balanced estimate of the rare tags. Positional turning points
+correctly stay `null`. Re-label before treating a new concept rule as
+cleared.

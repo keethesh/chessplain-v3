@@ -1338,8 +1338,8 @@
       "candidateType": "Turning point",
       "verified": true
     },
-    "label": null,
-    "why": "no material loss and no mate",
+    "label": "missed_mate_threat",
+    "why": "Second blind labeller + Stockfish d24 (2026-10-11): after Kh1 Black has mate in 3 (Ng3+ hxg3 hxg3+ Nh2 Rxh2#); Qf2 avoids it (+7.9). Missed mate threat; the stored refutation line stops before the mate.",
     "rating": 1603,
     "time_class": "blitz"
   },
@@ -1506,8 +1506,8 @@
       "candidateType": "Missed win",
       "verified": true
     },
-    "label": null,
-    "why": "line is 3 down but no single concept fits",
+    "label": "missed_mate_threat",
+    "why": "Second blind labeller + Stockfish d24 (2026-10-11): after Rae1 Black has mate in 5 starting hxg3+; Bxd6 avoids it. Missed mate threat; the stored refutation line stops before the mate.",
     "rating": 1043,
     "time_class": "daily",
     "note": "material loss without a fixed concept"
