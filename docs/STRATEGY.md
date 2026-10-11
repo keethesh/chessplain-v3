@@ -376,3 +376,27 @@ Confirmed 2026-10-11:
    at the current prices; the live offer is unchanged.
 4. **Concierge test:** the owner will recruit 5–10 players for the hand test.
    This is a recruitment commitment, not completed research.
+5. **Visual world:** "Gremlin Club" (2026-10-11): each fixed concept is a
+   cartoon gremlin; white page, heavy type, pastel scenes, in the register of
+   macadam.app. Recorded in `apps/web/DESIGN.md`.
+
+## 14. Phase 1 status (2026-10-11)
+
+Built and committed, not deployed (see the deploy order in
+[the launch checklist](LAUNCH_CHECKLIST.md)):
+
+- Fixed concept list with code-derived `concept_id`
+  (`apps/engine/src/analysis/concepts.ts`), stored on every moment; prompt
+  `2026-10-11.1` names the code concept.
+- The scan: `POST /api/scans`, worker, persisted `scans` table, honest
+  "nothing decisive" (quiet-drift fallback off), one example report per scan.
+- The forward flow: try it first with three honest outcomes, the concept's
+  if-then check, the check-in on the next scan, next games and scan again at
+  the end of a report.
+- Signed-in home opens on the open idea.
+- Verified end to end locally on real usernames (local Supabase, Stockfish 19):
+  a 10-game scan took about 40 s and named a recurring concept.
+
+Still open before the stop condition is met: the labelled set and the 90%
+concept-tag gate, the concierge test (H1/H2), and the benchmark rerun for the
+new prompt. The build matches the "Not in this cut" list in §11.
