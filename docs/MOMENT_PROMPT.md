@@ -1,9 +1,9 @@
 # Chessplain voice contract — moment & summary prompts
 
 This is the design system for the product's words. The report page renders
-these outputs 1:1: every JSON field maps to a fixed slot in the moment card
-(`MomentCard.tsx`); the summary fields map to the headline/story block at the
-top of the report (`SharedReportInteractiveView.tsx`).
+these outputs 1:1: every JSON field maps to a fixed slot in the moment view
+(`SharedReportInteractiveView.tsx`), and the summary headline sits at the top
+of the report.
 
 This document is a mirror of `apps/engine/src/analysis/prompts.ts` for
 readability — that file is the source of truth. If they disagree, the code

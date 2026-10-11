@@ -17,6 +17,21 @@ Deployed state verified 2026-10-09:
 - Web Worker version `a0909c6d` (signed-in home, `/account`, plan-aware pricing,
   Opera Game sample, out-of-reviews state on the game list, motion polish).
 
+**Phase 1 pivot (2026-10-11) is committed but NOT deployed.** The repository now
+has the last-10-games scan, code-derived concepts, the gremlin design system
+and the rebuilt website (`ff711c9`, `5222216` and later). Production still runs
+the commits above. Before deploying, in this order:
+1. Apply `supabase/migrations/20261011000000_scans.sql` to production
+   deliberately (`supabase db query --linked -f ...`, per the migration warning
+   below). It is additive: one new `scans` table with RLS on and no policies.
+2. Deploy the engine (`docs/ENGINE_DEPLOYMENT.md`), then
+   `node apps/engine/scripts/verify-deployment.mjs` and one real scan.
+3. Deploy the web Worker. The prompt changed (`2026-10-11.1`): rerun the
+   benchmark before claiming quality.
+4. Concept-tag accuracy has no labelled set yet; the Phase 1 stop condition
+   (90% on the labelled set) is still open (`docs/STRATEGY.md` §11).
+5. Then the held relaunch email (section 0) can go, rewritten for the scan.
+
 Earlier rows keep dated evidence where it is still useful; don't treat old
 commit IDs or provider settings below as current state. The API verifier's
 `READY` is not launch approval: it doesn't test the website, payment

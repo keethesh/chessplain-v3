@@ -212,9 +212,13 @@
 @media (max-width: 640px) {
   .home-hero { --hero-size: clamp(40px, 13vw, 58px); }
   .home-line--lead .home-word { display: block; }
+  .home-walker { width: 1.9em; height: 0.9em; margin-left: 0.12em; overflow: visible; }
+  .home-walker img { height: 1.7em !important; width: auto !important; position: absolute; bottom: 0; left: 0; }
   .home-slips, .home-cast { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-cast { gap: 12px; }
+  .home-cast-art img { width: min(100%, 140px); }
+  .home-cast-copy { padding: 10px 10px 14px; }
+  .home-cast-copy h3 { font-size: 16px; }
+  .home-cast-copy p { font-size: 15px; line-height: 1.35; }
   .home-actions .btn, .home-try-actions .btn { width: 100%; }
-}
-@media (max-width: 420px) {
-  .home-cast { grid-template-columns: 1fr; }
 }

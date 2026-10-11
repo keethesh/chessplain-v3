@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Chessplain (getchessplain.com) turns a chess game into a short review of the few moments that decided it. pnpm monorepo: `apps/web` (Next.js 16 / React 19 / Tailwind, deployed to Cloudflare Workers) and `apps/engine` (Fastify API + analysis worker with Stockfish, an LLM and Supabase, deployed to a VPS). Schema lives in `supabase/migrations`.
+Chessplain (getchessplain.com) finds the mistake a player keeps making: it scans their last 10 Chess.com games, names the recurring idea as a "gremlin" (a fixed, code-derived concept), explains one example on the board, lets them try the better move, and gives one check for their next game. Single-game reviews remain. Strategy and phases: `docs/STRATEGY.md`. pnpm monorepo: `apps/web` (Next.js 16 / React 19 / Tailwind, deployed to Cloudflare Workers) and `apps/engine` (Fastify API + analysis worker with Stockfish, an LLM and Supabase, deployed to a VPS). Schema lives in `supabase/migrations`.
 
 ## Commands
 
@@ -29,14 +29,17 @@ Engine deploy (VPS `london-ampere`, systemd `chessplain-engine`) is documented i
 
 **Request flow.** The browser never touches the database. It signs in with Supabase (Google OAuth or passwordless magic link, both PKCE) and calls the engine over HTTP with the Supabase access token as `Bearer`; the engine verifies it with `supabase.auth.getUser` and uses the service-role key for all table access. All tables have RLS on with no anon/authenticated policies, deliberately (see `supabase/migrations/20260831000000_baseline_schema.sql`).
 
-**Queue.** The username path first lists the player's 10 most recent standard games (`GET /api/chesscom/:username/games`); the player picks one. `POST /api/reports` (`apps/engine/src/http/server.ts`) fetches that game (`chesscom_game_url`, default latest) and rejects unknown usernames with a 400. It then enforces the free quota (2 reports per 7 days, keyed by `user_id` when signed in, else client IP; premium is never blocked), inserts `source_games` + `game_analyses` rows, and returns. The worker (`src/queue/worker.ts`, started in-process unless `WORKER_ENABLED=false`) runs `WORKER_CONCURRENCY` job loops (default 2) that claim rows from `game_analyses` by compare-and-swap, run the pipeline, retry, then mark `failed`. Failed rows and completed reports with no moments don't count against quota. Resubmitting a game whose review failed less than 7 days ago re-queues it free and keeps its original `created_at`; an older failure goes through the quota check and gets a fresh date (otherwise it would be a free review that never counts). The report page streams progress from `GET /api/reports/:id/events` (SSE).
+**Scan.** The front door is `POST /api/scans` (`{ chesscom_username }`): the worker fetches the last 10 standard rapid/blitz/daily games (no bullet), runs sweep + select (`quietDriftFallback: false`, so "nothing decisive" is honest) + verify + `classifyMoment` per game, aggregates the top concept (counted once per game), and enqueues one example report (`hero_variant = 'scan'`, excluded from the review quota and rejected if a client sends it). `GET /api/scans/:id` is polled by `/scan/[id]`; `POST /api/scans/:id/checkin` records whether the player remembered the last check; `/claim` attaches an anonymous scan after sign-in. Free: 2 scans per 7 days (same key and lock as reports). No LLM in the scan itself. Scan jobs share the worker loops with reports, with lease heartbeats and attempt-guarded writes (`src/queue/scan-worker.ts`).
+
+**Queue.** Single-game reviews: `GET /api/chesscom/:username/games` lists the 10 most recent rapid/blitz/daily games; the player picks one. `POST /api/reports` (`apps/engine/src/http/server.ts`) fetches that game (`chesscom_game_url`, default latest) and rejects unknown usernames with a 400. It then enforces the free quota (2 reports per 7 days, keyed by `user_id` when signed in, else client IP; premium is never blocked), inserts `source_games` + `game_analyses` rows, and returns. The worker (`src/queue/worker.ts`, started in-process unless `WORKER_ENABLED=false`) runs `WORKER_CONCURRENCY` job loops (default 2) that claim rows from `game_analyses` by compare-and-swap, run the pipeline, retry, then mark `failed`. Failed rows and completed reports with no moments don't count against quota. Resubmitting a game whose review failed less than 7 days ago re-queues it free and keeps its original `created_at`; an older failure goes through the quota check and gets a fresh date (otherwise it would be a free review that never counts). The report page streams progress from `GET /api/reports/:id/events` (SSE).
 
 **Pipeline** (`src/analysis/pipeline.ts`), in order:
 1. `pgn.ts` parses the PGN and identifies the player.
 2. `sweep.ts` does a fast Stockfish pass over every position (cached in `analysis_cache`).
 3. `select.ts` picks candidate moments and builds refutation lines (extended up to 2 plies to finish capture sequences).
 4. `verify.ts` re-checks candidates at depth and drops false positives.
-5. `explain.ts` asks the LLM for each moment's explanation, then a game summary.
+5. `concepts.ts` `classifyMoment` tags each verified moment with a `concept_id` (hanging_piece, double_attack, missed_mate_threat, weak_back_rank, losing_exchange) or null when unsure; a wrong tag is worse than none.
+6. `explain.ts` asks the LLM for each moment's explanation (the prompt names the code concept), then a game summary.
 
 If every moment falls back to generic text, or credits run out, the pipeline throws `LlmUnavailableError` rather than publish a degraded "completed" report.
 
@@ -50,7 +53,7 @@ If every moment falls back to generic text, or credits run out, the pipeline thr
 
 **Web.** `apps/web/lib/supabase.ts` sets `detectSessionInUrl: false` on purpose: `/auth/callback` owns the code exchange, and letting the client do it too shows a sign-in error to a signed-in user. Square names in explanation text become colored chips linked to board highlights (`lib/squares.ts`, `components/SquareText.tsx`).
 
-**Signed-in experience.** The site is session-aware. `lib/use-session.ts` `useMe()` calls `GET /api/me` (plan, weekly allowance, reviews, recurring concepts, last-used Chess.com username; derived from `game_analyses`/`source_games`, no profile column). Signed-in visitors get a different home (`app/page.tsx`: remembered username, games already reviewed marked, allowance left), `/account` (`app/account/page.tsx`), plan-aware `/pricing`, and no sample or marketing sections. The sample at `/report/demo` is Morphy's Opera Game from Black's side (`lib/demo-report.ts`; evaluations from Stockfish 18 at depth 18-20, replay-checked in `engine/test/reliability.test.ts`).
+**Signed-in experience.** The site is session-aware. `lib/use-session.ts` `useMe()` calls `GET /api/me` (plan, review and scan allowances, `open_idea` from the latest completed scan, scans, reviews, patterns grouped by `concept_id`, last-used Chess.com username). Signed-in visitors get a home that opens on their open idea (`app/page.tsx`), `/account`, plan-aware `/pricing`, and no marketing sections. The sample at `/report/demo` is Morphy's Opera Game from Black's side (`lib/demo-report.ts`; evaluations from Stockfish 18 at depth 18-20, replay-checked in `engine/test/reliability.test.ts`).
 
 ## Constraints
 
@@ -59,7 +62,7 @@ If every moment falls back to generic text, or credits run out, the pipeline thr
 - **No default credentials.** Missing config fails at startup by design (`src/config.ts`, `apps/web/lib/supabase.ts`).
 - **Web on Workers:** load fonts with `<link>`/`@import`, not `next/font/google`. `patches/` carries required patches for `next` and `@opennextjs/cloudflare`.
 - **Auth email templates** are sourced from `supabase/templates/` and pasted into the Supabase dashboard; the auth server keeps sending the old template for ~10 minutes after a save. Mail goes out through Resend SMTP from `mail.getchessplain.com`.
-- **Design system:** "The Forensic Match Report" in `apps/web/DESIGN.md` (graphite `#111310`, Signal Lime `#c9f36d` for actions/insight, Mistake Coral `#ff725c` for blunders, IBM Plex). Product intent is in `apps/web/PRODUCT.md`, which wins when docs disagree about intent; the code wins on facts.
+- **Design system:** "Gremlin Club" in `apps/web/DESIGN.md`: white paper, ink, Archivo Expanded display + Satoshi body, pastel scene panels (butter, pink, mint, sky, lilac; one tint per concept), framed `.panel` for marketing and soft `.surface` for product screens, gremlin art in `public/gremlins/<concept_id>.png` rendered only through `components/Gremlin.tsx` (swap point for Rive). Tokens and shared classes live only in `app/globals.css`; page styles sit next to each page. Product intent is in `apps/web/PRODUCT.md`, which wins when docs disagree about intent; the code wins on facts.
 
 ## Docs
 
