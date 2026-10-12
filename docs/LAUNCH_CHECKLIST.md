@@ -9,34 +9,29 @@ redirects on, premium reconciled, two games analysed at once. Open owner
 items are in section 0; [`PRODUCT_REVIEW.md`](PRODUCT_REVIEW.md) holds the
 reasoning.
 
-Deployed state verified 2026-10-09:
-- Engine commit `3cc9125` (adds `GET /api/me` and the failed-retry rule), prompt `2026-09-24.1`,
-  `openai/gpt-6-luna` through OpenRouter (key: $10 limit, expires 2026-12-25).
-  The OpenRouter **account** held only $3.07 of credit on 2026-09-30, and that
-  balance, not the key limit, is what runs out first.
-- Web Worker version `a0909c6d` (signed-in home, `/account`, plan-aware pricing,
-  Opera Game sample, out-of-reviews state on the game list, motion polish).
+Deployed state verified 2026-10-12 (Phase 1 pivot is live):
+- `scans` table applied to production with `supabase db query --linked -f
+  supabase/migrations/20261011000000_scans.sql` (RLS on, no policies, 5 indexes).
+- Engine commit `2ff017a`, prompt `2026-10-12.3`, `openai/gpt-6-luna` through
+  OpenRouter (key: $10 limit, expires 2026-12-25; account topped up 2026-10-12).
+  `verify-deployment.mjs`: 25/25 READY. A real production scan (Agata16) read
+  10/10 games in 90 s; its example report completed with 3 moments, no fallback
+  text, and the live scan page rendered it on a 390 px screen.
+- Web Worker version `9c744a0c`: the scan front door, gremlin site, darker
+  board.
+- The previous deploy (engine `3cc9125`, web `a0909c6d`, verified 2026-10-09)
+  is superseded.
 
-**Phase 1 pivot (2026-10-11) is committed but NOT deployed.** The repository now
-has the last-10-games scan, code-derived concepts, the gremlin design system
-and the rebuilt website (`ff711c9`, `5222216` and later). Production still runs
-the commits above. Before deploying, in this order:
-1. Apply `supabase/migrations/20261011000000_scans.sql` to production
-   deliberately (`supabase db query --linked -f ...`, per the migration warning
-   below). It is additive: one new `scans` table with RLS on and no policies.
-2. Deploy the engine (`docs/ENGINE_DEPLOYMENT.md`), then
-   `node apps/engine/scripts/verify-deployment.mjs` and one real scan.
-3. Deploy the web Worker. Prompt `2026-10-12.3`: missed chances carry a
-   code-checked fact, and code writes their idea and "why it works" text; see
-   Analysis quality.
-4. Concept tags (six concepts since 2026-10-12) are under the 90% bar on
+Open before the relaunch email:
+1. Concept tags (six concepts since 2026-10-12) are under the 90% bar on
    fresh games: precision 34/38 (89%; 95% range 76–96%) and accuracy 0.807
    on 114 held-out moments. The pooled 0.937 and 0.844 over all 212 include
    the 98 moments the rules were tuned on. The missed chance is the weakest
    tag (16/19 fresh). The owner decides the bar (see the analysis roadmap).
    Rerun `pnpm --filter @chessplain/engine benchmark:concepts` after any
    change to `concepts.ts`; it prints the pooled figures.
-5. Then the held relaunch email (section 0) can go, rewritten for the scan.
+2. The hand test with 5–10 players, then the held relaunch email (section 0),
+   rewritten for the scan.
 
 Earlier rows keep dated evidence where it is still useful; don't treat old
 commit IDs or provider settings below as current state. The API verifier's

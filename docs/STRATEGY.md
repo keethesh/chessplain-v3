@@ -382,7 +382,7 @@ Confirmed 2026-10-11:
 
 ## 14. Phase 1 status (2026-10-11)
 
-Built and committed, not deployed (see the deploy order in
+Built and deployed 2026-10-12 (see the deployed state in
 [the launch checklist](LAUNCH_CHECKLIST.md)):
 
 - Fixed concept list with code-derived `concept_id`
@@ -415,5 +415,5 @@ code-checked fact, and for those moments code writes the idea (what the played
 move did) and why it works (the checked line) instead of the model. The
 49-fixture no-judge benchmark remains 49/49 valid; the 11-position rerun of
 earlier failures was 11/11 valid but 7/11 clean before those fields moved to
-code (details in the analysis roadmap). Still open: the concierge test (H1/H2)
-and deployment. The build matches the "Not in this cut" list in §11.
+code (details in the analysis roadmap). Still open: the concierge test (H1/H2).
+The build matches the "Not in this cut" list in §11.
