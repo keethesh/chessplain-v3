@@ -250,6 +250,7 @@ function Scan({ id }: { id: string }) {
             <p>Last time it was <span translate="no">{scan.previous.concept.gremlin}</span>.</p>
           )}
           <h1 className="h2" id="checkin-title">Did you remember the check?</h1>
+          <blockquote className="big">{scan.previous.concept.habit}</blockquote>
           {scan.checkin ? (
             <p className="display display--extruded" role="status">{CHECKIN[scan.checkin.answer]}</p>
           ) : (
@@ -257,6 +258,7 @@ function Scan({ id }: { id: string }) {
               <div className="scan-checkin-actions" role="group" aria-label="Did you remember the check?">
                 <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('remembered')}>Yes</button>
                 <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('forgot')}>No</button>
+                <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('did_not_come_up')}>Didn’t come up</button>
               </div>
               {checkinError && <p className="field-note" data-tone="error" role="alert">{checkinError}</p>}
             </>

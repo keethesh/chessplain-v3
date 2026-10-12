@@ -96,7 +96,7 @@ export function ChessboardView({
     if (!onPieceDrop || repeatSquare(square)) return;
     rememberSquare(square);
     if (isOwnPiece(fen, square)) {
-      setSelected(square);
+      setSelected(selected === square ? null : square);
       return;
     }
     if (!selected) return;
