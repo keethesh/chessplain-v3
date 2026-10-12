@@ -137,6 +137,20 @@ Warmth comes from authored illustration, not from gradients, glass or dark-mode 
 - Names and taglines for marketing live in `lib/gremlins.ts`; chess truth (definition,
   habit) always comes from the engine's `ConceptInfo`.
 
+
+## Logo
+
+- **The Pawn Gremlin**: a butter pawn whose head is a gremlin face, sky base, ink outline, in
+  the same illustration style as the gremlins. Header lockup = the mark + the CHESSPLAIN
+  wordmark in display type (`.wordmark`, `.wordmark__mark`).
+- Files in `public/`: `logo.png` (256, header), `logo-512.png` (structured data), `icon-32.png`
+  and `icon-192.png` (favicon: the head only, which stays readable at 16–32 px),
+  `apple-icon.png` (head on white), `email-logo.png` (88, emails). Masters and the
+  generation history live in `brand/2026-10/` (not committed).
+- The pale pawn fades on a butter panel: on butter, put the mark on white or use the
+  wordmark alone.
+- Emails (`supabase/templates/`, `emails/`) use the same system: white page, one framed
+  pastel panel, display-type headline, black pill button, Satoshi body, `--ink-2` small print.
 ## Motion
 
 Motion is authored and purposeful (Emil Kowalski's rules). The premium feel comes from a few

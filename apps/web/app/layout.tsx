@@ -20,7 +20,10 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: '/' },
-  icons: { icon: '/icon.svg', apple: '/icon.svg' },
+  icons: {
+    icon: [{ url: '/icon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: '/apple-icon.png',
+  },
   applicationName: 'Chessplain',
   keywords: ['chess coach', 'recurring chess mistakes', 'chess improvement', 'chess game review', 'hanging pieces', 'Chess.com analysis'],
   openGraph: {
@@ -55,7 +58,7 @@ const STRUCTURED_DATA = {
       '@id': `${SITE_URL}/#organization`,
       name: 'Chessplain',
       url: SITE_URL,
-      logo: `${SITE_URL}/icon.svg`,
+      logo: `${SITE_URL}/logo-512.png`,
     },
     {
       '@type': 'WebApplication',
@@ -85,7 +88,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a href="#main-content" className="skip-link">Skip to content</a>
         <header className="site-header">
           <div className="site-header__inner page">
-            <Link href="/" className="wordmark" aria-label="Chessplain home">Chessplain</Link>
+            <Link href="/" className="wordmark" aria-label="Chessplain home">
+              {/* eslint-disable-next-line @next/next/no-img-element -- static brand mark, no optimisation needed */}
+              <img className="wordmark__mark" src="/logo.png" alt="" width={40} height={40} />
+              Chessplain
+            </Link>
             <SiteNav />
           </div>
         </header>
