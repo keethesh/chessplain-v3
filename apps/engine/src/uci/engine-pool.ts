@@ -1,14 +1,22 @@
 import { config } from '../config.js';
-import { UciClient } from './uci-client.js';
+import { UciClient, type UciClientOptions } from './uci-client.js';
 import { EngineEvalResult } from '../types.js';
+
+type Waiter = {
+  resolve: (client: UciClient) => void;
+  reject: (err: Error) => void;
+};
 
 export class EnginePool {
   private clients: UciClient[] = [];
-  private waitQueue: Array<(client: UciClient) => void> = [];
+  private waitQueue: Waiter[] = [];
   private reserved = new Set<UciClient>();
   private isInitialized = false;
 
-  constructor(private size: number = config.enginePoolSize) {}
+  constructor(
+    private size: number = config.enginePoolSize,
+    private readonly clientOptions?: Partial<UciClientOptions>,
+  ) {}
 
   public async init(): Promise<void> {
     if (this.isInitialized) return;
@@ -19,6 +27,7 @@ export class EnginePool {
         hashMb: config.engineHashMb,
         threads: config.engineThreads,
         syzygyPath: config.syzygyPath,
+        ...this.clientOptions,
       });
 
       try {
@@ -52,23 +61,22 @@ export class EnginePool {
       return available;
     }
 
-    const { promise, resolve } = Promise.withResolvers<UciClient>();
-    this.waitQueue.push((client) => {
-      this.reserved.add(client);
-      resolve(client);
-    });
+    if (!this.clients.some((c) => c.isUsable())) {
+      throw new Error('No usable UCI engines');
+    }
+
+    const { promise, resolve, reject } = Promise.withResolvers<UciClient>();
+    this.waitQueue.push({ resolve, reject });
     return promise;
   }
 
   public release(client: UciClient): void {
     this.reserved.delete(client);
-    if (this.waitQueue.length > 0) {
-      const nextResolver = this.waitQueue.shift();
-      if (nextResolver) {
-        nextResolver(client);
-        return;
-      }
+    if (!this.isInitialized) return;
+    if (!client.isUsable()) {
+      this.clients = this.clients.filter((c) => c !== client);
     }
+    this.serveWaiters();
   }
 
   public async evaluate(
@@ -84,13 +92,34 @@ export class EnginePool {
   }
 
   public async shutdown(): Promise<void> {
-    for (const client of this.clients) {
+    this.isInitialized = false;
+    this.rejectWaiters(new Error('Engine pool shut down'));
+    const clients = this.clients.splice(0);
+    this.reserved.clear();
+    for (const client of clients) {
       await client.quit();
     }
-    this.clients = [];
-    this.reserved.clear();
-    this.waitQueue = [];
-    this.isInitialized = false;
+  }
+
+  private serveWaiters(): void {
+    while (this.waitQueue.length > 0) {
+      const next = this.clients.find((c) => !this.reserved.has(c) && c.isAvailable());
+      if (!next) {
+        if (!this.clients.some((c) => c.isUsable())) {
+          this.rejectWaiters(new Error('No usable UCI engines'));
+        }
+        return;
+      }
+      const waiter = this.waitQueue.shift();
+      if (!waiter) return;
+      this.reserved.add(next);
+      waiter.resolve(next);
+    }
+  }
+
+  private rejectWaiters(err: Error): void {
+    const pending = this.waitQueue.splice(0);
+    for (const waiter of pending) waiter.reject(err);
   }
 }
 

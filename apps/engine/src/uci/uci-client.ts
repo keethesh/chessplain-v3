@@ -2,12 +2,23 @@ import { spawn, ChildProcess } from 'node:child_process';
 import * as readline from 'node:readline';
 import { EngineEvalResult, MultiPvInfo } from '../types.js';
 
+const COMMAND_TIMEOUT_MS = 30_000;
+const STOP_GRACE_MS = 5_000;
+
 export interface UciClientOptions {
   enginePath: string;
   coreId?: number;
   hashMb?: number;
   threads?: number;
   syzygyPath?: string;
+  /** Deadline for a `go` search. Handshake commands keep COMMAND_TIMEOUT_MS. */
+  searchTimeoutMs?: number;
+  /** How long to wait for `bestmove` after `stop` before killing the process. */
+  stopGraceMs?: number;
+}
+
+function isSearchCommand(cmd: string): boolean {
+  return cmd === 'go' || cmd.startsWith('go ');
 }
 
 export class UciClient {
@@ -15,7 +26,10 @@ export class UciClient {
   private rl: readline.Interface | null = null;
   private isReady = false;
   private busy = false;
-  private options: UciClientOptions;
+  private retired = false;
+  private readonly options: UciClientOptions;
+  private readonly searchTimeoutMs: number;
+  private readonly stopGraceMs: number;
 
   constructor(options: UciClientOptions) {
     this.options = {
@@ -23,27 +37,45 @@ export class UciClient {
       threads: 1,
       ...options,
     };
+    this.searchTimeoutMs = options.searchTimeoutMs ?? COMMAND_TIMEOUT_MS;
+    this.stopGraceMs = options.stopGraceMs ?? STOP_GRACE_MS;
   }
 
   public async init(): Promise<void> {
+    if (this.retired) throw new Error('UCI client is shut down');
+
     const { enginePath, coreId, hashMb, threads, syzygyPath } = this.options;
 
     const useTaskset = process.platform === 'linux' && typeof coreId === 'number';
     const binary = useTaskset ? 'taskset' : enginePath;
     const args = useTaskset ? ['-c', String(coreId), enginePath] : [];
 
-    this.process = spawn(binary, args, {
+    const child = spawn(binary, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    this.process = child;
+    // A fast exit (missing binary, restart that dies immediately) emits before
+    // sendCommand attaches its own waiter. Swallow here so it cannot crash the process.
+    child.on('error', () => {});
+    child.on('exit', () => {
+      // Ignore the process we already replaced. An unexpected exit must not
+      // leave this client looking ready for the next game.
+      if (this.process !== child) return;
+      this.isReady = false;
+    });
 
-    if (!this.process.stdout || !this.process.stdin) {
+    if (!child.stdout || !child.stdin) {
       throw new Error('Failed to create Stockfish process streams');
     }
 
+    // EPIPE when the engine dies mid-write must not crash the process.
+    child.stdin.on('error', () => {});
+
     this.rl = readline.createInterface({
-      input: this.process.stdout,
+      input: child.stdout,
       crlfDelay: Infinity,
     });
+    this.rl.on('error', () => {});
 
     await this.sendCommand('uci', (line) => line === 'uciok');
 
@@ -58,6 +90,7 @@ export class UciClient {
     }
 
     await this.isReadyCheck();
+    if (this.retired) throw new Error('UCI client is shut down');
     this.isReady = true;
   }
 
@@ -74,6 +107,9 @@ export class UciClient {
     fen: string,
     options: { nodes?: number; depth?: number; multiPv?: number } = {}
   ): Promise<EngineEvalResult> {
+    if (!this.isReady || this.retired) {
+      throw new Error('UCI client is not running');
+    }
     if (this.busy) {
       throw new Error('UCI client is busy');
     }
@@ -132,7 +168,8 @@ export class UciClient {
         depth: primary?.depth,
       };
     } finally {
-      this.busy = false;
+      // A failed restart leaves isReady false so this engine stays out of the pool.
+      if (this.isReady && !this.retired) this.busy = false;
     }
   }
 
@@ -196,62 +233,174 @@ export class UciClient {
 
   private sendCommand(cmd: string, isTerminal: (line: string) => boolean): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.rl || !this.process?.stdin?.writable) {
-        return reject(new Error('Engine process is not running'));
+      const rl = this.rl;
+      const child = this.process;
+      if (!rl || !child?.stdin?.writable) {
+        reject(new Error('Engine process is not running'));
+        return;
+      }
+      if (child.exitCode !== null || child.signalCode !== null) {
+        reject(new Error('Engine process exited'));
+        return;
       }
 
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error(`UCI command '${cmd}' timed out`));
-      }, 30000);
+      let settled = false;
+      let draining = false;
+      let onDrain: ((line: string) => void) | null = null;
+      let timeout: ReturnType<typeof setTimeout>;
 
-      const onLine = (line: string) => {
-        try {
-          if (isTerminal(line.trim())) {
-            cleanup();
-            resolve();
-          }
-        } catch (err) {
-          cleanup();
-          reject(err);
-        }
+      const cleanup = () => {
+        clearTimeout(timeout);
+        rl.off('line', onLine);
+        child.off('error', onError);
+        child.off('exit', onExit);
       };
 
-      const onError = (err: Error) => {
+      const fail = (err: Error) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         reject(err);
       };
 
-      const cleanup = () => {
-        clearTimeout(timeout);
-        this.rl?.off('line', onLine);
-        this.process?.off('error', onError);
+      const onLine = (line: string) => {
+        const text = line.trim();
+        if (draining) {
+          onDrain?.(text);
+          return;
+        }
+        if (settled) return;
+        try {
+          if (isTerminal(text)) {
+            settled = true;
+            cleanup();
+            resolve();
+          }
+        } catch (err) {
+          fail(err instanceof Error ? err : new Error(String(err)));
+        }
       };
 
-      this.rl.on('line', onLine);
-      this.process.on('error', onError);
-      this.process.stdin.write(`${cmd}\n`);
+      const onError = (err: Error) => {
+        if (settled || draining) return;
+        fail(err);
+      };
+
+      const onExit = () => {
+        if (settled) return;
+        // Our own kill at the end of a failed stop is not a second failure.
+        if (draining && !this.retired) return;
+        if (!this.retired) this.isReady = false;
+        fail(new Error('Engine process exited'));
+      };
+
+      const deadline = isSearchCommand(cmd) ? this.searchTimeoutMs : COMMAND_TIMEOUT_MS;
+      timeout = setTimeout(() => {
+        if (settled) return;
+        if (!isSearchCommand(cmd)) {
+          fail(new Error(`UCI command '${cmd}' timed out`));
+          return;
+        }
+        // Reject only after stop or restart. Resolving here would publish the
+        // late bestmove as this evaluation's result and free a live search.
+        draining = true;
+        void this.recoverSearch((listener) => {
+          onDrain = listener;
+        }).then(
+          () => fail(new Error(`UCI command '${cmd}' timed out`)),
+          () => fail(new Error(`UCI command '${cmd}' timed out`)),
+        );
+      }, deadline);
+
+      rl.on('line', onLine);
+      child.on('error', onError);
+      child.on('exit', onExit);
+      child.stdin.write(`${cmd}\n`);
     });
   }
 
-  public async quit(): Promise<void> {
+  /**
+   * Stop the timed-out search and discard its bestmove. If the engine never
+   * answers, replace the process. isReady stays true until that replacement
+   * fails so waiters keep queueing on this client instead of being failed
+   * while a new process is starting.
+   */
+  private async recoverSearch(arm: (listener: (line: string) => void) => void): Promise<void> {
+    const stopped = await this.stopAndDrain(arm);
+    if (stopped || this.retired) return;
+    console.warn('[UciClient] Search ignored stop; restarting engine');
     try {
-      if (this.process?.stdin?.writable) {
-        this.process.stdin.write('quit\n');
-      }
-      this.rl?.close();
-      this.process?.kill();
-    } catch {
-      // Ignore cleanup error
-    } finally {
-      this.process = null;
-      this.rl = null;
+      this.destroyProcess();
+      await this.init();
+    } catch (err) {
       this.isReady = false;
-      this.busy = false;
+      this.destroyProcess();
+      console.warn('[UciClient] Engine restart failed:', err);
     }
   }
 
+  private stopAndDrain(arm: (listener: (line: string) => void) => void): Promise<boolean> {
+    const child = this.process;
+    return new Promise((resolve) => {
+      let done = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const finish = (ok: boolean) => {
+        if (done) return;
+        done = true;
+        if (timer) clearTimeout(timer);
+        child?.off('exit', onExit);
+        resolve(ok);
+      };
+      const onExit = () => finish(false);
+      arm((line) => {
+        if (line.startsWith('bestmove ')) finish(true);
+      });
+      const stdin = child?.stdin;
+      if (!child || !stdin?.writable || child.exitCode !== null || child.signalCode !== null) {
+        finish(false);
+        return;
+      }
+      child.once('exit', onExit);
+      timer = setTimeout(() => finish(false), this.stopGraceMs);
+      try {
+        stdin.write('stop\n');
+      } catch {
+        finish(false);
+      }
+    });
+  }
+
+  private destroyProcess(): void {
+    const child = this.process;
+    const rl = this.rl;
+    this.process = null;
+    this.rl = null;
+    if (rl) {
+      try { rl.close(); } catch { /* already closed */ }
+    }
+    if (!child) return;
+    child.stdin?.on('error', () => {});
+    try {
+      if (child.stdin?.writable) child.stdin.write('quit\n');
+    } catch { /* engine already gone */ }
+    if (child.exitCode === null && child.signalCode === null) {
+      try { child.kill('SIGKILL'); } catch { /* already gone */ }
+    }
+  }
+
+  public async quit(): Promise<void> {
+    this.retired = true;
+    this.isReady = false;
+    this.destroyProcess();
+    this.busy = false;
+  }
+
   public isAvailable(): boolean {
-    return this.isReady && !this.busy;
+    return this.isReady && !this.busy && !this.retired;
+  }
+
+  /** False after quit or a restart that did not come back. Busy engines stay usable. */
+  public isUsable(): boolean {
+    return this.isReady && !this.retired;
   }
 }
