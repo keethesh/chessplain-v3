@@ -674,3 +674,18 @@ export function missedChanceFact(candidate: CandidateMoment): string | null {
     return null;
   }
 }
+
+/** Grounded text for the "why better" field; never expands a withheld net. */
+export function missedChanceWhyBetter(candidate: CandidateMoment): string | null {
+  const fact = missedChanceFact(candidate);
+  if (!fact) return null;
+  const material = fact.indexOf(' Instead,');
+  if (material >= 0) return fact.slice(0, material).trimEnd();
+  const mate = fact.indexOf(' After ');
+  return mate >= 0 ? fact.slice(0, mate).trimEnd() : fact;
+}
+
+/** A deliberately neutral intention; the code cannot know what the player thought. */
+export function missedChanceProbableThought(candidate: CandidateMoment): string | null {
+  return missedChanceFact(candidate) ? 'You may have been looking for a useful move.' : null;
+}

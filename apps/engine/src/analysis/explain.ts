@@ -10,6 +10,7 @@ import {
   validateMomentJson,
   validateSummaryJson,
 } from './prompts.js';
+import { missedChanceProbableThought, missedChanceWhyBetter } from './concepts.js';
 
 const openai = new OpenAI({
   baseURL: config.llmApiBase,
@@ -153,6 +154,8 @@ export async function explainMoment(
   };
 
   const inputPayload = buildMomentPayload(moment, eloBand, opponentName);
+  const groundedMissedChance = missedChanceWhyBetter(moment);
+  const neutralMissedChanceThought = missedChanceProbableThought(moment);
   const systemPrompt = momentSystemPrompt(inputPayload);
 
   const userContent = JSON.stringify(inputPayload);
@@ -182,6 +185,8 @@ export async function explainMoment(
     if (validation.isValid && validation.parsed) {
       return {
         ...validation.parsed,
+        ...(neutralMissedChanceThought ? { probable_thought: neutralMissedChanceThought } : {}),
+        ...(groundedMissedChance ? { why_better: groundedMissedChance } : {}),
         played: moment.san,
         ply: moment.ply,
         move_number: moment.moveNumber,
@@ -223,6 +228,8 @@ export async function explainMoment(
     if (retryValidation.isValid && retryValidation.parsed) {
       return {
         ...retryValidation.parsed,
+        ...(neutralMissedChanceThought ? { probable_thought: neutralMissedChanceThought } : {}),
+        ...(groundedMissedChance ? { why_better: groundedMissedChance } : {}),
         played: moment.san,
         ply: moment.ply,
         move_number: moment.moveNumber,

@@ -12,7 +12,7 @@ wins; re-sync this document rather than trusting it. Remaining prompt work
 decision) is tracked in
 [`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md).
 
-- **`PROMPT_VERSION` constant: `2026-10-12.2`** (`prompts.ts`). Bump on every
+- **`PROMPT_VERSION` constant: `2026-10-12.3`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**
   anywhere — no `game_analyses` write includes it, despite an earlier version
   of this document claiming it is stored per-row. Wire it into
@@ -219,15 +219,21 @@ mistake. This payload has no refutation line: tell the story from best_move,
 best_line_moves and best_line_outcome. When in_the_game is present, what was
 really played next may be told as an event. If code_concept.fact is absent,
 say only what best_line_outcome gives and name no specific piece.
+- probable_thought: when the fact does not say what the played move attacked or
+defended, use a neutral intention such as "You may have been looking for a
+useful move." Do not claim that the played move attacks, defends, threatens,
+or fails to do something unless the input states it.
 - what_actually_happens: the fact, in the words given. ≤45 words, or 50 when
   the in-game sentence is added.
-- why_better: best_move and what the fact says it wins. Attribute a capture
-  by its "by" field in best_line_moves only when the fact names that material.
+- why_better: use the fact's material wording and no more. If it says "won
+  material", write "wins material"; do not expand that into named pieces from
+  best_line_moves or best_line_outcome. If it names pieces, best_line_moves
+  may explain those named captures, but do not omit or reverse a recapture.
   ≤2 sentences, ≤35 words.
 
 Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance",
 fact "Rxe5 would have won a knight for nothing. Instead, a3 kept the material level."):
-{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Rxe5 would have won a knight for nothing. Instead, 21.a3 kept the material level.","why_better":"21.Rxe5 wins their knight for nothing.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}
+{"played":"21.a3","probable_thought":"You may have been looking for a useful move.","what_actually_happens":"Rxe5 would have won a knight for nothing. Instead, 21.a3 kept the material level.","why_better":"21.Rxe5 wins their knight for nothing.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}
 ```
 
 `tactical_context` is built by `buildTacticalContext()` in
@@ -250,6 +256,10 @@ must be that name. Pipeline runs also include `in_the_game: { next_moves:
 [{ move, by }], refutation_moves_played, game_over }`; the refutation line is
 what the move allowed, and only its first `refutation_moves_played` moves were
 played. A missed chance sends no refutation line.
+For a missed chance with a code fact, `explainMoment` also replaces the model's
+`why_better` with the fact's grounded win and uses a neutral
+`probable_thought`; the model cannot expand a deliberately withheld material
+net or claim an unsupported intention.
 
 **Known gaps** (tracked in the roadmap doc): the model receives one FEN with
 no move history and no clock time. `elo_band` comes from the Chess.com API

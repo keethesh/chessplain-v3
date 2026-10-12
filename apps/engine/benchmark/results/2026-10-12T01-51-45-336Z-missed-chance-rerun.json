@@ -1,0 +1,1660 @@
+{
+  "prompt": "2026-10-12.2",
+  "model": "openai/gpt-6-luna",
+  "reasoning": "none",
+  "opponent": "Sam",
+  "note": "The 11 missed-chance moments from the pre-2026-10-12.2 hand check (5 fixtures + 6 labelled). No in_the_game on any of them. Production retry-on-invalid included.",
+  "costUsd": 0.0017359650000000003,
+  "rows": [
+    {
+      "id": "carlinoravioli-55-013",
+      "source": "labelled",
+      "eloBand": "1000_1400",
+      "rating": 1349,
+      "played": "28.Rb1",
+      "best": "Qb4+",
+      "bestLine": "Qb4+ Kg8 Qxb6 Bf5",
+      "refutation": "Bc7 Rb7 h4",
+      "classified": "missed_chance",
+      "fact": "Qb4+ would have won a bishop for nothing. Instead, Rb1 kept the material level.",
+      "codeFact": "Qb4+ would have won a bishop for nothing. Instead, Rb1 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost nothing and the opponent has lost a bishop.",
+      "bestLineMoves": [
+        {
+          "san": "Qb4+",
+          "by": "you",
+          "captured": null,
+          "description": "White queen from a4 to b4 (check)"
+        },
+        {
+          "san": "Kg8",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black king from f8 to g8"
+        },
+        {
+          "san": "Qxb6",
+          "by": "you",
+          "captured": "Black bishop on b6",
+          "description": "White queen from b4 to b6, capturing Black bishop on b6"
+        },
+        {
+          "san": "Bf5",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black bishop from g6 to f5"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Qb4+",
+          "color": "w",
+          "piece": "q",
+          "from": "a4",
+          "to": "b4",
+          "captured": null,
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "Kg8",
+          "color": "b",
+          "piece": "k",
+          "from": "f8",
+          "to": "g8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qxb6",
+          "color": "w",
+          "piece": "q",
+          "from": "b4",
+          "to": "b6",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Bf5",
+          "color": "b",
+          "piece": "b",
+          "from": "g6",
+          "to": "f5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Rb1",
+          "color": "w",
+          "piece": "r",
+          "from": "c1",
+          "to": "b1",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Bc7",
+          "color": "b",
+          "piece": "b",
+          "from": "b6",
+          "to": "c7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rb7",
+          "color": "w",
+          "piece": "r",
+          "from": "b1",
+          "to": "b7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "h4",
+          "color": "b",
+          "piece": "p",
+          "from": "h5",
+          "to": "h4",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "28.Rb1",
+        "probable_thought": "The rook moves to b1, where it attacks the bishop on b6.",
+        "what_actually_happens": "Qb4+ would have won a bishop for nothing. Instead, 28.Rb1 kept the material level.",
+        "why_better": "28.Qb4+ checks the king and, after it moves to g8, takes the bishop on b6.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "When you have a check, look for a loose piece it can attack next.",
+        "severity_label": "Missed win"
+      },
+      "servedBy": "OpenAI",
+      "ms": 2448,
+      "costUsd": 0.0001849
+    },
+    {
+      "id": "funfunpieces-9-030",
+      "source": "labelled",
+      "eloBand": "under_1000",
+      "rating": 859,
+      "played": "5.d3",
+      "best": "d4",
+      "bestLine": "d4 Qg6 dxc5 Nc6",
+      "refutation": "Qg6 h4 h5",
+      "classified": "missed_chance",
+      "fact": "d4 would have won a bishop for nothing. Instead, d3 kept the material level.",
+      "codeFact": "d4 would have won a bishop for nothing. Instead, d3 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost nothing and the opponent has lost a bishop.",
+      "bestLineMoves": [
+        {
+          "san": "d4",
+          "by": "you",
+          "captured": null,
+          "description": "White pawn from d2 to d4"
+        },
+        {
+          "san": "Qg6",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black queen from g5 to g6"
+        },
+        {
+          "san": "dxc5",
+          "by": "you",
+          "captured": "Black bishop on c5",
+          "description": "White pawn from d4 to c5, capturing Black bishop on c5"
+        },
+        {
+          "san": "Nc6",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black knight from b8 to c6"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "d4",
+          "color": "w",
+          "piece": "p",
+          "from": "d2",
+          "to": "d4",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qg6",
+          "color": "b",
+          "piece": "q",
+          "from": "g5",
+          "to": "g6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "dxc5",
+          "color": "w",
+          "piece": "p",
+          "from": "d4",
+          "to": "c5",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nc6",
+          "color": "b",
+          "piece": "n",
+          "from": "b8",
+          "to": "c6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "d3",
+          "color": "w",
+          "piece": "p",
+          "from": "d2",
+          "to": "d3",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qg6",
+          "color": "b",
+          "piece": "q",
+          "from": "g5",
+          "to": "g6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "h4",
+          "color": "w",
+          "piece": "p",
+          "from": "h2",
+          "to": "h4",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "h5",
+          "color": "b",
+          "piece": "p",
+          "from": "h7",
+          "to": "h5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "5.d3",
+        "probable_thought": "The pawn steps to d3, moving away from the queen on g5 and opening the bishop on c1.",
+        "what_actually_happens": "d4 would have won a bishop for nothing. Instead, 5.d3 kept the material level.",
+        "why_better": "5.d4 attacks the bishop on c5 and the pawn on e5; after the queen moves to g6, dxc5 takes the bishop.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play",
+        "takeaway": "Before making a quiet pawn move, check which enemy pieces your pawn could attack by moving farther.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 2093,
+      "costUsd": 0.000194525
+    },
+    {
+      "id": "nerdquestadventures-47-032",
+      "source": "labelled",
+      "eloBand": "under_1000",
+      "rating": 765,
+      "played": "24.Qxf7+",
+      "best": "Bxh8",
+      "bestLine": "Bxh8 a5 Bf6 Rf8",
+      "refutation": "Rd7 Qxf5 Rc8",
+      "classified": "missed_chance",
+      "fact": "Bxh8 would have won a rook for nothing. Instead, Qxf7+ won 2 pawns for nothing.",
+      "codeFact": "Bxh8 would have won a rook for nothing. Instead, Qxf7+ won 2 pawns for nothing.",
+      "bestLineOutcome": "By the end of this line, you have lost nothing and the opponent has lost a rook.",
+      "bestLineMoves": [
+        {
+          "san": "Bxh8",
+          "by": "you",
+          "captured": "Black rook on h8",
+          "description": "White bishop from b2 to h8, capturing Black rook on h8"
+        },
+        {
+          "san": "a5",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black pawn from a7 to a5"
+        },
+        {
+          "san": "Bf6",
+          "by": "you",
+          "captured": null,
+          "description": "White bishop from h8 to f6"
+        },
+        {
+          "san": "Rf8",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black rook from d8 to f8"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Bxh8",
+          "color": "w",
+          "piece": "b",
+          "from": "b2",
+          "to": "h8",
+          "captured": "r",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "a5",
+          "color": "b",
+          "piece": "p",
+          "from": "a7",
+          "to": "a5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Bf6",
+          "color": "w",
+          "piece": "b",
+          "from": "h8",
+          "to": "f6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rf8",
+          "color": "b",
+          "piece": "r",
+          "from": "d8",
+          "to": "f8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Qxf7+",
+          "color": "w",
+          "piece": "q",
+          "from": "h7",
+          "to": "f7",
+          "captured": "p",
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "Rd7",
+          "color": "b",
+          "piece": "r",
+          "from": "d8",
+          "to": "d7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qxf5",
+          "color": "w",
+          "piece": "q",
+          "from": "f7",
+          "to": "f5",
+          "captured": "p",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rc8",
+          "color": "b",
+          "piece": "r",
+          "from": "h8",
+          "to": "c8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "24.Qxf7+",
+        "probable_thought": "The queen takes the f7 pawn with check, picking up a pawn and attacking the pawn on f5.",
+        "what_actually_happens": "Bxh8 would have won a rook for nothing. Instead, 24.Qxf7+ won 2 pawns for nothing.",
+        "why_better": "24.Bxh8 takes Sam's rook for nothing, and the bishop gets away to f6.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before giving check, look for an undefended piece you can take.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 2255,
+      "costUsd": 0.0002014
+    },
+    {
+      "id": "takuc2-23-036",
+      "source": "labelled",
+      "eloBand": "under_1000",
+      "rating": 964,
+      "played": "12.a3",
+      "best": "Nxc6",
+      "bestLine": "Nxc6 Qd6 Nb5 Qf6",
+      "refutation": "Nxd4 Rxd4 c6",
+      "classified": "missed_chance",
+      "fact": "Nxc6 would have won a knight for nothing. Instead, a3 kept the material level.",
+      "codeFact": "Nxc6 would have won a knight for nothing. Instead, a3 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost nothing and the opponent has lost a knight.",
+      "bestLineMoves": [
+        {
+          "san": "Nxc6",
+          "by": "you",
+          "captured": "Black knight on c6",
+          "description": "White knight from d4 to c6, capturing Black knight on c6"
+        },
+        {
+          "san": "Qd6",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black queen from e7 to d6"
+        },
+        {
+          "san": "Nb5",
+          "by": "you",
+          "captured": null,
+          "description": "White knight from c3 to b5"
+        },
+        {
+          "san": "Qf6",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black queen from d6 to f6"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Nxc6",
+          "color": "w",
+          "piece": "n",
+          "from": "d4",
+          "to": "c6",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qd6",
+          "color": "b",
+          "piece": "q",
+          "from": "e7",
+          "to": "d6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nb5",
+          "color": "w",
+          "piece": "n",
+          "from": "c3",
+          "to": "b5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qf6",
+          "color": "b",
+          "piece": "q",
+          "from": "d6",
+          "to": "f6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "a3",
+          "color": "w",
+          "piece": "p",
+          "from": "a2",
+          "to": "a3",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nxd4",
+          "color": "b",
+          "piece": "n",
+          "from": "c6",
+          "to": "d4",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rxd4",
+          "color": "w",
+          "piece": "r",
+          "from": "d1",
+          "to": "d4",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "c6",
+          "color": "b",
+          "piece": "p",
+          "from": "c7",
+          "to": "c6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "12.a3",
+        "probable_thought": "The pawn steps to a3, though it does not attack or defend anything immediately.",
+        "what_actually_happens": "Nxc6 would have won a knight for nothing. Instead, 12.a3 kept the material level.",
+        "why_better": "12.Nxc6 takes Sam’s knight, and the line ends with you having lost nothing while Sam has lost a knight.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before making a quiet move, check whether an opponent’s piece can be taken safely.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 1855,
+      "costUsd": 0.0001929
+    },
+    {
+      "id": "plomo24-49-055",
+      "source": "labelled",
+      "eloBand": "above_1400",
+      "rating": 1587,
+      "played": "25.Rac1",
+      "best": "Nxc4",
+      "bestLine": "Nxc4 bxc4 Qxc4+ Kh8",
+      "refutation": "Qxd4+ Kh1 e3",
+      "classified": "missed_chance",
+      "fact": "Nxc4 would have won a rook and a pawn for a knight. Instead, Rac1 lost a pawn.",
+      "codeFact": "Nxc4 would have won a rook and a pawn for a knight. Instead, Rac1 lost a pawn.",
+      "bestLineOutcome": "By the end of this line, you have lost a knight and the opponent has lost a rook and a pawn.",
+      "bestLineMoves": [
+        {
+          "san": "Nxc4",
+          "by": "you",
+          "captured": "Black rook on c4",
+          "description": "White knight from e5 to c4, capturing Black rook on c4"
+        },
+        {
+          "san": "bxc4",
+          "by": "opponent",
+          "captured": "White knight on c4",
+          "description": "Black pawn from b5 to c4, capturing White knight on c4"
+        },
+        {
+          "san": "Qxc4+",
+          "by": "you",
+          "captured": "Black pawn on c4",
+          "description": "White queen from b3 to c4, capturing Black pawn on c4 (check)"
+        },
+        {
+          "san": "Kh8",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black king from g8 to h8"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Nxc4",
+          "color": "w",
+          "piece": "n",
+          "from": "e5",
+          "to": "c4",
+          "captured": "r",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "bxc4",
+          "color": "b",
+          "piece": "p",
+          "from": "b5",
+          "to": "c4",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qxc4+",
+          "color": "w",
+          "piece": "q",
+          "from": "b3",
+          "to": "c4",
+          "captured": "p",
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "Kh8",
+          "color": "b",
+          "piece": "k",
+          "from": "g8",
+          "to": "h8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Rac1",
+          "color": "w",
+          "piece": "r",
+          "from": "a1",
+          "to": "c1",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qxd4+",
+          "color": "b",
+          "piece": "q",
+          "from": "d8",
+          "to": "d4",
+          "captured": "p",
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "Kh1",
+          "color": "w",
+          "piece": "k",
+          "from": "g1",
+          "to": "h1",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "e3",
+          "color": "b",
+          "piece": "p",
+          "from": "e4",
+          "to": "e3",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "25.Rac1",
+        "probable_thought": "The rook moves to c1 to attack Sam's rook on c4.",
+        "what_actually_happens": "Nxc4 would have won a rook and a pawn for a knight. Instead, 25.Rac1 lost a pawn.",
+        "why_better": "25.Nxc4 takes Sam's rook; after the b-pawn takes your knight, Qxc4+ takes that pawn too.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before making a quiet move, check whether you can capture an undefended piece.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 1968,
+      "costUsd": 0.000190275
+    },
+    {
+      "id": "liber0-25-062",
+      "source": "labelled",
+      "eloBand": "above_1400",
+      "rating": 1596,
+      "played": "13.Qf3",
+      "best": "Nd6+",
+      "bestLine": "Nd6+ Ke7 Ndxf7 Nxe5 Nxd8 Nxd3",
+      "refutation": "O-O Nxf6+ Nxf6",
+      "classified": "missed_chance",
+      "fact": "Nd6+ would have won material. Instead, Qf3 kept the material level.",
+      "codeFact": "Nd6+ would have won material. Instead, Qf3 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost a bishop and a knight and the opponent has lost a queen and a pawn.",
+      "bestLineMoves": [
+        {
+          "san": "Nd6+",
+          "by": "you",
+          "captured": null,
+          "description": "White knight from e4 to d6 (check)"
+        },
+        {
+          "san": "Ke7",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black king from e8 to e7"
+        },
+        {
+          "san": "Ndxf7",
+          "by": "you",
+          "captured": "Black pawn on f7",
+          "description": "White knight from d6 to f7, capturing Black pawn on f7"
+        },
+        {
+          "san": "Nxe5",
+          "by": "opponent",
+          "captured": "White knight on e5",
+          "description": "Black knight from d7 to e5, capturing White knight on e5"
+        },
+        {
+          "san": "Nxd8",
+          "by": "you",
+          "captured": "Black queen on d8",
+          "description": "White knight from f7 to d8, capturing Black queen on d8"
+        },
+        {
+          "san": "Nxd3",
+          "by": "opponent",
+          "captured": "White bishop on d3",
+          "description": "Black knight from e5 to d3, capturing White bishop on d3"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Nd6+",
+          "color": "w",
+          "piece": "n",
+          "from": "e4",
+          "to": "d6",
+          "captured": null,
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "Ke7",
+          "color": "b",
+          "piece": "k",
+          "from": "e8",
+          "to": "e7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Ndxf7",
+          "color": "w",
+          "piece": "n",
+          "from": "d6",
+          "to": "f7",
+          "captured": "p",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nxe5",
+          "color": "b",
+          "piece": "n",
+          "from": "d7",
+          "to": "e5",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nxd8",
+          "color": "w",
+          "piece": "n",
+          "from": "f7",
+          "to": "d8",
+          "captured": "q",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nxd3",
+          "color": "b",
+          "piece": "n",
+          "from": "e5",
+          "to": "d3",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Qf3",
+          "color": "w",
+          "piece": "q",
+          "from": "d1",
+          "to": "f3",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "O-O",
+          "color": "b",
+          "piece": "k",
+          "from": "e8",
+          "to": "g8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nxf6+",
+          "color": "w",
+          "piece": "n",
+          "from": "e4",
+          "to": "f6",
+          "captured": "b",
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "Nxf6",
+          "color": "b",
+          "piece": "n",
+          "from": "d7",
+          "to": "f6",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "13.Qf3",
+        "probable_thought": "The queen steps to f3, but the move attacks or defends nothing immediately.",
+        "what_actually_happens": "Nd6+ would have won material. Instead, 13.Qf3 kept the material level.",
+        "why_better": "13.Nd6+ checks the king and attacks the b7 pawn, c8 bishop, and f7 pawn; the line wins a queen and pawn for a bishop and knight.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before making a quiet move, check every available check and what it attacks.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 2092,
+      "costUsd": 0.000225525
+    },
+    {
+      "id": "rep-knight-fork-c7:27",
+      "source": "fixture",
+      "eloBand": "1000_1400",
+      "rating": null,
+      "played": "14.Re1",
+      "best": "Bxe6",
+      "bestLine": "Bxe6 Bxe6 Nh4 Rb8",
+      "refutation": "Qf6 Bd5 g5",
+      "classified": "missed_chance",
+      "fact": "Bxe6 would have won a queen for a bishop. Instead, Re1 kept the material level.",
+      "codeFact": "Bxe6 would have won a queen for a bishop. Instead, Re1 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost a bishop and the opponent has lost a queen.",
+      "bestLineMoves": [
+        {
+          "san": "Bxe6",
+          "by": "you",
+          "captured": "Black queen on e6",
+          "description": "White bishop from c4 to e6, capturing Black queen on e6"
+        },
+        {
+          "san": "Bxe6",
+          "by": "opponent",
+          "captured": "White bishop on e6",
+          "description": "Black bishop from d7 to e6, capturing White bishop on e6"
+        },
+        {
+          "san": "Nh4",
+          "by": "you",
+          "captured": null,
+          "description": "White knight from f3 to h4"
+        },
+        {
+          "san": "Rb8",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black rook from h8 to b8"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Bxe6",
+          "color": "w",
+          "piece": "b",
+          "from": "c4",
+          "to": "e6",
+          "captured": "q",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Bxe6",
+          "color": "b",
+          "piece": "b",
+          "from": "d7",
+          "to": "e6",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nh4",
+          "color": "w",
+          "piece": "n",
+          "from": "f3",
+          "to": "h4",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rb8",
+          "color": "b",
+          "piece": "r",
+          "from": "h8",
+          "to": "b8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Re1",
+          "color": "w",
+          "piece": "r",
+          "from": "f1",
+          "to": "e1",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Qf6",
+          "color": "b",
+          "piece": "q",
+          "from": "e6",
+          "to": "f6",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Bd5",
+          "color": "w",
+          "piece": "b",
+          "from": "c4",
+          "to": "d5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "g5",
+          "color": "b",
+          "piece": "p",
+          "from": "g7",
+          "to": "g5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "14.Re1",
+        "probable_thought": "The rook moves from f1 to e1, though the move has no direct attack or capture in the given facts.",
+        "what_actually_happens": "Bxe6 would have won a queen for a bishop. Instead, 14.Re1 kept the material level.",
+        "why_better": "14.Bxe6 takes Sam’s queen; after the bishop recaptures, you have lost a bishop and Sam has lost a queen.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before making a routine move, scan for an undefended queen you can take.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 2123,
+      "costUsd": 0.00010941
+    },
+    {
+      "id": "rep-knight-fork-c7:37",
+      "source": "fixture",
+      "eloBand": "1000_1400",
+      "rating": null,
+      "played": "19.Nf3",
+      "best": "Nxe6+",
+      "bestLine": "Nxe6+ fxe6 Rxa6 Kc7",
+      "refutation": "a5 b4 a4",
+      "classified": "missed_chance",
+      "fact": "Nxe6+ would have won a queen and a pawn for a knight. Instead, Nf3 kept the material level.",
+      "codeFact": "Nxe6+ would have won a queen and a pawn for a knight. Instead, Nf3 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost a knight and the opponent has lost a queen and a pawn.",
+      "bestLineMoves": [
+        {
+          "san": "Nxe6+",
+          "by": "you",
+          "captured": "Black queen on e6",
+          "description": "White knight from d4 to e6, capturing Black queen on e6 (check)"
+        },
+        {
+          "san": "fxe6",
+          "by": "opponent",
+          "captured": "White knight on e6",
+          "description": "Black pawn from f7 to e6, capturing White knight on e6"
+        },
+        {
+          "san": "Rxa6",
+          "by": "you",
+          "captured": "Black pawn on a6",
+          "description": "White rook from a1 to a6, capturing Black pawn on a6"
+        },
+        {
+          "san": "Kc7",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black king from d8 to c7"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Nxe6+",
+          "color": "w",
+          "piece": "n",
+          "from": "d4",
+          "to": "e6",
+          "captured": "q",
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "fxe6",
+          "color": "b",
+          "piece": "p",
+          "from": "f7",
+          "to": "e6",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rxa6",
+          "color": "w",
+          "piece": "r",
+          "from": "a1",
+          "to": "a6",
+          "captured": "p",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Kc7",
+          "color": "b",
+          "piece": "k",
+          "from": "d8",
+          "to": "c7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Nf3",
+          "color": "w",
+          "piece": "n",
+          "from": "d4",
+          "to": "f3",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "a5",
+          "color": "b",
+          "piece": "p",
+          "from": "a6",
+          "to": "a5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "b4",
+          "color": "w",
+          "piece": "p",
+          "from": "b3",
+          "to": "b4",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "a4",
+          "color": "b",
+          "piece": "p",
+          "from": "a5",
+          "to": "a4",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "19.Nf3",
+        "probable_thought": "The knight retreats to f3 while keeping pressure on the pawn at e5.",
+        "what_actually_happens": "Nxe6+ would have won a queen and a pawn for a knight. Instead, 19.Nf3 kept the material level.",
+        "why_better": "19.Nxe6+ checks while taking Sam’s queen; after the f-pawn recaptures your knight, Rxa6 takes a pawn too.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before moving a piece, scan for checks that capture something valuable.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 2105,
+      "costUsd": 0.00010885
+    },
+    {
+      "id": "rep-steady-draw:25",
+      "source": "fixture",
+      "eloBand": "1000_1400",
+      "rating": null,
+      "played": "13.Kf1",
+      "best": "Rxd7",
+      "bestLine": "Rxd7 Rad8 Rxd8 Rxd8",
+      "refutation": "Rfd8 b4 Be7",
+      "classified": "missed_chance",
+      "fact": "Rxd7 would have won a bishop for nothing. Instead, Kf1 kept the material level.",
+      "codeFact": "Rxd7 would have won a bishop for nothing. Instead, Kf1 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost a rook and the opponent has lost a rook and a bishop.",
+      "bestLineMoves": [
+        {
+          "san": "Rxd7",
+          "by": "you",
+          "captured": "Black bishop on d7",
+          "description": "White rook from d1 to d7, capturing Black bishop on d7"
+        },
+        {
+          "san": "Rad8",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black rook from a8 to d8"
+        },
+        {
+          "san": "Rxd8",
+          "by": "you",
+          "captured": "Black rook on d8",
+          "description": "White rook from d7 to d8, capturing Black rook on d8"
+        },
+        {
+          "san": "Rxd8",
+          "by": "opponent",
+          "captured": "White rook on d8",
+          "description": "Black rook from f8 to d8, capturing White rook on d8"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Rxd7",
+          "color": "w",
+          "piece": "r",
+          "from": "d1",
+          "to": "d7",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rad8",
+          "color": "b",
+          "piece": "r",
+          "from": "a8",
+          "to": "d8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rxd8",
+          "color": "w",
+          "piece": "r",
+          "from": "d7",
+          "to": "d8",
+          "captured": "r",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rxd8",
+          "color": "b",
+          "piece": "r",
+          "from": "f8",
+          "to": "d8",
+          "captured": "r",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Kf1",
+          "color": "w",
+          "piece": "k",
+          "from": "g1",
+          "to": "f1",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rfd8",
+          "color": "b",
+          "piece": "r",
+          "from": "f8",
+          "to": "d8",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "b4",
+          "color": "w",
+          "piece": "p",
+          "from": "b2",
+          "to": "b4",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Be7",
+          "color": "b",
+          "piece": "b",
+          "from": "c5",
+          "to": "e7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "13.Kf1",
+        "probable_thought": "The king steps from g1 to f1, moving away from its original square.",
+        "what_actually_happens": "Rxd7 would have won a bishop for nothing. Instead, 13.Kf1 kept the material level.",
+        "why_better": "13.Rxd7 takes Sam’s bishop; after the rooks are exchanged, you have traded a rook for a rook and kept the extra bishop.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before making a quiet move, check whether you can take an undefended piece.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 2178,
+      "costUsd": 0.00010755
+    },
+    {
+      "id": "rep-steady-draw:29",
+      "source": "fixture",
+      "eloBand": "1000_1400",
+      "rating": null,
+      "played": "15.Bd2",
+      "best": "Rxd7",
+      "bestLine": "Rxd7 Nd5 Bxd5 exd5 Rxb7",
+      "refutation": "Bb5+ Ke1 Nd5",
+      "classified": "missed_chance",
+      "fact": "Rxd7 would have won a knight and a pawn for nothing. Instead, Bd2 kept the material level.",
+      "codeFact": "Rxd7 would have won a knight and a pawn for nothing. Instead, Bd2 kept the material level.",
+      "bestLineOutcome": "By the end of this line, you have lost a bishop and the opponent has lost a bishop and a knight and a pawn.",
+      "bestLineMoves": [
+        {
+          "san": "Rxd7",
+          "by": "you",
+          "captured": "Black bishop on d7",
+          "description": "White rook from d1 to d7, capturing Black bishop on d7"
+        },
+        {
+          "san": "Nd5",
+          "by": "opponent",
+          "captured": null,
+          "description": "Black knight from e7 to d5"
+        },
+        {
+          "san": "Bxd5",
+          "by": "you",
+          "captured": "Black knight on d5",
+          "description": "White bishop from e4 to d5, capturing Black knight on d5"
+        },
+        {
+          "san": "exd5",
+          "by": "opponent",
+          "captured": "White bishop on d5",
+          "description": "Black pawn from e6 to d5, capturing White bishop on d5"
+        },
+        {
+          "san": "Rxb7",
+          "by": "you",
+          "captured": "Black pawn on b7",
+          "description": "White rook from d7 to b7, capturing Black pawn on b7"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Rxd7",
+          "color": "w",
+          "piece": "r",
+          "from": "d1",
+          "to": "d7",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nd5",
+          "color": "b",
+          "piece": "n",
+          "from": "e7",
+          "to": "d5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Bxd5",
+          "color": "w",
+          "piece": "b",
+          "from": "e4",
+          "to": "d5",
+          "captured": "n",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "exd5",
+          "color": "b",
+          "piece": "p",
+          "from": "e6",
+          "to": "d5",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rxb7",
+          "color": "w",
+          "piece": "r",
+          "from": "d7",
+          "to": "b7",
+          "captured": "p",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Bd2",
+          "color": "w",
+          "piece": "b",
+          "from": "c1",
+          "to": "d2",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Bb5+",
+          "color": "b",
+          "piece": "b",
+          "from": "d7",
+          "to": "b5",
+          "captured": null,
+          "promotion": null,
+          "check": true,
+          "mate": false
+        },
+        {
+          "san": "Ke1",
+          "color": "w",
+          "piece": "k",
+          "from": "e2",
+          "to": "e1",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Nd5",
+          "color": "b",
+          "piece": "n",
+          "from": "e7",
+          "to": "d5",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "15.Bd2",
+        "probable_thought": "The bishop moves from c1 to d2, though the move does not create an attack or defend a piece in the listed facts.",
+        "what_actually_happens": "Rxd7 would have won a knight and a pawn for nothing. Instead, 15.Bd2 kept the material level.",
+        "why_better": "15.Rxd7 takes the bishop; after the knight moves, your bishop takes that knight and your rook collects a pawn, winning a knight and a pawn for nothing.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before making a quiet move, check whether you can safely capture an enemy piece first.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 3078,
+      "costUsd": 0.00011756
+    },
+    {
+      "id": "prod-dd73fe8b:87",
+      "source": "fixture",
+      "eloBand": "above_1400",
+      "rating": null,
+      "played": "44.Rhh7",
+      "best": "Rh8#",
+      "bestLine": "Rh8#",
+      "refutation": "Re7 Rhxe7 exd3",
+      "classified": "missed_chance",
+      "fact": "You had mate in 1 starting with Rh8#. After Rhh7, it is gone.",
+      "codeFact": "You had mate in 1 starting with Rh8#. After Rhh7, it is gone.",
+      "bestLineOutcome": "By the end of this line, no material has changed hands.",
+      "bestLineMoves": [
+        {
+          "san": "Rh8#",
+          "by": "you",
+          "captured": null,
+          "description": "White rook from h6 to h8 (checkmate)"
+        }
+      ],
+      "hasRefutationLine": false,
+      "hasInGame": false,
+      "bestTrace": [
+        {
+          "san": "Rh8#",
+          "color": "w",
+          "piece": "r",
+          "from": "h6",
+          "to": "h8",
+          "captured": null,
+          "promotion": null,
+          "check": true,
+          "mate": true
+        }
+      ],
+      "playedTrace": [
+        {
+          "san": "Rhh7",
+          "color": "w",
+          "piece": "r",
+          "from": "h6",
+          "to": "h7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Re7",
+          "color": "b",
+          "piece": "r",
+          "from": "e8",
+          "to": "e7",
+          "captured": null,
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "Rhxe7",
+          "color": "w",
+          "piece": "r",
+          "from": "h7",
+          "to": "e7",
+          "captured": "r",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        },
+        {
+          "san": "exd3",
+          "color": "b",
+          "piece": "p",
+          "from": "e4",
+          "to": "d3",
+          "captured": "b",
+          "promotion": null,
+          "check": false,
+          "mate": false
+        }
+      ],
+      "attempt": 1,
+      "valid": true,
+      "errors": [],
+      "output": {
+        "played": "44.Rhh7",
+        "probable_thought": "The rook moves from h6 to h7, keeping it active on the seventh rank.",
+        "what_actually_happens": "You had mate in 1 starting with Rh8#. After 44.Rhh7, it is gone.",
+        "why_better": "44.Rh8# checkmates immediately: the king has no escape square, and nothing can capture the rook or block the check.",
+        "concept_name": "Missed chance",
+        "concept_definition": "A winning move you had but didn't play.",
+        "takeaway": "Before moving a rook, check every available move that gives check.",
+        "severity_label": "Turning point"
+      },
+      "servedBy": "OpenAI",
+      "ms": 1997,
+      "costUsd": 0.00010307
+    }
+  ]
+}

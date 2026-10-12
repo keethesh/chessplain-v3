@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
-import { classifyMoment, missedChanceFact, type ConceptId } from '../src/analysis/concepts.js';
+import { classifyMoment, missedChanceFact, missedChanceProbableThought, missedChanceWhyBetter, type ConceptId } from '../src/analysis/concepts.js';
 import { parsePgn } from '../src/analysis/pgn.js';
 import { buildMomentPayload, MOMENT_MISSED_CHANCE_RULES, momentSystemPrompt } from '../src/analysis/prompts.js';
 import { selectCandidateMoments } from '../src/analysis/select.js';
@@ -220,6 +220,16 @@ describe('missedChanceFact', () => {
     // The queen on d8 can still take on d4, so "a knight for nothing" would be false.
     const defended = moment('3qk3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
     expect(missedChanceFact(defended)).toBe('Nxd4 would have won material. Instead, Kf2 kept the material level.');
+  });
+
+  it('uses only the grounded win in why_better', () => {
+    const defended = moment('3qk3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
+    expect(missedChanceWhyBetter(defended)).toBe('Nxd4 would have won material.');
+  });
+
+  it('does not invent the player’s intention for a missed chance', () => {
+    const missed = moment('4k3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
+    expect(missedChanceProbableThought(missed)).toBe('You may have been looking for a useful move.');
   });
 
   it('states a mate in N when the eval is the mate encoding', () => {

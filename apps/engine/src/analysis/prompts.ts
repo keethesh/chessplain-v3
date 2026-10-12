@@ -63,7 +63,7 @@ export function cleanJsonString(str: string): string {
   return match ? match[0] : unquoted;
 }
 
-export const PROMPT_VERSION = '2026-10-12.2';
+export const PROMPT_VERSION = '2026-10-12.3';
 
 export const MOMENT_SYSTEM_PROMPT = `You are the explanation engine for Chessplain, a game-review product for adult
 casual players (roughly 600–1200) who want to understand their losses, not be
@@ -243,15 +243,22 @@ mistake. This payload has no refutation line: tell the story from best_move,
 best_line_moves and best_line_outcome. When in_the_game is present, what was
 really played next may be told as an event. If code_concept.fact is absent,
 say only what best_line_outcome gives and name no specific piece.
+- probable_thought: when the fact does not say what the played move attacked or
+defended, use a neutral intention such as "You may have been looking for a
+useful move." Do not claim that the played move attacks, defends, threatens,
+or fails to do something unless the input states it.
 - what_actually_happens: the fact, in the words given. ≤45 words, or 50 when
   the in-game sentence is added.
-- why_better: best_move and what the fact says it wins. Attribute a capture
-  by its "by" field in best_line_moves only when the fact names that material.
+- why_better: use the fact's material wording and no more. If it says "won
+  material", write "wins material"; do not expand that into named pieces from
+  best_line_moves or best_line_outcome. If it names pieces, best_line_moves
+  may explain those named captures, but do not omit or reverse a recapture.
   ≤2 sentences, ≤35 words.
 
 Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance",
 fact "Rxe5 would have won a knight for nothing. Instead, a3 kept the material level."):
-{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Rxe5 would have won a knight for nothing. Instead, 21.a3 kept the material level.","why_better":"21.Rxe5 wins their knight for nothing.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}`;
+{"played":"21.a3","probable_thought":"You may have been looking for a useful move.","what_actually_happens":"Rxe5 would have won a knight for nothing. Instead, 21.a3 kept the material level.","why_better":"21.Rxe5 wins their knight for nothing.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}`;
+
 
 /**
  * The moment system prompt for a payload: the in-game rules when it carries
