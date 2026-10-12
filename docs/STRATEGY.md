@@ -409,10 +409,10 @@ Built and committed, not deployed (see the deploy order in
   five-concept rules); 33% of turning points tagged (18% before). The missed
   chance is the top gremlin for 7 of 13.
 
-Prompt `2026-10-12.2` on `openai/gpt-6-luna` (`.2` adds a code-checked fact for
-missed chances; its 7 benchmark missed-chance explanations all state it): the code concept is named exactly
-where tagged, explanations keep what a move allowed apart from what was played
-(hand-judged on 14 real games), and missed chances are told from the better
-line (7 of 11 read cleanly; see the analysis roadmap). Still
-open: the concierge test (H1/H2) and deployment. The build matches the "Not in
-this cut" list in §11.
+Prompt `2026-10-12.3` on `openai/gpt-6-luna`: missed chances carry a
+code-checked fact, and production owns `why_better` from that fact plus a
+neutral intention instead of unsupported model claims. The 49-fixture no-judge
+benchmark remains 49/49 valid; the 11-position rerun of earlier failures was
+11/11 valid but 7/11 clean before the production grounding override (details
+in the analysis roadmap). Still open: the concierge test (H1/H2) and
+deployment. The build matches the "Not in this cut" list in §11.

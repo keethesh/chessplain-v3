@@ -478,3 +478,19 @@ Two more code-side checks landed with it: the severity label is now
 own label had shown "Quiet drift" on mate moments), and a summary that says
 "you played" a SAN which `in_the_game` attributes only to the opponent fails
 validation, retries once, then falls back.
+
+## Production grounding for missed-chance output (prompt 2026-10-12.3)
+
+The same 11-position no-judge rerun of the old hand-check failures produced
+11/11 valid responses but only 7/11 fully clean: the model still expanded
+`why_better` beyond a fact that deliberately said only "won material", and
+occasionally made a concrete claim about the played move's intention without
+board evidence. The prompt now tells it not to do either.
+
+Production no longer relies on that instruction alone. When the code has a
+`missedChanceFact`, `explainMoment` owns `why_better` from that fact and uses a
+neutral `probable_thought` ("You may have been looking for a useful move.").
+The raw benchmark remains evidence about the model response, not the final
+post-grounding report. The rerun artifacts are
+`benchmark/results/2026-10-12T02-09-14-032Z-missed-chance-rerun.{json,md}`;
+cost was $0.0025.
