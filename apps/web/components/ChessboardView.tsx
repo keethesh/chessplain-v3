@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useSyncExternalStore } from 'react';
-import { Chessboard } from 'react-chessboard';
-import { Chess } from 'chess.js';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Chessboard, type PieceDropHandlerArgs, type SquareHandlerArgs } from 'react-chessboard';
+import { Chess, type Square } from 'chess.js';
 
 interface ChessboardViewProps {
   fen: string;
@@ -16,8 +16,20 @@ interface ChessboardViewProps {
   focusSquare?: string | null;
   /** Piece movement duration; 0 disables animation. */
   animationMs?: number;
-  /** Enables dragging; return true to accept the move. Used by the try-it board. */
-  onPieceDrop?: (from: string, to: string) => boolean;
+  /**
+   * Enables dragging and tap-to-move. Return true to accept the move.
+   * `method` defaults to drag; a tap passes 'tap'.
+   */
+  onPieceDrop?: (from: string, to: string, method?: 'drag' | 'tap') => boolean;
+}
+
+function isOwnPiece(fen: string, square: string): boolean {
+  try {
+    const game = new Chess(fen);
+    return game.get(square as Square)?.color === game.turn();
+  } catch {
+    return false;
+  }
 }
 
 export function ChessboardView({
@@ -32,6 +44,18 @@ export function ChessboardView({
   onPieceDrop,
 }: ChessboardViewProps) {
   const boardRef = useRef<HTMLDivElement>(null);
+  const interactive = Boolean(onPieceDrop);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [trackedFen, setTrackedFen] = useState(fen);
+  // Drop the selection with the position, and when the board stops accepting moves.
+  if (trackedFen !== fen) {
+    setTrackedFen(fen);
+    if (selected !== null) setSelected(null);
+  } else if (!interactive && selected !== null) {
+    setSelected(null);
+  }
+  // onSquareClick is fired from touchend and, on some phones, the click that follows.
+  const recentSquare = useRef<{ square: string; at: number } | null>(null);
   const animate = useSyncExternalStore(
     (onChange) => {
       const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -52,6 +76,34 @@ export function ChessboardView({
     obs.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['tabindex'] });
     return () => obs.disconnect();
   }, [fen, onPieceDrop]);
+
+  function rememberSquare(square: string) {
+    recentSquare.current = { square, at: performance.now() };
+  }
+
+  function repeatSquare(square: string) {
+    const recent = recentSquare.current;
+    return Boolean(recent && recent.square === square && performance.now() - recent.at < 400);
+  }
+
+  function dropPiece(from: string, to: string, method: 'drag' | 'tap') {
+    if (!onPieceDrop) return false;
+    rememberSquare(to);
+    return onPieceDrop(from, to, method);
+  }
+
+  function onSquareClick({ square }: SquareHandlerArgs) {
+    if (!onPieceDrop || repeatSquare(square)) return;
+    rememberSquare(square);
+    if (isOwnPiece(fen, square)) {
+      setSelected(square);
+      return;
+    }
+    if (!selected) return;
+    const accepted = dropPiece(selected, square, 'tap');
+    if (accepted) setSelected(null);
+  }
+
   const customSquareStyles: Record<string, React.CSSProperties> = {};
 
   for (const sq of highlightSquares) {
@@ -66,6 +118,13 @@ export function ChessboardView({
       ...customSquareStyles[sq],
       boxShadow: `inset 0 0 0 3px ${color}, inset 0 0 0 5px rgb(10 10 10 / 35%)`,
       ...(sq === focusSquare ? { backgroundColor: `color-mix(in srgb, ${color} 60%, transparent)` } : {}),
+    };
+  }
+  if (interactive && selected) {
+    customSquareStyles[selected] = {
+      ...customSquareStyles[selected],
+      boxShadow: 'inset 0 0 0 3px var(--blue-fill), inset 0 0 0 5px rgb(10 10 10 / 35%)',
+      backgroundColor: 'color-mix(in srgb, var(--blue-fill) 60%, transparent)',
     };
   }
 
@@ -103,8 +162,11 @@ export function ChessboardView({
           options={{
             position: fen,
             boardOrientation: orientation,
-            allowDragging: Boolean(onPieceDrop),
-            ...(onPieceDrop ? { onPieceDrop: ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => (targetSquare ? onPieceDrop(sourceSquare, targetSquare) : false) } : {}),
+            allowDragging: interactive,
+            ...(onPieceDrop ? {
+              onPieceDrop: ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => (targetSquare ? dropPiece(sourceSquare, targetSquare, 'drag') : false),
+              onSquareClick,
+            } : {}),
             squareStyles: customSquareStyles,
             arrows: customArrows,
             darkSquareStyle: { backgroundColor: '#a6d7ff' },

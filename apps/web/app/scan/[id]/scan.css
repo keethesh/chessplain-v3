@@ -50,17 +50,6 @@
 .scan-reveal-copy .lede strong { font-weight: 700; }
 .scan-gremlin { justify-self: center; align-self: end; width: 100%; max-width: 380px; margin-bottom: calc(clamp(24px, 4vw, 56px) * -1); }
 .scan-gremlin img { width: 100%; }
-.scan-habit {
-  margin: 4px 0 0;
-  padding: clamp(18px, 2.4vw, 28px) clamp(20px, 3vw, 32px);
-  max-width: 34ch;
-  background: var(--paper);
-  border: var(--line);
-  rotate: -1deg;
-  display: grid;
-  gap: 8px;
-}
-.scan-habit blockquote { margin: 0; font-size: clamp(21px, 2.1vw, 30px); font-weight: 700; line-height: 1.18; }
 .scan-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
 
 .scan-evidence { display: grid; gap: 4px; }

@@ -83,7 +83,7 @@ export function HomeTry() {
         {outcome === 'idle' ? (
           <>
             <p className="big">Black to move. Find the move that stops the fork.</p>
-            <p className="muted">Drag a piece, or type the move. A tap on “Show the checked move” works without dragging.</p>
+            <p className="muted">Tap a piece and then a square, drag it, or type the move.</p>
             {note ? <p className="field-note" data-tone="error" role="alert">{note}</p> : null}
             <form className="home-try-actions" onSubmit={playTyped}>
               <label className="sr-only" htmlFor="try-san">Move</label>

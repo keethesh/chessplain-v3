@@ -82,6 +82,14 @@
 .report-check .big { max-width: 36ch; margin-top: 12px; }
 
 .report-stepper { display: flex; flex-wrap: wrap; gap: 12px; }
+.report-more {
+  align-self: flex-start;
+  max-width: 22rem;
+  padding-block: 12px;
+  white-space: normal;
+  text-align: start;
+  line-height: 1.35;
+}
 
 .report-end { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
 .report-games { width: 100%; }
@@ -124,5 +132,7 @@
   .report-share .btn,
   .report-wait .btn,
   .report-missing .btn,
-  .report-game .btn { width: 100%; }
+  .report-game .btn,
+  .report-more { width: 100%; }
+  .report-more { max-width: none; align-self: stretch; }
 }

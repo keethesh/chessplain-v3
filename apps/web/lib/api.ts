@@ -88,6 +88,7 @@ export interface ScanGame {
   player_rating: number | null;
   analyzed: boolean;
   turning_points: ScanTurningPoint[];
+  error?: boolean;
 }
 
 export interface ScanResult {
@@ -114,7 +115,8 @@ export interface ScanDetail {
   result: ScanResult | null;
   example_report_id: string | null;
   checkin: Checkin | null;
-  previous: null | { scan_id: string; concept: ConceptInfo; scanned_at: string };
+  /** The player's last completed scan that named a concept. Counts are that scan's own numbers for the same concept. */
+  previous: null | { scan_id: string; concept: ConceptInfo; scanned_at: string; games_with_concept: number | null; games_scanned: number | null };
   created_at: string;
   completed_at: string | null;
 }

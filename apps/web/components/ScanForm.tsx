@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ApiError, startScan } from '../lib/api';
+import { captureEvent } from '../lib/posthog';
 import { supabase } from '../lib/supabase';
 import { invalidateMe } from '../lib/use-session';
 import './ScanForm.css';
@@ -75,6 +76,7 @@ export function ScanForm({ id, initial = '', submitLabel = 'Find my gremlin', no
       const { data } = await supabase.auth.getSession();
       signedInNow = Boolean(data.session);
       const res = await startScan(username, data.session?.access_token);
+      captureEvent('scan_started', { username_length: username.length, signed_in: signedInNow });
       invalidateMe();
       router.push('/scan/' + res.id, { transitionTypes: ['nav-forward'] });
     } catch (err) {

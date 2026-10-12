@@ -11,6 +11,7 @@ import {
   type Checkin, type ConceptId, type ScanDetail, type ScanGame,
 } from '../../../lib/api';
 import { GREMLINS } from '../../../lib/gremlins';
+import { captureEvent } from '../../../lib/posthog';
 import { invalidateMe, useMe } from '../../../lib/use-session';
 import './scan.css';
 import '../../../components/view-transition.css';
@@ -41,7 +42,7 @@ function slipConcept(game: ScanGame): ConceptId | null {
 function statusLine(scan: ScanDetail | null, missing: boolean): string {
   if (missing) return 'Can’t find that scan.';
   if (!scan || scan.status === 'pending' || scan.status === 'fetching') return 'Chessplain is reading your games…';
-  if (scan.status === 'failed') return 'Oops, Chess.com didn’t answer.';
+  if (scan.status === 'failed') return 'Oops, that scan didn’t finish.';
   if (scan.status !== 'completed' || !scan.result) {
     const total = scan.progress.total || scan.games.length;
     return `Chessplain is reading your games… ${scan.progress.done} of ${total} so far.`;
@@ -49,7 +50,8 @@ function statusLine(scan: ScanDetail | null, missing: boolean): string {
   const top = scan.result.top;
   if (scan.result.nothing_decisive || !top) return 'Nothing decisive. Nice!';
   if (!top.recurring) return `No gremlin showed up twice yet. Closest: ${top.concept.gremlin} in ${top.games_with_concept} ${top.games_with_concept === 1 ? 'game' : 'games'}.`;
-  return `Found it! ${top.concept.gremlin} showed up in ${top.games_with_concept} of ${scan.result.games_scanned}.`;
+  const line = `${top.concept.gremlin} showed up in ${top.games_with_concept} of ${scan.result.games_scanned}.`;
+  return top.games_with_concept >= 3 ? `Found it! ${line}` : line;
 }
 
 function Heading({ level, ...props }: { level: 1 | 2; className?: string; id?: string; children: React.ReactNode }) {
@@ -79,7 +81,7 @@ function Slips({ scan, totalSlots, focus }: { scan: ScanDetail | null; totalSlot
             <span className="result-chip" data-result={game.outcome}>{LETTER[game.outcome]}</span>
             <span className="scan-opp">vs {game.opponent}</span>
             <span className="small muted">{TIME[game.time_class]} · {shortDate(game.ended_at)}</span>
-            <span className="small">{game.analyzed ? (points ? `${points} turning ${points === 1 ? 'point' : 'points'}` : 'Nothing decisive') : 'Reading…'}</span>
+            <span className="small">{!game.analyzed && scan?.status === 'completed' ? 'Couldn’t read this one' : game.analyzed ? (points ? `${points} turning ${points === 1 ? 'point' : 'points'}` : 'Nothing decisive') : 'Reading…'}</span>
             {concept && (
               <span className="scan-sticker">
                 <Gremlin concept={hit && focus ? focus : concept} size={64} label={`${GREMLINS[hit && focus ? focus : concept].name} showed up`} />
@@ -111,6 +113,7 @@ function Scan({ id }: { id: string }) {
   const [reviewBusy, setReviewBusy] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const claimed = useRef(false);
+  const scanCompletedSent = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -141,6 +144,20 @@ function Scan({ id }: { id: string }) {
     claimScan(id, session.access_token).then(() => invalidateMe()).catch(() => { /* already claimed, or not this player */ });
   }, [session?.access_token, scan?.status, id]);
 
+  useEffect(() => {
+    if (scanCompletedSent.current || scan?.status !== 'completed' || !scan.result) return;
+    scanCompletedSent.current = true;
+    const topConcept = scan.result.top;
+    captureEvent('scan_completed', {
+      scan_id: id,
+      concept_id: topConcept?.concept.id ?? null,
+      games_with_concept: topConcept?.games_with_concept ?? 0,
+      games_scanned: scan.result.games_scanned,
+      nothing_decisive: scan.result.nothing_decisive,
+      recurring: topConcept?.recurring ?? false,
+    });
+  }, [scan, id]);
+
   async function answer(value: Checkin['answer']) {
     if (!scan?.previous || checkinBusy) return;
     setCheckinBusy(true);
@@ -148,6 +165,7 @@ function Scan({ id }: { id: string }) {
     try {
       const { checkin } = await checkinScan(id, { concept_id: scan.previous.concept.id, answer: value }, session?.access_token);
       setScan((current) => current ? { ...current, checkin } : current);
+      captureEvent('checkin_answered', { scan_id: id, concept_id: scan.previous.concept.id, answer: value });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) setCheckinHidden(true);
       else setCheckinError('We couldn’t save that. Try again.');
@@ -203,6 +221,10 @@ function Scan({ id }: { id: string }) {
   const top = result?.top ?? null;
   const quiet = Boolean(done && result && (result.nothing_decisive || !top));
   const showCheckin = Boolean(done && scan?.previous && !checkinHidden);
+  const previousConceptId = scan?.previous?.concept.id;
+  const currentForPrevious = result && previousConceptId
+    ? (result.concept_counts.find((row) => row.concept_id === previousConceptId)?.games ?? 0)
+    : 0;
   const totalSlots = scan
     ? Math.max(scan.progress.total || 0, scan.games.length, scan.status === 'pending' || scan.status === 'fetching' ? 10 : 0)
     : 10;
@@ -222,17 +244,19 @@ function Scan({ id }: { id: string }) {
 
       {showCheckin && scan?.previous && (
         <section className={scan.checkin ? 'panel bg-concept scan-checkin' : 'surface scan-checkin'} data-concept={scan.checkin ? scan.previous.concept.id : undefined} aria-labelledby="checkin-title">
-          <h1 className="h2" id="checkin-title">Did it come up?</h1>
-          <p>Last time it was <span translate="no">{scan.previous.concept.gremlin}</span>.</p>
+          {scan.previous.games_with_concept != null && result ? (
+            <p><span translate="no">{scan.previous.concept.gremlin}</span> came up in {currentForPrevious} of these {result.games_scanned}. Last time, {scan.previous.games_with_concept} of {scan.previous.games_scanned ?? 10}.</p>
+          ) : (
+            <p>Last time it was <span translate="no">{scan.previous.concept.gremlin}</span>.</p>
+          )}
+          <h1 className="h2" id="checkin-title">Did you remember the check?</h1>
           {scan.checkin ? (
             <p className="display display--extruded" role="status">{CHECKIN[scan.checkin.answer]}</p>
           ) : (
             <>
-              <p className="big">In these games, did you remember the check?</p>
               <div className="scan-checkin-actions" role="group" aria-label="Did you remember the check?">
-                <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('remembered')}>Remembered</button>
-                <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('forgot')}>Forgot</button>
-                <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('did_not_come_up')}>Didn’t come up</button>
+                <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('remembered')}>Yes</button>
+                <button className="btn btn--key" type="button" disabled={checkinBusy} onClick={() => answer('forgot')}>No</button>
               </div>
               {checkinError && <p className="field-note" data-tone="error" role="alert">{checkinError}</p>}
             </>
@@ -249,7 +273,7 @@ function Scan({ id }: { id: string }) {
 
       {(failed || (done && !result)) && scan && (
         <section className="surface" aria-labelledby="fail-title">
-          <h1 className="h1" id="fail-title">{failed ? 'Oops, Chess.com didn’t answer. Try again?' : 'This scan finished without a result.'}</h1>
+          <h1 className="h1" id="fail-title">{failed ? 'Oops, that scan didn’t finish. Try again?' : 'This scan finished without a result.'}</h1>
           <p className="lede">Your username is still <span className="move" translate="no">{scan.chesscom_username}</span>.</p>
           <button className="btn" type="button" onClick={tryAgain} disabled={retryBusy}>Try again</button>
           {retryProblem && (
@@ -263,9 +287,9 @@ function Scan({ id }: { id: string }) {
 
       {done && result && top && !result.nothing_decisive && scan ? (
         <>
-          <section className={`panel bg-concept scan-reveal${top.recurring ? ' is-hit' : ''}`} data-concept={top.concept.id} aria-labelledby="result-title">
+          <section className={`panel bg-concept scan-reveal${top.games_with_concept >= 3 ? ' is-hit' : ''}`} data-concept={top.concept.id} aria-labelledby="result-title">
             <div className="scan-reveal-copy">
-              {top.recurring && <p className="display display--extruded scan-found" aria-hidden="true">Found it!</p>}
+              {top.games_with_concept >= 3 && <p className="display display--extruded scan-found" aria-hidden="true">Found it!</p>}
               <Heading level={showCheckin ? 2 : 1} className="h1 scan-claim" id="result-title">
                 {top.recurring
                   ? <><span translate="no">{top.concept.gremlin}</span> showed up in <span className="scan-count">{top.games_with_concept} of {result.games_scanned}</span> games.</>
@@ -276,16 +300,13 @@ function Scan({ id }: { id: string }) {
                   ? <><strong>{top.concept.name}.</strong> {top.concept.definition}</>
                   : <><span translate="no">{top.concept.gremlin}</span> came closest, in {top.games_with_concept} game. {top.concept.name}: {top.concept.definition.toLowerCase()}</>}
               </p>
-              <figure className="scan-habit">
-                <figcaption className="label">Your check for the next game</figcaption>
-                <blockquote>{top.concept.habit}</blockquote>
-              </figure>
+              {!top.recurring && <p>Play five more games and scan again. We’ll compare.</p>}
               <div className="scan-actions">
                 {exampleHref
-                  ? <Link className="btn" href={exampleHref} transitionTypes={['nav-forward']}>See it in your game <span className="arrow" aria-hidden="true">→</span></Link>
+                  ? <Link className="btn" href={exampleHref} transitionTypes={['nav-forward']} onClick={() => captureEvent('example_opened', { scan_id: id, concept_id: top.concept.id })}>See it in your game <span className="arrow" aria-hidden="true">→</span></Link>
                   : <button className="btn" type="button" onClick={() => { getScan(id).then(setScan).catch(() => setLoadError('We couldn’t reach Chessplain. Check your connection and try again.')); }}>Check for the example</button>}
                 {ready && !signedIn && (
-                  <Link className="btn btn--key" href={`/login?next=${encodeURIComponent(`/scan/${id}`)}`}>Sign in to keep tracking it</Link>
+                  <Link className="btn btn--key" href={`/login?next=${encodeURIComponent(`/scan/${id}`)}`}>Sign in to see if it comes back</Link>
                 )}
               </div>
               {!exampleHref && <p className="small muted">The example game is still being written.</p>}
@@ -332,7 +353,7 @@ function Scan({ id }: { id: string }) {
             ))}
           </ol>
           {ready && !signedIn && (
-            <p className="big scan-next">Sign in to keep this scan. <Link href={`/login?next=${encodeURIComponent(`/scan/${id}`)}`}>Sign in</Link></p>
+            <p className="big scan-next">Sign in and we’ll compare your next scan with this one. <Link href={`/login?next=${encodeURIComponent(`/scan/${id}`)}`}>Sign in</Link></p>
           )}
         </section>
       )}

@@ -94,7 +94,7 @@ function Anonymous() {
           </h1>
         </div>
         <div className="home-hero-foot">
-          <p className="lede">Chessplain reads your last 10 Chess.com games and finds the mistake that keeps costing you. Then it helps you stop making it.</p>
+          <p className="lede">Chessplain reads your last 10 Chess.com games and finds the mistake that keeps costing you. Then it shows you where, on the board.</p>
           <ScanForm id="scan" />
         </div>
       </section>
