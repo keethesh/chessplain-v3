@@ -2,6 +2,8 @@
 .scan { overflow-x: clip; padding-block: clamp(24px, 4vw, 48px) clamp(48px, 8vw, 96px); display: grid; gap: clamp(20px, 3vw, 36px); }
 .scan-lead { margin: 0; max-width: 28ch; }
 .scan-reassure { margin: 8px 0 0; }
+.scan-reassure .btn { margin-top: 10px; }
+.scan-sofar { margin: 12px 0 0; }
 
 .scan-slips {
   list-style: none;

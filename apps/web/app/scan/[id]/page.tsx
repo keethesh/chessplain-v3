@@ -39,6 +39,20 @@ function slipConcept(game: ScanGame): ConceptId | null {
   return best?.id ?? null;
 }
 
+/** Gremlins seen so far, counted once per game like the final result. */
+function soFar(scan: ScanDetail | null): string | null {
+  const counts = new Map<ConceptId, number>();
+  for (const game of scan?.games ?? []) {
+    if (!game.analyzed) continue;
+    for (const id of new Set(game.turning_points.flatMap((point) => point.concept_id ? [point.concept_id] : []))) {
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+  if (counts.size === 0) return null;
+  const parts = [...counts].sort((a, b) => b[1] - a[1]).map(([id, n], i) => `${GREMLINS[id].name} in ${n}${i === 0 ? (n === 1 ? ' game' : ' games') : ''}`);
+  return `So far: ${parts.join(', ')}.`;
+}
+
 function statusLine(scan: ScanDetail | null, missing: boolean): string {
   if (missing) return 'Can’t find that scan.';
   if (!scan || scan.status === 'pending' || scan.status === 'fetching') return 'Chessplain is reading your games…';
@@ -113,6 +127,15 @@ function Scan({ id }: { id: string }) {
   const [reviewBusy, setReviewBusy] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const claimed = useRef(false);
+  const [linkNote, setLinkNote] = useState('');
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkNote('Link copied.');
+    } catch {
+      setLinkNote(window.location.href);
+    }
+  };
   const scanCompletedSent = useRef(false);
 
   useEffect(() => {
@@ -268,7 +291,8 @@ function Scan({ id }: { id: string }) {
 
       {!scan || scan.status === 'pending' || scan.status === 'fetching' || scan.status === 'analyzing' ? (
         <section className="surface" aria-busy={!done}>
-          <p className="muted scan-reassure">Leave this page open. The count above updates as each game is read.</p>
+          <p className="muted scan-reassure">Takes about a minute and a half. You can close this page: the scan keeps going, and this link shows the result. <button type="button" className="btn btn--key btn--sm" onClick={copyLink}>Copy link</button> <span role="status">{linkNote}</span></p>
+          {soFar(scan) && <p className="big scan-sofar">{soFar(scan)}</p>}
           <Slips scan={scan} totalSlots={totalSlots} />
         </section>
       ) : null}
