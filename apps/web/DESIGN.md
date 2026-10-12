@@ -137,7 +137,6 @@ Warmth comes from authored illustration, not from gradients, glass or dark-mode 
 - Names and taglines for marketing live in `lib/gremlins.ts`; chess truth (definition,
   habit) always comes from the engine's `ConceptInfo`.
 
-
 ## Logo
 
 - **The Pawn Gremlin**: a butter pawn whose head is a gremlin face, sky base, ink outline, in
@@ -151,6 +150,7 @@ Warmth comes from authored illustration, not from gradients, glass or dark-mode 
   wordmark alone.
 - Emails (`supabase/templates/`, `emails/`) use the same system: white page, one framed
   pastel panel, display-type headline, black pill button, Satoshi body, `--ink-2` small print.
+
 ## Motion
 
 Motion is authored and purposeful (Emil Kowalski's rules). The premium feel comes from a few

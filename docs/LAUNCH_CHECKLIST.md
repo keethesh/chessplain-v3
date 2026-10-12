@@ -17,9 +17,9 @@ Deployed state verified 2026-10-12 (Phase 1 pivot is live):
   `verify-deployment.mjs`: 25/25 READY. A real production scan (Agata16) read
   10/10 games in 90 s; its example report completed with 3 moments, no fallback
   text, and the live scan page rendered it on a 390 px screen.
-- Web Worker version `ea61313a`: the scan front door, gremlin site, darker
-  board, and a scan wait that gives the duration (a first scan takes ~90 s),
-  can be closed, and tallies gremlins so far.
+- Web Worker version `08701496`: the scan front door, gremlin site, darker
+  board, a scan wait that gives the duration (a first scan takes ~90 s), can be
+  closed, and tallies gremlins so far; the Pawn Gremlin logo and favicon.
 - The previous deploy (engine `3cc9125`, web `a0909c6d`, verified 2026-10-09)
   is superseded.
 
@@ -30,8 +30,13 @@ Open before the relaunch email:
    the 98 moments the rules were tuned on. The missed chance is the weakest
    tag (16/19 fresh). The owner decides the bar (see the analysis roadmap).
    Rerun `pnpm --filter @chessplain/engine benchmark:concepts` after any
-   change to `concepts.ts`; it prints the pooled figures.
-2. The hand test with 5–10 players, then the held relaunch email (section 0),
+2. Paste the new auth templates (`supabase/templates/magic-link.html`,
+   `confirm-signup.html`) into Supabase → Authentication → Emails; the old
+   template keeps sending for ~10 minutes after a save.
+3. The hand test with 5–10 players, then the relaunch email
+   (`emails/relaunch-2026-10.html`, subject "Which gremlin is in your games?")
+   into the Resend draft; check `{{{FIRST_NAME|there}}}` and the unsubscribe
+   link in a test send.
    rewritten for the scan.
 
 Earlier rows keep dated evidence where it is still useful; don't treat old
