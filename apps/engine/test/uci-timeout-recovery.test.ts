@@ -1,9 +1,14 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EnginePool } from '../src/uci/engine-pool.js';
 import type { EngineEvalResult } from '../src/types.js';
+
+// The tests pass enginePath per pool; this keeps the module from requiring a real .env.
+vi.mock('../src/config.js', () => ({
+  config: { enginePoolSize: 1, enginePath: '', engineHashMb: 16, engineThreads: 1, syzygyPath: '' },
+}));
 
 /**
  * A search that outlives sendCommand used to drop its listener, clear busy,
