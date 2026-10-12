@@ -411,9 +411,9 @@ Built and committed, not deployed (see the deploy order in
   chance is the top gremlin for 7 of 13.
 
 Prompt `2026-10-12.3` on `openai/gpt-6-luna`: missed chances carry a
-code-checked fact, and production owns `why_better` from that fact plus a
-neutral intention instead of unsupported model claims. The 49-fixture no-judge
-benchmark remains 49/49 valid; the 11-position rerun of earlier failures was
-11/11 valid but 7/11 clean before the production grounding override (details
-in the analysis roadmap). Still open: the concierge test (H1/H2) and
-deployment. The build matches the "Not in this cut" list in §11.
+code-checked fact, and for those moments code writes the idea (what the played
+move did) and why it works (the checked line) instead of the model. The
+49-fixture no-judge benchmark remains 49/49 valid; the 11-position rerun of
+earlier failures was 11/11 valid but 7/11 clean before those fields moved to
+code (details in the analysis roadmap). Still open: the concierge test (H1/H2)
+and deployment. The build matches the "Not in this cut" list in §11.

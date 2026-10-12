@@ -256,10 +256,10 @@ must be that name. Pipeline runs also include `in_the_game: { next_moves:
 [{ move, by }], refutation_moves_played, game_over }`; the refutation line is
 what the move allowed, and only its first `refutation_moves_played` moves were
 played. A missed chance sends no refutation line.
-For a missed chance with a code fact, `explainMoment` also replaces the model's
-`why_better` with the fact's grounded win and uses a neutral
-`probable_thought`; the model cannot expand a deliberately withheld material
-net or claim an unsupported intention.
+For a missed chance with a code fact, `explainMoment` replaces two of the
+model's fields: `probable_thought` becomes what the played move did on the
+board, and `why_better` the checked better line, numbered like the game. The
+model's `what_actually_happens` (the fact, plus what really happened) stays.
 
 **Known gaps** (tracked in the roadmap doc): the model receives one FEN with
 no move history and no clock time. `elo_band` comes from the Chess.com API

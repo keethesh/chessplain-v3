@@ -494,9 +494,14 @@ occasionally made a concrete claim about the played move's intention without
 board evidence. The prompt now tells it not to do either.
 
 Production no longer relies on that instruction alone. When the code has a
-`missedChanceFact`, `explainMoment` owns `why_better` from that fact and uses a
-neutral `probable_thought` ("You may have been looking for a useful move.").
-The raw benchmark remains evidence about the model response, not the final
-post-grounding report. The rerun artifacts are
+`missedChanceFact`, `explainMoment` writes two fields itself: `probable_thought`
+says what the played move did on the board ("The queen moves from e6 to f7
+with check."), and `why_better` gives the checked better line, numbered like
+the game ("The checked line starts 53.Qe7+ Kc8 54.Qxd6 d1=Q."). The model's
+`what_actually_happens`, which states the fact and what really happened, stays.
+A first version put the fact's opening sentence in `why_better` and a stock
+intention in `probable_thought`; on a real report that printed the same
+sentence twice under an empty "idea". The raw benchmark remains evidence about
+the model response, not the final report. The rerun artifacts are
 `benchmark/results/2026-10-12T02-09-14-032Z-missed-chance-rerun.{json,md}`;
 cost was $0.0025.
