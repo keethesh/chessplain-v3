@@ -408,7 +408,7 @@ export function SharedReportInteractiveView({
                 <p className="lede report-context">
                   In the game, {mode === 'owner' ? 'you' : side} played <span className="move" translate="no">{moveLabel}</span> here.
                   {conceptId === 'missed_chance' ? (
-                    <>{mode === 'owner' ? 'You' : side} had a win. Find it: tap a piece, or type the move.</>
+                    <>{' '}{mode === 'owner' ? 'You' : side} had a win. Find it: tap a piece, or type the move.</>
                   ) : (
                     <>
                       {gremlinName ? <> That let <strong translate="no">{gremlinName}</strong> in.</> : null}
