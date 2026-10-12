@@ -15,8 +15,8 @@ colors:
   red-fill: "#FF4D6D"
   blue: "#1F4FD8"
   blue-fill: "#2F6BFF"
-  board-light: "#FFFFFF"
-  board-dark: "#A6D7FF"
+  board-light: "#DEECF7"
+  board-dark: "#5EAAE8"
 typography:
   display:
     fontFamily: "Archivo (wdth 125), Arial Black, sans-serif"
@@ -96,7 +96,9 @@ Warmth comes from authored illustration, not from gradients, glass or dark-mode 
   `-fill` variants for arrows and board marks.
 - Secondary text is `--ink-2` (#4A4A4A), which passes AA on white and every pastel. Never
   use light grey text.
-- Board: white light squares, sky dark squares, 2px ink frame.
+- Board: pale sky light squares, sky dark squares, 2px ink frame. White pieces get 1.2:1 on
+  light and 2.5:1 on dark, like standard boards; arrows at 85% opacity so the blue arrow
+  still reads on blue squares.
 
 ## Typography
 

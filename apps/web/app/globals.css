@@ -31,8 +31,8 @@
   --blue: #1f4fd8;            /* the checked line; focus ring */
   --blue-fill: #2f6bff;
 
-  --board-light: #ffffff;
-  --board-dark: #a6d7ff;
+  --board-light: #deecf7;     /* white pieces 1.2:1, dark 2.5:1, like standard boards */
+  --board-dark: #5eaae8;
 
   --line: 2px solid var(--ink);
   --key-shadow: 0 4px 0 var(--ink);

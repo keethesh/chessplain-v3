@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Chessboard, type PieceDropHandlerArgs, type SquareHandlerArgs } from 'react-chessboard';
+import { Chessboard, defaultArrowOptions, type PieceDropHandlerArgs, type SquareHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
 interface ChessboardViewProps {
@@ -169,8 +169,10 @@ export function ChessboardView({
             } : {}),
             squareStyles: customSquareStyles,
             arrows: customArrows,
-            darkSquareStyle: { backgroundColor: '#a6d7ff' },
-            lightSquareStyle: { backgroundColor: '#ffffff' },
+            // The blue arrow sits on blue squares; more opaque than the 0.65 default so it still reads.
+            arrowOptions: { ...defaultArrowOptions, opacity: 0.85 },
+            darkSquareStyle: { backgroundColor: 'var(--board-dark)' },
+            lightSquareStyle: { backgroundColor: 'var(--board-light)' },
             lightSquareNotationStyle: { color: '#0a0a0a' },
             darkSquareNotationStyle: { color: '#0a0a0a' },
             showAnimations: animate && animationMs !== 0,
