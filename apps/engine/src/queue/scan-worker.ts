@@ -2,7 +2,7 @@ import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
 import { enqueuePendingReport } from '../db/enqueue-report.js';
 import { ChessComInputError, fetchScanGames, type ChessComScanGame } from '../analysis/chesscom.js';
-import { aggregate, analyzeScanGame, type ScanGame } from '../analysis/scan.js';
+import { aggregate, analyzedScanGames, analyzeScanGame, recordScanGame, type ScanGame } from '../analysis/scan.js';
 
 interface ScanRow {
   id: string;
@@ -102,15 +102,20 @@ export async function processNextScan(): Promise<boolean> {
 
     for (let i = 0; i < fetched.length; i++) {
       const game = fetched[i];
-      stored[i] = {
-        ...stored[i],
-        analyzed: true,
-        turning_points: await analyzeScanGame(game.pgn, { username: scan.chesscom_username, color: game.playerColor }),
-      };
+      try {
+        const turningPoints = await analyzeScanGame(game.pgn, { username: scan.chesscom_username, color: game.playerColor });
+        stored[i] = recordScanGame(stored[i], turningPoints);
+      } catch (err) {
+        // One timed-out game must not send the whole scan back to pending.
+        console.error(`[Worker] Scan ${scan.id} game ${game.url} failed:`, errorMessage(err));
+        stored[i] = recordScanGame(stored[i], { error: true });
+      }
       await patchOwned(scan.id, attempts, { games: stored, progress: { done: i + 1, total: stored.length } });
     }
 
-    const result = aggregate(stored);
+    const analysed = analyzedScanGames(stored);
+    if (analysed.length === 0) throw new Error('Every game failed to analyse');
+    const result = aggregate(analysed);
     let exampleReportId: string | null = scan.example_report_id ?? null;
     if (result.example && !exampleReportId) {
       const sample = fetched.find((g) => g.url === result.example!.game_url);

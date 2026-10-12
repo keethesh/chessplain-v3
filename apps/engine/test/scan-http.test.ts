@@ -299,6 +299,30 @@ describe('scan check-in, claim, and report concepts', () => {
     const body = reply.body as Record<string, unknown>;
     expect(body).not.toHaveProperty('ip');
     expect(body).not.toHaveProperty('user_id');
-    expect(body.previous).toMatchObject({ scan_id: '22222222-2222-4222-8222-222222222222', concept: { id: 'weak_back_rank', gremlin: 'The Back-Rank Sleeper' } });
+    expect(body.previous).toMatchObject({
+      scan_id: '22222222-2222-4222-8222-222222222222',
+      concept: { id: 'weak_back_rank', gremlin: 'The Back-Rank Sleeper' },
+      scanned_at: '2026-01-01T00:00:00.000Z',
+      games_with_concept: 3,
+      games_scanned: 10,
+    });
+  });
+
+  it('returns null counts when an earlier scan result omits them', async () => {
+    state.scan = {
+      id: SCAN_ID, share_id: 's', user_id: 'user-1', ip: '203.0.113.9', status: 'completed',
+      chesscom_username: 'me', progress: { done: 10, total: 10 }, games: [], result: null,
+      example_report_id: null, checkin: null, created_at: new Date().toISOString(), completed_at: new Date().toISOString(),
+    };
+    state.priors = [{
+      id: '22222222-2222-4222-8222-222222222222',
+      result: { top: { concept: { id: 'weak_back_rank' } }, nothing_decisive: false, concept_counts: [], example: null },
+      completed_at: '2026-01-01T00:00:00.000Z', created_at: '2026-01-01T00:00:00.000Z',
+    }];
+    const reply = replyFor();
+    await (await handler('GET /api/scans/:id'))(request({ params: { id: SCAN_ID } }), reply);
+    expect(reply.body).toMatchObject({
+      previous: { games_with_concept: null, games_scanned: null },
+    });
   });
 });

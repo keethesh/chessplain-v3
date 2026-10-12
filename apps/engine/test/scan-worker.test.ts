@@ -28,10 +28,14 @@ vi.mock('../src/analysis/chesscom.js', () => {
   return { ChessComInputError, fetchScanGames: vi.fn() };
 });
 
-vi.mock('../src/analysis/scan.js', () => ({
-  analyzeScanGame: vi.fn(async () => []),
-  aggregate: vi.fn(() => ({ games_scanned: 0, top: null, concept_counts: [], example: null, nothing_decisive: true })),
-}));
+vi.mock('../src/analysis/scan.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/analysis/scan.js')>();
+  return {
+    ...actual,
+    analyzeScanGame: vi.fn(async () => []),
+    aggregate: vi.fn(() => ({ games_scanned: 0, top: null, concept_counts: [], example: null, nothing_decisive: true })),
+  };
+});
 
 vi.mock('../src/db/enqueue-report.js', () => ({
   enqueuePendingReport: vi.fn(async () => ({ id: 'rep-1', share_id: 'r', status: 'pending', reused: false })),
@@ -187,6 +191,44 @@ describe('scan worker', () => {
     expect(await processNextScan()).toBe(true);
     expect(enqueuePendingReport).not.toHaveBeenCalled();
     expect(state.patches.at(-1)).toMatchObject({ status: 'completed', example_report_id: null });
+  });
+
+  it('completes when one game throws and aggregates only the games that were read', async () => {
+    const games = Array.from({ length: 10 }, (_, i) => ({ ...game, url: `https://www.chess.com/game/live/${i}` }));
+    state.candidate = { id: 'scan-1', user_id: 'user-1', ip: null, chesscom_username: 'me', attempts: 0 };
+    vi.mocked(fetchScanGames).mockResolvedValue(games);
+    let n = 0;
+    vi.mocked(analyzeScanGame).mockImplementation(async () => {
+      n += 1;
+      if (n === 2) throw new Error("UCI command 'go' timed out");
+      return [{ ply: 8, move_number: 4, san: 'Nf3', best_move: 'Qh5', eval_swing: -2, concept_id: 'hanging_piece' }];
+    });
+    vi.mocked(aggregate).mockReturnValue({ games_scanned: 9, top: null, concept_counts: [], example: null, nothing_decisive: false });
+
+    expect(await processNextScan()).toBe(true);
+
+    expect(analyzeScanGame).toHaveBeenCalledTimes(10);
+    const completed = state.patches.at(-1) as { status: string; games: Array<{ url: string; analyzed: boolean; turning_points: unknown[]; error?: boolean }> };
+    expect(completed.status).toBe('completed');
+    expect(completed.games).toHaveLength(10);
+    expect(completed.games.filter((g) => g.analyzed)).toHaveLength(9);
+    expect(completed.games[1]).toMatchObject({ analyzed: false, turning_points: [], error: true });
+    const counted = vi.mocked(aggregate).mock.calls[0][0] as Array<{ url: string; analyzed: boolean }>;
+    expect(counted).toHaveLength(9);
+    expect(counted.every((g) => g.analyzed)).toBe(true);
+    expect(counted.map((g) => g.url)).not.toContain(games[1].url);
+  });
+
+  it('retries when every game fails to analyse', async () => {
+    state.candidate = { id: 'scan-1', user_id: 'user-1', ip: null, chesscom_username: 'me', attempts: 0 };
+    vi.mocked(fetchScanGames).mockResolvedValue([game, { ...game, url: 'https://www.chess.com/game/live/8' }]);
+    vi.mocked(analyzeScanGame).mockRejectedValue(new Error("UCI command 'go' timed out"));
+
+    expect(await processNextScan()).toBe(true);
+
+    expect(aggregate).not.toHaveBeenCalled();
+    expect(state.patches.at(-1)).toMatchObject({ status: 'pending', error_message: 'Every game failed to analyse' });
+    expect(state.patches.some((p) => (p as { status?: string }).status === 'completed')).toBe(false);
   });
 
   it('reclaims fetching and analyzing leases older than staleLeaseMinutes', async () => {

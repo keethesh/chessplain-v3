@@ -521,3 +521,156 @@ export function classifyMoment(candidate: CandidateMoment): ConceptId | null {
   }
   return null;
 }
+
+const PIECE_ORDER = ['q', 'r', 'b', 'n', 'p'] as const;
+
+/** Mate distance when evalBefore is the engine's mate encoding (100 - N). */
+function mateDistance(evalPawns: number): number | null {
+  if (!Number.isFinite(evalPawns)) return null;
+  const rounded = Math.round(evalPawns);
+  if (Math.abs(evalPawns - rounded) > 1e-6) return null;
+  const n = 100 - rounded;
+  if (n < 1 || n > 50 || rounded < MATE_PAWNS) return null;
+  return n;
+}
+
+interface LineMaterial {
+  gained: Record<string, number>;
+  lost: Record<string, number>;
+  /** The line stops on a capture the other side can still take back. */
+  unsettled: boolean;
+  promoted: boolean;
+}
+
+/** Captures along a line, from the player's side. Null when a move will not play. */
+function replayMaterial(fen: string, sans: string[], player: 'w' | 'b'): LineMaterial | null {
+  if (sans.length === 0) return null;
+  try {
+    const chess = new Chess(fen);
+    const gained: Record<string, number> = {};
+    const lost: Record<string, number> = {};
+    let promoted = false;
+    let lastCapturedOn: string | null = null;
+    for (const san of sans) {
+      const move = chess.move(san);
+      if (!move) return null;
+      if (move.promotion) promoted = true;
+      if (move.captured) {
+        const bucket = move.color === player ? gained : lost;
+        bucket[move.captured] = (bucket[move.captured] ?? 0) + 1;
+        lastCapturedOn = move.to;
+      } else {
+        lastCapturedOn = null;
+      }
+    }
+    const unsettled =
+      !!lastCapturedOn && chess.moves({ verbose: true }).some((reply) => reply.to === lastCapturedOn && !!reply.captured);
+    return { gained, lost, unsettled, promoted };
+  } catch {
+    return null;
+  }
+}
+
+function tallyValue(counts: Record<string, number>): number {
+  let total = 0;
+  for (const [type, n] of Object.entries(counts)) {
+    const value = PIECE_VALUE[type];
+    if (value === undefined) return Number.NaN;
+    total += value * n;
+  }
+  return total;
+}
+
+function nettedCounts(gained: Record<string, number>, lost: Record<string, number>): { up: Record<string, number>; down: Record<string, number> } {
+  const up: Record<string, number> = {};
+  const down: Record<string, number> = {};
+  for (const type of new Set([...Object.keys(gained), ...Object.keys(lost)])) {
+    const delta = (gained[type] ?? 0) - (lost[type] ?? 0);
+    if (delta > 0) up[type] = delta;
+    else if (delta < 0) down[type] = -delta;
+  }
+  return { up, down };
+}
+
+/** "a knight and a pawn", or null when a type has no name. */
+function listPieces(counts: Record<string, number>): string | null {
+  const parts: string[] = [];
+  for (const type of PIECE_ORDER) {
+    const n = counts[type] ?? 0;
+    if (n <= 0) continue;
+    const name = PIECE_NAME[type];
+    if (!name) return null;
+    parts.push(n === 1 ? `a ${name}` : `${n} ${name}s`);
+  }
+  if (Object.keys(counts).some((type) => (counts[type] ?? 0) > 0 && !PIECE_NAME[type])) return null;
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * What the line did to the player's material, as a verb phrase. A line that
+ * ends mid-exchange, or whose captures do not add up to the board, is only
+ * "won material" or "lost material": a named piece would be a guess.
+ */
+function materialClause(line: LineMaterial, net: number): string | null {
+  if (!Number.isFinite(net)) return null;
+  if (net === 0) return 'kept the material level';
+  const capturesAddUp = tallyValue(line.gained) - tallyValue(line.lost) === net;
+  const named = capturesAddUp && !line.unsettled && !line.promoted;
+  if (!named) return net > 0 ? 'won material' : 'lost material';
+  const { up, down } = nettedCounts(line.gained, line.lost);
+  const won = listPieces(up);
+  const gave = listPieces(down);
+  if (net > 0) {
+    // A clean +3 whose piece type did not come through is a minor piece, not a guess at knight or bishop.
+    if (!won) return net === 3 && !gave ? 'won a piece for nothing' : 'won material';
+    return gave ? `won ${won} for ${gave}` : `won ${won} for nothing`;
+  }
+  if (!gave) return 'lost material';
+  return won ? `lost ${gave} for ${won}` : `lost ${gave}`;
+}
+
+function mateSentence(candidate: CandidateMoment): string | null {
+  const best = stripSan(candidate.bestMoveSan);
+  const played = stripSan(candidate.san);
+  if (!best || !played) return null;
+  const n = mateDistance(candidate.evalBefore);
+  const kind = n === null ? 'a forced mate' : `mate in ${n}`;
+  return `You had ${kind} starting with ${best}. After ${played}, it is gone.`;
+}
+
+function materialSentence(candidate: CandidateMoment, player: 'w' | 'b'): string | null {
+  const best = stripSan(candidate.bestMoveSan);
+  const played = stripSan(candidate.san);
+  if (!best || !played) return null;
+  const bestEnd = endFen(candidate.fenBefore, '', candidate.bestLineSan);
+  const playedEnd = endFen(candidate.fenBefore, candidate.san, candidate.refutationLineSan);
+  if (!bestEnd || !playedEnd) return null;
+  const gainBest = -netDown(candidate.fenBefore, bestEnd, player);
+  const gainPlayed = -netDown(candidate.fenBefore, playedEnd, player);
+  const bestLine = replayMaterial(candidate.fenBefore, lineSans(candidate.bestLineSan), player);
+  const playedLine = replayMaterial(candidate.fenBefore, [played, ...lineSans(candidate.refutationLineSan)], player);
+  if (!bestLine || !playedLine) return null;
+  const bestClause = materialClause(bestLine, gainBest);
+  const playedClause = materialClause(playedLine, gainPlayed);
+  if (!bestClause?.startsWith('won ') || !playedClause) return null;
+  return `${best} would have ${bestClause}. Instead, ${played} ${playedClause}.`;
+}
+
+/**
+ * The code-checked account of a win the player did not take, for the prompt.
+ * Null when this moment is not a missed chance, or the line cannot be read:
+ * a wrong fact is worse than none.
+ */
+export function missedChanceFact(candidate: CandidateMoment): string | null {
+  const player = playerOf(candidate);
+  if (!player || classifyMoment(candidate) !== 'missed_chance') return null;
+  try {
+    if (gaveUpMate(candidate)) return mateSentence(candidate);
+    return materialSentence(candidate, player);
+  } catch {
+    return null;
+  }
+}

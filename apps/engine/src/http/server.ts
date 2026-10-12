@@ -781,11 +781,23 @@ async function bootstrap() {
         : previousBase.eq('chesscom_username', scan.chesscom_username).is('ip', null);
     const { data: priors, error: priorErr } = await previousQuery;
     if (priorErr) throw priorErr;
-    let previous: { scan_id: string; concept: NonNullable<ReturnType<typeof conceptInfo>>; scanned_at: string } | null = null;
+    let previous: {
+      scan_id: string;
+      concept: NonNullable<ReturnType<typeof conceptInfo>>;
+      scanned_at: string;
+      games_with_concept: number | null;
+      games_scanned: number | null;
+    } | null = null;
     for (const row of (priors ?? []) as Array<{ id: string; result: ScanResult | null; completed_at: string | null; created_at: string }>) {
       const concept = conceptInfo(row.result?.top?.concept?.id);
       if (!concept) continue;
-      previous = { scan_id: row.id, concept, scanned_at: row.completed_at ?? row.created_at };
+      previous = {
+        scan_id: row.id,
+        concept,
+        scanned_at: row.completed_at ?? row.created_at,
+        games_with_concept: row.result?.top?.games_with_concept ?? null,
+        games_scanned: row.result?.games_scanned ?? null,
+      };
       break;
     }
 

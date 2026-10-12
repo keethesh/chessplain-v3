@@ -192,6 +192,7 @@ export async function explainMoment(
         refutation_line: moment.refutationLineSan,
         eval_swing: moment.swing,
         concept_id: moment.concept_id ?? null,
+        severity_label: moment.candidateType,
       };
     }
 
@@ -232,6 +233,7 @@ export async function explainMoment(
         refutation_line: moment.refutationLineSan,
         eval_swing: moment.swing,
         concept_id: moment.concept_id ?? null,
+        severity_label: moment.candidateType,
       };
     }
 
@@ -273,6 +275,70 @@ export async function explainMoment(
     }
     return fallback();
   }
+}
+
+function bareMove(san: string): string {
+  return san.replace(/^\d+\s*(?:\.{1,3}|…)?\s*/, '').replace(/[+#]$/, '');
+}
+
+/**
+ * The summary said the player played a move `in_the_game` attributes to the
+ * opponent ("you played …Kf1"). Each next move is already labelled `by`;
+ * this rejects the sentence that ignores that label. A SAN both sides played
+ * is left alone, because the sentence may be about the player's own move.
+ */
+export function opponentMoveCreditedToPlayer(
+  prose: string,
+  moments: ReadonlyArray<{
+    played?: string;
+    in_game?: { next_moves: ReadonlyArray<{ move: string; by: 'you' | 'opponent' }> };
+  }>,
+): string | null {
+  const player = new Set<string>();
+  const opponent: Array<{ bare: string; move: string }> = [];
+  const rememberPlayer = (move: string | undefined) => {
+    if (!move) return;
+    const bare = bareMove(move).toLowerCase();
+    if (bare) player.add(bare);
+  };
+  for (const moment of moments) {
+    rememberPlayer(moment.played);
+    for (const step of moment.in_game?.next_moves ?? []) {
+      const bare = bareMove(step.move).toLowerCase();
+      if (!bare) continue;
+      if (step.by === 'you') player.add(bare);
+      else opponent.push({ bare, move: step.move });
+    }
+  }
+  const seen = new Set<string>();
+  for (const step of opponent) {
+    if (player.has(step.bare) || seen.has(step.bare)) continue;
+    seen.add(step.bare);
+    const body = step.bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const credited = new RegExp(
+      `\\byou played\\s+(?:\\d+\\s*)?(?:\\.{1,3}|…)?\\s*${body}(?![A-Za-z0-9=-])`,
+      'i',
+    );
+    if (credited.test(prose)) return step.move;
+  }
+  return null;
+}
+
+function summaryWithAttribution(
+  validation: { isValid: boolean; errors: string[]; parsed?: GameSummary },
+  moments: MomentReport[],
+): { isValid: boolean; errors: string[]; parsed?: GameSummary } {
+  if (!validation.isValid || !validation.parsed) return validation;
+  const { headline, story, focus_habit } = validation.parsed;
+  const move = opponentMoveCreditedToPlayer(`${headline} ${story} ${focus_habit}`, moments);
+  if (!move) return validation;
+  return {
+    isValid: false,
+    errors: [
+      ...validation.errors,
+      `Summary says the player played ${move}, which in_the_game attributes to the opponent.`,
+    ],
+  };
 }
 
 export async function explainSummary(
@@ -371,7 +437,7 @@ export async function explainSummary(
     } catch {
       parsed = {};
     }
-    const validation = validateSummaryJson(parsed, outcome);
+    const validation = summaryWithAttribution(validateSummaryJson(parsed, outcome), moments);
 
     if (validation.isValid && validation.parsed) {
       return validation.parsed;
@@ -399,7 +465,7 @@ export async function explainSummary(
     } catch {
       retryParsed = {};
     }
-    const retryValidation = validateSummaryJson(retryParsed, outcome);
+    const retryValidation = summaryWithAttribution(validateSummaryJson(retryParsed, outcome), moments);
 
     if (retryValidation.isValid && retryValidation.parsed) {
       return retryValidation.parsed;

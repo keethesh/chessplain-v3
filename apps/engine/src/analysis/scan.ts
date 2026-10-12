@@ -26,6 +26,8 @@ export interface ScanGame {
   player_rating: number | null;
   analyzed: boolean;
   turning_points: ScanTurningPoint[];
+  /** Set when analysis of this game threw. Absent while it is still waiting to be read. */
+  error?: boolean;
 }
 
 export interface ScanResult {
@@ -63,6 +65,22 @@ export async function analyzeScanGame(
     eval_swing: c.swing,
     concept_id: classifyMoment(c),
   }));
+}
+
+/** One game's analysis, or a failure that must not drop the game from the scan. */
+export function recordScanGame(
+  game: ScanGame,
+  analysis: ScanTurningPoint[] | { error: true },
+): ScanGame {
+  if (!Array.isArray(analysis)) {
+    return { ...game, analyzed: false, turning_points: [], error: true };
+  }
+  return { ...game, analyzed: true, turning_points: analysis };
+}
+
+/** Games whose analysis finished. Failures stay on the scan for the slips, but they are not evidence. */
+export function analyzedScanGames(games: ScanGame[]): ScanGame[] {
+  return games.filter((game) => game.analyzed);
 }
 
 /**

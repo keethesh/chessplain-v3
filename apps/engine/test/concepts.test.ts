@@ -1,8 +1,8 @@
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
-import { classifyMoment, type ConceptId } from '../src/analysis/concepts.js';
+import { classifyMoment, missedChanceFact, type ConceptId } from '../src/analysis/concepts.js';
 import { parsePgn } from '../src/analysis/pgn.js';
-import { buildMomentPayload } from '../src/analysis/prompts.js';
+import { buildMomentPayload, MOMENT_MISSED_CHANCE_RULES, momentSystemPrompt } from '../src/analysis/prompts.js';
 import { selectCandidateMoments } from '../src/analysis/select.js';
 import type { CandidateMoment, EngineEvalResult, PositionInfo } from '../src/types.js';
 
@@ -209,6 +209,39 @@ describe('classifyMoment', () => {
   });
 });
 
+describe('missedChanceFact', () => {
+  it('names the piece a free capture would have won', () => {
+    // Nxd4 takes the knight on d4; nothing attacks d4 afterwards. Kf2 Ke7 changes nothing.
+    const free = moment('4k3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
+    expect(missedChanceFact(free)).toBe('Nxd4 would have won a knight for nothing. Instead, Kf2 kept the material level.');
+  });
+
+  it('does not name a piece when the best line ends mid-exchange', () => {
+    // The queen on d8 can still take on d4, so "a knight for nothing" would be false.
+    const defended = moment('3qk3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
+    expect(missedChanceFact(defended)).toBe('Nxd4 would have won material. Instead, Kf2 kept the material level.');
+  });
+
+  it('states a mate in N when the eval is the mate encoding', () => {
+    // 95 is the engine's mate-in-5 score: 100 − 5.
+    const gaveUp = moment(new Chess().fen(), 'e4', 'd4', 'e5');
+    gaveUp.evalBefore = 95;
+    gaveUp.evalAfter = 1;
+    expect(missedChanceFact(gaveUp)).toBe('You had mate in 5 starting with d4. After e4, it is gone.');
+  });
+
+  it('states a forced mate without a length when the eval is not that encoding', () => {
+    const gaveUp = moment(new Chess().fen(), 'e4', 'd4', 'e5');
+    gaveUp.evalBefore = 80.4;
+    gaveUp.evalAfter = 1;
+    expect(missedChanceFact(gaveUp)).toBe('You had a forced mate starting with d4. After e4, it is gone.');
+  });
+
+  it('returns null for a hanging piece', () => {
+    expect(missedChanceFact(moment('4k3/p7/8/4n3/8/5N2/P3B3/4K3 w - - 0 1', 'Ba6', 'Bd3', 'Nxf3'))).toBeNull();
+  });
+});
+
 describe('moment payload', () => {
   it('sends code_concept only when the moment has a concept', () => {
     const hanging = moment('4k3/p7/8/4n3/8/5N2/P3B3/4K3 w - - 0 1', 'Ba6', 'Bd3', 'Nxf3');
@@ -226,6 +259,29 @@ describe('moment payload', () => {
     expect(bare.code_concept?.fact).toBe('Your knight on f3 had no defender.');
     const guarded = buildMomentPayload(moment('4k3/8/8/2p5/8/1N2P3/8/4K3 w - - 0 1', 'Nd4', 'Kd2', 'cxd4 exd4'), '1000_1400', 'Sam');
     expect(guarded.code_concept?.fact).toBe('Your knight on d4 had 1 defender, but a cheaper piece (their pawn) could take it.');
+  });
+
+  it('sends the missed-chance fact and leaves out the refutation annotations', () => {
+    const missed = moment('4k3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
+    missed.inGame = { next_moves: [{ move: '1...Ke7', by: 'opponent' }], refutation_moves_played: 1, game_over: false };
+    const payload = buildMomentPayload(missed, '1000_1400', 'Sam');
+    expect(payload.code_concept?.fact).toBe('Nxd4 would have won a knight for nothing. Instead, Kf2 kept the material level.');
+    expect(payload.tactical_context).not.toHaveProperty('opponent_refutation');
+    expect(payload.tactical_context).not.toHaveProperty('refutation_moves');
+    expect(payload.tactical_context).not.toHaveProperty('after_refutation');
+    expect(payload.tactical_context).not.toHaveProperty('refutation_outcome');
+    expect(payload.tactical_context).not.toHaveProperty('refutation_sequence');
+    expect(payload.tactical_context).not.toHaveProperty('threat_summary');
+    expect(payload).not.toHaveProperty('refutation_line');
+    expect(payload.tactical_context.best_line_moves.length).toBeGreaterThan(0);
+    expect(payload.tactical_context.best_line_outcome).toEqual(expect.any(String));
+    expect(payload.in_the_game).toEqual(missed.inGame);
+    expect(momentSystemPrompt(payload)).toContain(MOMENT_MISSED_CHANCE_RULES);
+
+    const hanging = buildMomentPayload(moment('4k3/p7/8/4n3/8/5N2/P3B3/4K3 w - - 0 1', 'Ba6', 'Bd3', 'Nxf3'), '1000_1400', 'Sam');
+    expect(hanging.tactical_context).toHaveProperty('refutation_moves');
+    expect(hanging).toHaveProperty('refutation_line');
+    expect(momentSystemPrompt(hanging)).not.toContain(MOMENT_MISSED_CHANCE_RULES);
   });
 });
 

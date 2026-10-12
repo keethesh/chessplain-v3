@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { conceptInfo } from '../src/analysis/concepts.js';
-import { aggregate, type ScanGame, type ScanTurningPoint } from '../src/analysis/scan.js';
+import { aggregate, analyzedScanGames, recordScanGame, type ScanGame, type ScanTurningPoint } from '../src/analysis/scan.js';
 
 vi.mock('../src/config.js', () => ({
   config: { nodeEnv: 'test', staleLeaseMinutes: 15, llmModel: 'm', enginePoolSize: 1, engineHashMb: 16, engineThreads: 1 },
@@ -81,6 +81,20 @@ describe('aggregate', () => {
     expect(result.concept_counts).toEqual([]);
     expect(result.nothing_decisive).toBe(false);
     expect(result.example).toEqual({ game_url: 'https://chess.com/b', ply: 14, concept_id: null });
+  });
+
+  it('keeps a failed game on the list and counts only games that were read', () => {
+    const point = tp('hanging_piece', -2);
+    const read = Array.from({ length: 9 }, (_, i) => recordScanGame(game(`https://chess.com/${i}`, []), [point]));
+    const failed = recordScanGame(game('https://chess.com/bad', [point]), { error: true });
+    const games = [...read, failed];
+
+    expect(games).toHaveLength(10);
+    expect(failed).toMatchObject({ analyzed: false, turning_points: [], error: true });
+    const result = aggregate(analyzedScanGames(games));
+    expect(result.games_scanned).toBe(9);
+    expect(result.top?.games_with_concept).toBe(9);
+    expect(result.example?.game_url).not.toBe('https://chess.com/bad');
   });
 
   it('is nothing decisive when no game has a turning point', () => {

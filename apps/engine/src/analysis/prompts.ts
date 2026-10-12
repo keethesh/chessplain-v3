@@ -1,6 +1,6 @@
 import { CandidateMoment, EloBand, MomentExplanation, GameSummary } from '../types.js';
 import { buildTacticalContext } from './chess-facts.js';
-import { CONCEPTS, classifyMoment, conceptInfo, hangingPieceFact } from './concepts.js';
+import { CONCEPTS, classifyMoment, conceptInfo, hangingPieceFact, missedChanceFact } from './concepts.js';
 
 /**
  * The player's standing in words, from a player-relative evaluation. Computed
@@ -17,19 +17,33 @@ export function describeStanding(evalPawns: number): string {
 /** The exact user message production sends for one moment; the benchmark reuses it. */
 export function buildMomentPayload(moment: CandidateMoment, eloBand: EloBand, opponentName: string) {
   const concept = conceptInfo(moment.concept_id !== undefined ? moment.concept_id : classifyMoment(moment));
-  const fact = concept?.id === 'hanging_piece' ? hangingPieceFact(moment) : null;
+  const fact =
+    concept?.id === 'hanging_piece' ? hangingPieceFact(moment) : concept?.id === 'missed_chance' ? missedChanceFact(moment) : null;
+  const tactical = buildTacticalContext(moment.fenBefore, moment.san, moment.bestMoveSan, moment.refutationLineSan, moment.bestLineSan);
+  // The refutation is what the played move allowed. For a missed chance that
+  // line is not the mistake, and leaving it in the payload makes the model
+  // narrate it. The better line, and in_the_game, stay.
+  const missed = concept?.id === 'missed_chance';
+  const tactical_context = missed
+    ? {
+        played_move: tactical.played_move,
+        best_move: tactical.best_move,
+        best_line_moves: tactical.best_line_moves,
+        best_line_outcome: tactical.best_line_outcome,
+      }
+    : tactical;
   return {
     position_before_fen: moment.fenBefore,
     played_move: moment.san,
     player_color: moment.playerColor,
     player_elo_band: eloBand,
-    tactical_context: buildTacticalContext(moment.fenBefore, moment.san, moment.bestMoveSan, moment.refutationLineSan, moment.bestLineSan),
+    tactical_context,
     standing_before: describeStanding(moment.evalBefore),
     standing_after_played: describeStanding(moment.evalAfter),
     eval_before_pawns: parseFloat(moment.evalBefore.toFixed(2)),
     eval_after_pawns: parseFloat(moment.evalAfter.toFixed(2)),
     best_move: moment.bestMoveSan,
-    refutation_line: moment.refutationLineSan,
+    ...(missed ? {} : { refutation_line: moment.refutationLineSan }),
     material_note: moment.materialNote,
     phase: moment.phase,
     opponent_name: opponentName,
@@ -49,7 +63,7 @@ export function cleanJsonString(str: string): string {
   return match ? match[0] : unquoted;
 }
 
-export const PROMPT_VERSION = '2026-10-12.1';
+export const PROMPT_VERSION = '2026-10-12.2';
 
 export const MOMENT_SYSTEM_PROMPT = `You are the explanation engine for Chessplain, a game-review product for adult
 casual players (roughly 600–1200) who want to understand their losses, not be
@@ -215,24 +229,29 @@ next_moves [{"move":"19.Bd2","by":"opponent"},{"move":"19...Be6","by":"you"}]):
 /**
  * Appended when code_concept is the missed chance. The base prompt explains
  * what a move allowed; here the mistake is a win the player had and did not
- * play, so the story comes from the better line.
+ * play, so the story comes from the fact and the better line.
+ * validateMomentJson caps what_actually_happens at 60 words and why_better at
+ * 45. The limits below stay inside that: the base prompt's 45 and 35, and the
+ * in-game rules' 50 when that extra sentence is added.
  */
 export const MOMENT_MISSED_CHANCE_RULES = `MISSED CHANCE — code_concept is "Missed chance": the player had a win and
-played something else. The mistake is the win not taken, so tell that story
-from best_move, best_line_moves and best_line_outcome:
-- what_actually_happens: two sentences. First, what best_move would have
-  done: the mate, or what it takes or attacks, as best_line_moves shows. Call
-  a piece of theirs undefended only when nothing of theirs takes back in
-  best_line_moves. Second, what the played move did instead, from played_move
-  only. Add a third sentence only when refutation_outcome shows the player
-  losing material.
-- why_better: the winning move and what it wins. Attribute every capture by
-  its "by" field ("you take the knight", "their queen takes back"). State the
-  gain only as best_line_outcome gives it ("you win their queen for a
-  knight"); never write a trade of equal pieces as a loss or a gain.
+played something else. The mistake is the win not taken. code_concept.fact is
+the code-checked account of that win. State that fact as given in
+what_actually_happens; never contradict it, and never name material the fact
+does not name. Never describe the opponent's reply to the played move as the
+mistake. This payload has no refutation line: tell the story from best_move,
+best_line_moves and best_line_outcome. When in_the_game is present, what was
+really played next may be told as an event. If code_concept.fact is absent,
+say only what best_line_outcome gives and name no specific piece.
+- what_actually_happens: the fact, in the words given. ≤45 words, or 50 when
+  the in-game sentence is added.
+- why_better: best_move and what the fact says it wins. Attribute a capture
+  by its "by" field in best_line_moves only when the fact names that material.
+  ≤2 sentences, ≤35 words.
 
-Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance"):
-{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Their knight on e5 had no defender, and your rook on e1 could take it. 21.a3 lets it walk to d3, where it attacks your rook.","why_better":"21.Rxe5 takes the knight for nothing: no piece of theirs can take back on e5.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}`;
+Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance",
+fact "Rxe5 would have won a knight for nothing. Instead, a3 kept the material level."):
+{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Rxe5 would have won a knight for nothing. Instead, 21.a3 kept the material level.","why_better":"21.Rxe5 wins their knight for nothing.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}`;
 
 /**
  * The moment system prompt for a payload: the in-game rules when it carries

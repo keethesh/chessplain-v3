@@ -100,6 +100,35 @@ describe('LLM timeout retry', () => {
     expect(result.probable_thought).toContain('cannot be inferred');
   });
 
+  it('uses the code severity even when the model names a different one', async () => {
+    const { explainMoment } = await import('../src/analysis/explain.js');
+    const parsed = JSON.parse(goodMomentJson) as { severity_label: string };
+    parsed.severity_label = 'Missed win';
+    create.mockResolvedValueOnce(reply(JSON.stringify(parsed)));
+
+    const result = await explainMoment({ ...MOMENT, candidateType: 'Last chance' }, '1000_1400', 'analysis-severity');
+
+    expect(result.concept_name).toBe('Loose piece');
+    expect(result.severity_label).toBe('Last chance');
+  });
+
+  it('uses the code severity on the retry path too', async () => {
+    const { explainMoment } = await import('../src/analysis/explain.js');
+    const invalid = JSON.parse(goodMomentJson) as { probable_thought: string; severity_label: string };
+    invalid.probable_thought = 'I wanted to trade the bishop before the file opened.';
+    invalid.severity_label = 'Quiet drift';
+    const valid = JSON.parse(goodMomentJson) as { severity_label: string };
+    valid.severity_label = 'Missed win';
+    create.mockResolvedValueOnce(reply(JSON.stringify(invalid))).mockResolvedValueOnce(reply(JSON.stringify(valid)));
+
+    const result = await explainMoment(MOMENT, '1000_1400', 'analysis-severity-retry');
+
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(result.concept_name).toBe('Loose piece');
+    expect(result.probable_thought).not.toContain('cannot be inferred');
+    expect(result.severity_label).toBe('Turning point');
+  });
+
   it('does not retry a credit-exhaustion failure', async () => {
     const { explainMoment } = await import('../src/analysis/explain.js');
     create.mockRejectedValue(creditError());
