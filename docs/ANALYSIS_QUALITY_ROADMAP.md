@@ -444,3 +444,37 @@ opponent's line when they should not, and two of those misstate it (a pawn
 push told as a capture; "down a knight for a bishop"). The no-judge benchmark
 stays at 49/49 valid; its 3 phantom flags are on moments with no code concept.
 Next: a judged pass on missed-chance moments before treating them as solid.
+
+## A code-checked fact for missed chances (prompt 2026-10-12.2)
+
+The four failures above were a grounding gap, not a wording one: the payload
+carried the refutation line (what the played move allowed) for a moment whose
+mistake is the win not taken, and no code sentence said what that win was.
+`missedChanceFact` (`concepts.ts`) now replays the stored best line and the
+played line with chess.js and writes the account from the player's side:
+"Nxd4 would have won a knight for nothing. Instead, Kf2 kept the material
+level." or "You had mate in 5 starting with d4. After e4, it is gone." A line
+that ends mid-exchange, promotes, or whose captures do not add up to the
+board's net says only "won material", because a named piece would be a guess.
+For this concept `buildMomentPayload` sends the fact as `code_concept.fact` and
+drops `refutation_line` and the refutation annotations from
+`tactical_context`; `best_move`, `best_line_moves`, `best_line_outcome` and
+`in_the_game` stay. `MOMENT_MISSED_CHANCE_RULES` says to state the fact as
+given and never name material the fact does not name.
+
+No-judge benchmark, 49/49 valid, 1 phantom flag on a moment with no code
+concept (`benchmark/results/2026-10-12T01-31-28-761Z.md`). The 7
+missed-chance fixtures (5 distinct positions: two queen-winning captures,
+two Rxd7 lines, one Rh8# in three copies) all state the fact and their
+`why_better` follows `best_line_moves` capture by capture. Limits: the
+fixtures hold none of the 6 labelled moments that failed before, so this is
+evidence that the fact is stated and consistent, not a re-run of those
+failures; the netted wording ("a knight and a pawn for nothing" when a bishop
+was taken and a bishop given back) is true but may read oddly. Classification
+is unchanged (precision 0.937, accuracy 0.844).
+
+Two more code-side checks landed with it: the severity label is now
+`candidateType` from code on every return path of `explainMoment` (the model's
+own label had shown "Quiet drift" on mate moments), and a summary that says
+"you played" a SAN which `in_the_game` attributes only to the opponent fails
+validation, retries once, then falls back.

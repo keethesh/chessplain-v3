@@ -409,7 +409,8 @@ Built and committed, not deployed (see the deploy order in
   five-concept rules); 33% of turning points tagged (18% before). The missed
   chance is the top gremlin for 7 of 13.
 
-Prompt `2026-10-12.1` on `openai/gpt-6-luna`: the code concept is named exactly
+Prompt `2026-10-12.2` on `openai/gpt-6-luna` (`.2` adds a code-checked fact for
+missed chances; its 7 benchmark missed-chance explanations all state it): the code concept is named exactly
 where tagged, explanations keep what a move allowed apart from what was played
 (hand-judged on 14 real games), and missed chances are told from the better
 line (7 of 11 read cleanly; see the analysis roadmap). Still

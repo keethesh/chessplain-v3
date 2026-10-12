@@ -12,7 +12,7 @@ wins; re-sync this document rather than trusting it. Remaining prompt work
 decision) is tracked in
 [`ANALYSIS_QUALITY_ROADMAP.md`](ANALYSIS_QUALITY_ROADMAP.md).
 
-- **`PROMPT_VERSION` constant: `2026-10-12.1`** (`prompts.ts`). Bump on every
+- **`PROMPT_VERSION` constant: `2026-10-12.2`** (`prompts.ts`). Bump on every
   prompt edit. This constant is currently **defined but not persisted**
   anywhere — no `game_analyses` write includes it, despite an earlier version
   of this document claiming it is stored per-row. Wire it into
@@ -200,27 +200,34 @@ next_moves [{"move":"19.Bd2","by":"opponent"},{"move":"19...Be6","by":"you"}]):
 
 `momentSystemPrompt(payload)` also appends this block when the moment's code
 concept is the missed chance (`concepts.ts`): the mistake is a win the player
-had and did not play, so the story comes from the better line. For a hanging
-piece, the payload's `code_concept.fact` says whether the lost piece had a
-defender (`hangingPieceFact`); the tactical context does not.
+had and did not play. `code_concept.fact` is `missedChanceFact` for that
+concept (the win not taken) and `hangingPieceFact` for a hanging piece
+(whether the lost piece had a defender). For a missed chance,
+`buildMomentPayload` omits the refutation annotations — top-level
+`refutation_line`, and inside `tactical_context`: `opponent_refutation`,
+`refutation_moves`, `after_refutation`, `refutation_outcome`,
+`refutation_sequence`, and `threat_summary` — so the story is told from
+`best_move`, `best_line_moves`, and `best_line_outcome`. `in_the_game` stays.
 
 ```
 MISSED CHANCE — code_concept is "Missed chance": the player had a win and
-played something else. The mistake is the win not taken, so tell that story
-from best_move, best_line_moves and best_line_outcome:
-- what_actually_happens: two sentences. First, what best_move would have
-  done: the mate, or what it takes or attacks, as best_line_moves shows. Call
-  a piece of theirs undefended only when nothing of theirs takes back in
-  best_line_moves. Second, what the played move did instead, from played_move
-  only. Add a third sentence only when refutation_outcome shows the player
-  losing material.
-- why_better: the winning move and what it wins. Attribute every capture by
-  its "by" field ("you take the knight", "their queen takes back"). State the
-  gain only as best_line_outcome gives it ("you win their queen for a
-  knight"); never write a trade of equal pieces as a loss or a gain.
+played something else. The mistake is the win not taken. code_concept.fact is
+the code-checked account of that win. State that fact as given in
+what_actually_happens; never contradict it, and never name material the fact
+does not name. Never describe the opponent's reply to the played move as the
+mistake. This payload has no refutation line: tell the story from best_move,
+best_line_moves and best_line_outcome. When in_the_game is present, what was
+really played next may be told as an event. If code_concept.fact is absent,
+say only what best_line_outcome gives and name no specific piece.
+- what_actually_happens: the fact, in the words given. ≤45 words, or 50 when
+  the in-game sentence is added.
+- why_better: best_move and what the fact says it wins. Attribute a capture
+  by its "by" field in best_line_moves only when the fact names that material.
+  ≤2 sentences, ≤35 words.
 
-Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance"):
-{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Their knight on e5 had no defender, and your rook on e1 could take it. 21.a3 lets it walk to d3, where it attacks your rook.","why_better":"21.Rxe5 takes the knight for nothing: no piece of theirs can take back on e5.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}
+Example (middlegame, 1200 White, "Turning point", code_concept "Missed chance",
+fact "Rxe5 would have won a knight for nothing. Instead, a3 kept the material level."):
+{"played":"21.a3","probable_thought":"The pawn steps to a3 to keep their knight off b4.","what_actually_happens":"Rxe5 would have won a knight for nothing. Instead, 21.a3 kept the material level.","why_better":"21.Rxe5 wins their knight for nothing.","concept_name":"Missed chance","concept_definition":"a winning move you had but didn't play","takeaway":"When they move, look at their pieces first: is one loose?","severity_label":"Turning point"}
 ```
 
 `tactical_context` is built by `buildTacticalContext()` in
@@ -238,10 +245,11 @@ User message = `JSON.stringify(buildMomentPayload(...))` (`prompts.ts`),
 nothing else. The benchmark (`scripts/benchmark-models.ts`) sends the same
 payload, so benchmark results transfer to production. When `classifyMoment`
 tags the moment, the payload includes `code_concept: { name, definition }`
-from `concepts.ts`, and `concept_name` must be that name. Pipeline runs also
-include `in_the_game: { next_moves: [{ move, by }], refutation_moves_played,
-game_over }`; the refutation line is what the move allowed, and only its first
-`refutation_moves_played` moves were played.
+from `concepts.ts`, plus `fact` when the code checked one, and `concept_name`
+must be that name. Pipeline runs also include `in_the_game: { next_moves:
+[{ move, by }], refutation_moves_played, game_over }`; the refutation line is
+what the move allowed, and only its first `refutation_moves_played` moves were
+played. A missed chance sends no refutation line.
 
 **Known gaps** (tracked in the roadmap doc): the model receives one FEN with
 no move history and no clock time. `elo_band` comes from the Chess.com API
