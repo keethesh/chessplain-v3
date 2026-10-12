@@ -222,14 +222,19 @@ describe('missedChanceFact', () => {
     expect(missedChanceFact(defended)).toBe('Nxd4 would have won material. Instead, Kf2 kept the material level.');
   });
 
-  it('uses only the grounded win in why_better', () => {
-    const defended = moment('3qk3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
-    expect(missedChanceWhyBetter(defended)).toBe('Nxd4 would have won material.');
+  it('shows the checked line in why_better instead of repeating the fact', () => {
+    const white = moment('4k3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
+    white.bestLineSan = 'Nxd4 Ke7';
+    expect(missedChanceWhyBetter(white)).toBe('The checked line starts 1.Nxd4 Ke7.');
+    // Black's first move takes "7..." and White's reply starts the next number.
+    const black = moment('4k3/8/5n2/3N4/8/8/8/4K3 b - - 0 7', 'Kd7', 'Nxd5', 'Ke2');
+    black.bestLineSan = 'Nxd5 Kd2';
+    expect(missedChanceWhyBetter(black)).toBe('The checked line starts 7...Nxd5 8.Kd2.');
   });
 
-  it('does not invent the player’s intention for a missed chance', () => {
+  it('describes the played move instead of guessing what the player meant', () => {
     const missed = moment('4k3/8/8/8/3n4/5N2/8/4K3 w - - 0 1', 'Kf2', 'Nxd4', 'Ke7');
-    expect(missedChanceProbableThought(missed)).toBe('You may have been looking for a useful move.');
+    expect(missedChanceProbableThought(missed)).toBe('The king moves from e1 to f2.');
   });
 
   it('states a mate in N when the eval is the mate encoding', () => {

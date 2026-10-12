@@ -675,17 +675,44 @@ export function missedChanceFact(candidate: CandidateMoment): string | null {
   }
 }
 
-/** Grounded text for the "why better" field; never expands a withheld net. */
+/**
+ * "Why it works" for a missed chance: the checked better line, numbered like
+ * the game. what_actually_happens already states the fact, so repeating it
+ * here would say the same sentence twice; the model's own version named
+ * material the fact withholds.
+ */
 export function missedChanceWhyBetter(candidate: CandidateMoment): string | null {
-  const fact = missedChanceFact(candidate);
-  if (!fact) return null;
-  const material = fact.indexOf(' Instead,');
-  if (material >= 0) return fact.slice(0, material).trimEnd();
-  const mate = fact.indexOf(' After ');
-  return mate >= 0 ? fact.slice(0, mate).trimEnd() : fact;
+  if (!missedChanceFact(candidate)) return null;
+  const chess = new Chess(candidate.fenBefore);
+  const moves: string[] = [];
+  for (const san of lineSans(candidate.bestLineSan || candidate.bestMoveSan)) {
+    const number = chess.fen().split(' ')[5];
+    let move;
+    try {
+      move = chess.move(san);
+    } catch {
+      break;
+    }
+    moves.push(move.color === 'w' ? `${number}.${move.san}` : moves.length === 0 ? `${number}...${move.san}` : move.san);
+  }
+  return moves.length === 0 ? null : `The checked line starts ${moves.join(' ')}.`;
 }
 
-/** A deliberately neutral intention; the code cannot know what the player thought. */
+/**
+ * "The idea" for a missed chance: what the played move did on the board. The
+ * model guessed at what it attacked or defended, and got that wrong.
+ */
 export function missedChanceProbableThought(candidate: CandidateMoment): string | null {
-  return missedChanceFact(candidate) ? 'You may have been looking for a useful move.' : null;
+  if (!missedChanceFact(candidate)) return null;
+  try {
+    const move = new Chess(candidate.fenBefore).move(stripSan(candidate.san));
+    const piece = PIECE_NAME[move.piece] ?? 'king';
+    const check = move.san.endsWith('#') ? ' with mate' : move.san.endsWith('+') ? ' with check' : '';
+    if (move.flags.includes('k') || move.flags.includes('q')) return `The king castles ${move.flags.includes('k') ? 'kingside' : 'queenside'}${check}.`;
+    if (move.promotion) return `The pawn promotes to a ${PIECE_NAME[move.promotion]} on ${move.to}${check}.`;
+    if (move.captured) return `The ${piece} takes the ${PIECE_NAME[move.captured]} on ${move.to}${check}.`;
+    return `The ${piece} moves from ${move.from} to ${move.to}${check}.`;
+  } catch {
+    return null;
+  }
 }
