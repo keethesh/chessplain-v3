@@ -47,6 +47,7 @@ function quotaIdentity(userId: string | null, ip: string | undefined): { column:
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const USERNAME_RE = /^[a-zA-Z0-9_-]{3,25}$/;
 const CHECKIN_ANSWERS = ['remembered', 'forgot', 'did_not_come_up'] as const;
 
 function isConceptId(value: unknown): value is ConceptId {
@@ -105,7 +106,7 @@ async function bootstrap() {
         /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
       ]),
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: false,
   });
 
@@ -545,9 +546,8 @@ async function bootstrap() {
     return reply.send({ success: true, user_id: userId });
   });
 
-  // GET /api/me: everything the signed-in home and account pages need in one
-  // call. The Chess.com username is the one last used on a submitted game, so
-  // no profile column (or migration) is required.
+  // GET /api/me: signed-in home and account. Username prefers the saved
+  // profile, then the last submitted game, then the latest scan.
   fastify.get('/api/me', async (request, reply) => {
     const token = request.headers.authorization?.replace(/^Bearer /, '');
     if (!token) return reply.status(401).send({ error: 'Sign in to see your account.' });
@@ -558,7 +558,7 @@ async function bootstrap() {
     const weekAgo = Date.now() - WEEK_MS;
     const weekIso = new Date(weekAgo).toISOString();
     const [profileRes, reviewsRes, scansRes, scanOpenRes, scanWeekRes] = await Promise.all([
-      supabase.from('profiles').select('subscription_tier').eq('id', userId).maybeSingle(),
+      supabase.from('profiles').select('subscription_tier, chesscom_username').eq('id', userId).maybeSingle(),
       supabase.from('game_analyses')
         .select('id, share_id, status, summary, moments, hero_variant, created_at, source_games(external_id, source, player_color, white_player, black_player, metadata)')
         .eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
@@ -624,7 +624,9 @@ async function bootstrap() {
     }
     const patterns = [...patternsById.values()].filter(p => p.count >= 2).sort((a, b) => b.count - a.count);
 
-    const premium = profileRes.data?.subscription_tier === 'premium';
+    const profile = (profileRes.data ?? null) as { subscription_tier?: string | null; chesscom_username?: string | null } | null;
+    const profileName = profile?.chesscom_username?.trim() || null;
+    const premium = profile?.subscription_tier === 'premium';
     // Same rule as the submit quota: failed runs, empty completed reports, and scan examples are free.
     const counted = rows.filter(r => r.hero_variant !== 'scan' && r.status !== 'failed' && (r.status !== 'completed' || (r.moments?.length ?? 0) > 0) && Date.parse(r.created_at) >= weekAgo);
     const oldest = counted.length ? Math.min(...counted.map(r => Date.parse(r.created_at))) : null;
@@ -649,9 +651,11 @@ async function bootstrap() {
         used: Math.min(countedScans.length, 2),
         next_slot_at: countedScans.length >= 2 && oldestScan !== null ? new Date(oldestScan + WEEK_MS).toISOString() : null,
       },
-      chesscom_username: rows.find(r => r.source_games?.source === 'chesscom' && r.source_games.metadata?.chesscom_username)?.source_games?.metadata?.chesscom_username
+      chesscom_username: profileName
+        ?? rows.find(r => r.source_games?.source === 'chesscom' && r.source_games.metadata?.chesscom_username)?.source_games?.metadata?.chesscom_username
         ?? scanRows.find(s => s.chesscom_username)?.chesscom_username
         ?? null,
+      chesscom_username_saved: profileName !== null,
       open_idea: open && openConcept ? {
         scan_id: open.id,
         concept: openConcept,
@@ -674,12 +678,46 @@ async function bootstrap() {
     });
   });
 
+  fastify.patch('/api/me', async (request, reply) => {
+    const token = request.headers.authorization?.replace(/^Bearer /, '');
+    if (!token) return reply.status(401).send({ error: 'Sign in to see your account.' });
+    const { data: auth, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !auth.user) return reply.status(401).send({ error: 'Please sign in again.' });
+
+    const raw = (request.body ?? {}) as { chesscom_username?: unknown };
+    const username = typeof raw.chesscom_username === 'string' ? raw.chesscom_username.trim() : '';
+    if (!USERNAME_RE.test(username)) {
+      return reply.status(400).send({ error: 'invalid_username', message: 'Enter a valid Chess.com username.' });
+    }
+    const clean = username.toLowerCase();
+    try {
+      await fetchScanGames(clean);
+    } catch (err) {
+      if (err instanceof ChessComInputError) {
+        if (err.kind === 'unknown_username') {
+          return reply.status(400).send({ error: 'unknown_username', message: err.message });
+        }
+      } else {
+        fastify.log.warn(err, 'Chess.com username check failed');
+        return reply.status(502).send({ error: 'chesscom_unavailable', message: 'Chess.com did not respond. Try again in a moment.' });
+      }
+    }
+
+    const { data, error } = await supabase.from('profiles')
+      .update({ chesscom_username: clean })
+      .eq('id', auth.user.id)
+      .select('chesscom_username')
+      .maybeSingle();
+    if (error || !data) return reply.status(503).send({ error: 'account_not_ready', message: 'Your account is not ready yet. Please try again shortly.' });
+    return reply.send({ chesscom_username: clean });
+  });
+
   fastify.post('/api/scans', {
     config: { rateLimit: { max: 30, timeWindow: '1 hour' } },
   }, async (request, reply) => {
     const raw = (request.body ?? {}) as { chesscom_username?: unknown };
     const username = typeof raw.chesscom_username === 'string' ? raw.chesscom_username.trim() : '';
-    if (!/^[a-zA-Z0-9_-]{3,25}$/.test(username)) {
+    if (!USERNAME_RE.test(username)) {
       return reply.status(400).send({ error: 'invalid_username', message: 'Enter a valid Chess.com username.' });
     }
     const clean = username.toLowerCase();

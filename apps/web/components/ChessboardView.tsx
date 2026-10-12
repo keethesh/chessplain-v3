@@ -3,6 +3,33 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Chessboard, defaultArrowOptions, type PieceDropHandlerArgs, type SquareHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
+import { MARK } from '../lib/squares';
+
+/** True when one legal move (either direction) joins the two positions. Halfmove clocks are ignored. */
+function differsByOneMove(a: string, b: string): boolean {
+  if (!a || !b || a === b) return false;
+  return reaches(a, b) || reaches(b, a);
+}
+
+function fenKey(fen: string): string {
+  return fen.split(' ').slice(0, 4).join(' ');
+}
+
+function reaches(fromFen: string, toFen: string): boolean {
+  try {
+    const game = new Chess(fromFen);
+    const target = fenKey(toFen);
+    for (const mv of game.moves({ verbose: true })) {
+      game.move(mv);
+      const key = fenKey(game.fen());
+      game.undo();
+      if (key === target) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 interface ChessboardViewProps {
   fen: string;
@@ -21,6 +48,15 @@ interface ChessboardViewProps {
    * `method` defaults to drag; a tap passes 'tap'.
    */
   onPieceDrop?: (from: string, to: string, method?: 'drag' | 'tap') => boolean;
+}
+
+function legalTargets(fen: string, from: string): Array<{ to: string; capture: boolean }> {
+  try {
+    const game = new Chess(fen);
+    return game.moves({ square: from as Square, verbose: true }).map(move => ({ to: move.to, capture: Boolean(move.captured) }));
+  } catch {
+    return [];
+  }
 }
 
 function isOwnPiece(fen: string, square: string): boolean {
@@ -44,9 +80,11 @@ export function ChessboardView({
   onPieceDrop,
 }: ChessboardViewProps) {
   const boardRef = useRef<HTMLDivElement>(null);
+  const prevFen = useRef(fen);
   const interactive = Boolean(onPieceDrop);
   const [selected, setSelected] = useState<string | null>(null);
   const [trackedFen, setTrackedFen] = useState(fen);
+  useEffect(() => { prevFen.current = fen; });
   // Drop the selection with the position, and when the board stops accepting moves.
   if (trackedFen !== fen) {
     setTrackedFen(fen);
@@ -65,6 +103,10 @@ export function ChessboardView({
     () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     () => true,
   );
+  // Slide only when the new position is exactly one legal move away. A jump of
+  // several plies, or the cut back to the original position, does not glide
+  // unrelated pieces. animationMs 0 forces that cut.
+  const slide = animate && animationMs !== 0 && differsByOneMove(prevFen.current, fen);
   useEffect(() => {
     const root = boardRef.current;
     if (!root) return;
@@ -104,34 +146,41 @@ export function ChessboardView({
     if (accepted) setSelected(null);
   }
 
+  const legal = interactive && selected ? legalTargets(fen, selected) : [];
   const customSquareStyles: Record<string, React.CSSProperties> = {};
 
   for (const sq of highlightSquares) {
-    customSquareStyles[sq] = {
-      backgroundColor: 'color-mix(in srgb, var(--red-fill) 40%, transparent)',
-      borderRadius: '0',
-      boxShadow: 'inset 0 0 0 3px var(--red-fill)',
-    };
+    customSquareStyles[sq] = { boxShadow: `inset 0 0 0 4px ${MARK.played}` };
+  }
+  for (const target of legal) {
+    customSquareStyles[target.to] = target.capture
+      ? { backgroundImage: `radial-gradient(circle, transparent 54%, ${MARK.legal} 56% 70%, transparent 72%)` }
+      : { backgroundImage: `radial-gradient(circle, ${MARK.legal} 16%, transparent 18%)` };
+  }
+  for (const a of arrows) {
+    const ring = `inset 0 0 0 4px ${a.color || MARK.checked}`;
+    for (const sq of [a.startSquare, a.endSquare]) {
+      customSquareStyles[sq] = { ...customSquareStyles[sq], boxShadow: ring };
+    }
   }
   for (const [sq, color] of Object.entries(markedSquares)) {
     customSquareStyles[sq] = {
       ...customSquareStyles[sq],
-      boxShadow: `inset 0 0 0 3px ${color}, inset 0 0 0 5px rgb(10 10 10 / 35%)`,
-      ...(sq === focusSquare ? { backgroundColor: `color-mix(in srgb, ${color} 60%, transparent)` } : {}),
+      boxShadow: `inset 0 0 0 4px ${color}`,
+      ...(sq === focusSquare ? { backgroundColor: `${color}55` } : {}),
     };
   }
   if (interactive && selected) {
     customSquareStyles[selected] = {
       ...customSquareStyles[selected],
-      boxShadow: 'inset 0 0 0 3px var(--blue-fill), inset 0 0 0 5px rgb(10 10 10 / 35%)',
-      backgroundColor: 'color-mix(in srgb, var(--blue-fill) 60%, transparent)',
+      boxShadow: `inset 0 0 0 4px ${MARK.selected}`,
     };
   }
 
   const customArrows = arrows.map((a) => ({
     startSquare: a.startSquare,
     endSquare: a.endSquare,
-    color: a.color || 'var(--red-fill)',
+    color: a.color || MARK.checked,
   }));
   const turn = fen.split(' ')[1] === 'w' ? 'White' : 'Black';
   let positionLabel = `${turn} to move`;
@@ -169,14 +218,14 @@ export function ChessboardView({
             } : {}),
             squareStyles: customSquareStyles,
             arrows: customArrows,
-            // The blue arrow sits on blue squares; more opaque than the 0.65 default so it still reads.
-            arrowOptions: { ...defaultArrowOptions, opacity: 0.85 },
+            arrowOptions: { ...defaultArrowOptions, opacity: 1, activeOpacity: 1 },
+            dropSquareStyle: { boxShadow: `inset 0 0 0 4px ${MARK.legal}` },
             darkSquareStyle: { backgroundColor: 'var(--board-dark)' },
             lightSquareStyle: { backgroundColor: 'var(--board-light)' },
             lightSquareNotationStyle: { color: '#0a0a0a' },
             darkSquareNotationStyle: { color: '#0a0a0a' },
-            showAnimations: animate && animationMs !== 0,
-            ...(animationMs === undefined ? {} : { animationDurationInMs: animationMs }),
+            showAnimations: slide,
+            animationDurationInMs: slide ? (animationMs ?? 300) : 0,
           }}
         />
       </div>

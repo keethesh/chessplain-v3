@@ -1,20 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Gremlin } from '../../components/Gremlin';
-import { createBillingPortal, type Allowance, type Me, type MeReview } from '../../lib/api';
-import { GREMLINS } from '../../lib/gremlins';
+import { ApiError, CHESSCOM_USERNAME_RE, createBillingPortal, type Allowance } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
-import { invalidateMe, useMe } from '../../lib/use-session';
+import { invalidateMe, saveChesscomUsername, useMe } from '../../lib/use-session';
 import './account.css';
-
-function formatDay(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date);
-}
 
 function formatWeekday(iso: string): string {
   const date = new Date(iso);
@@ -32,29 +24,66 @@ function allowanceCopy(kind: string, allowance: Allowance | null, premium: boole
     : `${left} of ${allowance.limit} ${kind} left this week.`;
 }
 
-function scanTitle(scan: Me['scans'][number]): string {
-  if (scan.status === 'failed') return 'Didn’t finish. Try again?';
-  if (scan.status !== 'completed') return 'Reading your games…';
-  if (!scan.top_concept_id) return 'Nothing decisive. Nice!';
-  const name = GREMLINS[scan.top_concept_id].name;
-  return scan.games_with_concept > 0 ? `${name} in ${scan.games_with_concept}` : name;
-}
+function UsernameField({ initial, token }: { initial: string; token: string }) {
+  const [name, setName] = useState(initial);
+  const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState('');
+  useEffect(() => { if (!dirty) setName(initial); }, [initial, dirty]);
+  useEffect(() => {
+    if (window.location.hash === '#chesscom') document.getElementById('chesscom')?.focus();
+  }, []);
 
-function reviewTitle(review: MeReview): string {
-  if (review.headline) return review.headline;
-  if (review.status === 'failed') return 'Oops, this game didn’t finish.';
-  if (review.status !== 'completed') return 'Writing this review…';
-  return 'Game review';
-}
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    const username = name.trim();
+    if (!CHESSCOM_USERNAME_RE.test(username)) {
+      setError('Enter a valid Chess.com username.');
+      setSaved('');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setSaved('');
+    try {
+      const res = await saveChesscomUsername(token, username);
+      setSaved(`Saved ${res.chesscom_username}.`);
+      setName(res.chesscom_username);
+      setDirty(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Couldn’t save that username. Try again?');
+    } finally {
+      setBusy(false);
+    }
+  }
 
-function reviewMeta(review: MeReview): string {
-  const names = [review.white_player, review.black_player];
-  const them = review.player_color === 'black' ? names[0] : review.player_color === 'white' ? names[1] : null;
-  const bits = [them ? `vs ${them}` : '', formatDay(review.created_at)];
-  if (review.status === 'completed' && review.moment_count > 0) bits.push(review.moment_count === 1 ? '1 moment' : `${review.moment_count} moments`);
-  else if (review.status === 'failed') bits.push('Didn’t finish');
-  else if (review.status !== 'completed') bits.push('Still writing');
-  return bits.filter(Boolean).join(' · ');
+  return (
+    <form className="acct-user" onSubmit={onSubmit}>
+      <label className="label" htmlFor="chesscom">Username</label>
+      <div className="acct-user-row">
+        <input
+          id="chesscom"
+          className="input"
+          name="username"
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          value={name}
+          aria-invalid={error ? true : undefined}
+          aria-describedby="chesscom-note"
+          onChange={(event) => { setDirty(true); setName(event.target.value); if (error) setError(''); }}
+        />
+        <button className="btn" type="submit" disabled={busy} aria-busy={busy}>
+          {busy ? 'Checking…' : 'Save'}
+        </button>
+      </div>
+      <p id="chesscom-note" className="field-note" data-tone={error ? 'error' : undefined} role={error ? 'alert' : saved ? 'status' : undefined}>
+        {error || saved || 'Used when you scan. You won’t type it on the home page.'}
+      </p>
+    </form>
+  );
 }
 
 export default function AccountPage() {
@@ -93,11 +122,15 @@ export default function AccountPage() {
   }
 
   const premium = me?.tier === 'premium';
-  const idea = me?.open_idea ?? null;
   const email = me?.email || session?.user.email;
 
   return (
     <div className="page acct">
+      <header className="acct-mast">
+        <p className="label">Account</p>
+        <h1 className="acct-title">Settings</h1>
+      </header>
+
       {!me && !failed ? (
         <div>
           <p className="sr-only" role="status">Chessplain is opening your account…</p>
@@ -108,114 +141,40 @@ export default function AccountPage() {
         </div>
       ) : failed && !me ? (
         <p role="alert">Oops, we couldn’t load your account. <button type="button" className="btn btn--quiet" onClick={retry}>Try again</button></p>
-      ) : me && idea ? (
-        <section className="panel acct-idea bg-concept" data-concept={idea.concept.id}>
-          <div className="acct-idea__copy">
-            <h1 className="h1">{idea.concept.gremlin}.</h1>
-            <p className="lede">{idea.concept.name}. Showed up in {idea.games_with_concept} of your last {idea.games_scanned} games.</p>
-            <blockquote className="acct-habit"><p>{idea.concept.habit}</p></blockquote>
-            <Link className="btn" href={idea.example_report_id ? `/report/${idea.example_report_id}` : `/scan/${idea.scan_id}`}>
-              {idea.example_report_id ? 'See it in your game' : 'See this scan'} <span className="arrow" aria-hidden="true">→</span>
-            </Link>
-          </div>
-          <Gremlin className="acct-gremlin" concept={idea.concept.id} size={240} label={idea.concept.gremlin} priority />
-        </section>
-      ) : (
-        <section className="panel acct-idea bg-lilac">
-          <div className="acct-idea__copy">
-            <h1 className="h1">No gremlin yet!</h1>
-            <p className="lede">Scan your last 10 games. We’ll name the mistake that keeps showing up.</p>
-            <Link className="btn" href="/#scan">Find my gremlin <span className="arrow" aria-hidden="true">→</span></Link>
-          </div>
-          <Gremlin className="acct-gremlin" concept="hanging_piece" size={220} />
-        </section>
-      )}
-
-      {me && (
+      ) : me && session && (
         <>
-          <div className="acct-split">
-            <section className="surface acct-block" aria-labelledby="acct-scans">
-              <h2 id="acct-scans" className="h3">Scans</h2>
-              {me.scans.length === 0 ? <p className="muted">No scans yet. Your last 10 games will show up here.</p> : (
-                <ul className="acct-list">
-                  {me.scans.map(scan => (
-                    <li key={scan.id}>
-                      <Link className="acct-row" href={`/scan/${scan.id}`}>
-                        <span className="acct-row__title">{scanTitle(scan)}</span>
-                        <time className="small muted move" dateTime={scan.created_at}>{formatDay(scan.created_at)}</time>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-            <section className="surface acct-block" aria-labelledby="acct-reviews">
-              <h2 id="acct-reviews" className="h3">Reviews</h2>
-              {me.reviews.length === 0 ? <p className="muted">No full reviews yet. Open one from a scan when you want the whole game.</p> : (
-                <ul className="acct-list">
-                  {me.reviews.map(review => (
-                    <li key={review.id}>
-                      <Link className="acct-row" href={`/report/${review.id}`}>
-                        <span className="acct-row__title">{reviewTitle(review)}</span>
-                        <span className="small muted" translate="no">{reviewMeta(review)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </div>
-
-          <section className="acct-block" aria-labelledby="acct-patterns">
-            <h2 id="acct-patterns" className="h3">What came back</h2>
-            {me.patterns.length === 0 ? <p className="surface muted">Nothing has come back twice. Scan again after you’ve played more.</p> : (
-              <ul className="acct-patterns">
-                {me.patterns.map(pattern => (
-                  <li key={pattern.concept.id} className="surface acct-pattern bg-concept" data-concept={pattern.concept.id}>
-                    <Gremlin concept={pattern.concept.id} size={72} />
-                    <div>
-                      <p className="h3">{pattern.concept.gremlin}</p>
-                      <p className="small">{pattern.concept.name}. {pattern.count === 1 ? '1 review' : `${pattern.count} reviews`}.</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
-      )}
-
-      {(me || failed) && <section className="surface acct-plan" aria-labelledby="acct-plan">
-        <h2 id="acct-plan" className="h2">{me ? (premium ? 'Premium' : 'Free') : 'Plan'}</h2>
-        {email ? <p className="small muted">Signed in as <span translate="no">{email}</span></p> : null}
-        {me && (
-          <>
+          <section className="surface acct-block" aria-labelledby="acct-plan">
+            <h2 id="acct-plan" className="h3">{premium ? 'Premium' : 'Free'}</h2>
+            {email ? <p className="small">Signed in as <span translate="no">{email}</span></p> : null}
             <p>{allowanceCopy('reviews', me.allowance, premium)}</p>
             <p>{allowanceCopy('scans', me.scan_allowance, premium)}</p>
-          </>
-        )}
-        <div className="acct-actions">
-          {premium ? (
-            <button type="button" className="btn" onClick={openPortal} disabled={!!busy}>
-              {busy === 'portal' ? 'Opening billing…' : 'Manage subscription'}
-            </button>
-          ) : (
-            <>
-              {me && <Link className="btn" href="/pricing">See Premium <span className="arrow" aria-hidden="true">→</span></Link>}
-              <button type="button" className={me ? 'btn btn--quiet' : 'btn'} onClick={openPortal} disabled={!!busy}>
-                {busy === 'portal' ? 'Opening billing…' : me ? 'Already subscribed? Manage' : 'Manage subscription'}
-              </button>
-            </>
-          )}
-          <button type="button" className="btn btn--quiet" onClick={signOut} disabled={!!busy}>
+            <div className="acct-actions">
+              {premium ? (
+                <button type="button" className="btn" onClick={openPortal} disabled={!!busy}>
+                  {busy === 'portal' ? 'Opening billing…' : 'Manage subscription'}
+                </button>
+              ) : (
+                <>
+                  <Link className="btn" href="/pricing">See Premium <span className="arrow" aria-hidden="true">→</span></Link>
+                  <button type="button" className="btn btn--quiet" onClick={openPortal} disabled={!!busy}>
+                    {busy === 'portal' ? 'Opening billing…' : 'Already subscribed? Manage'}
+                  </button>
+                </>
+              )}
+            </div>
+            {error && <p className="field-note" data-tone="error" role="alert">{error}</p>}
+          </section>
+
+          <section className="surface acct-block" aria-labelledby="acct-chess">
+            <h2 id="acct-chess" className="h3">Chess.com</h2>
+            <UsernameField initial={me.chesscom_username ?? ''} token={session.access_token} />
+          </section>
+
+          <button type="button" className="btn btn--quiet acct-signout" onClick={signOut} disabled={!!busy}>
             {busy === 'signout' ? 'Signing out…' : 'Sign out'}
           </button>
-        </div>
-        {error && <p className="field-note" data-tone="error" role="alert">{error}</p>}
-        {me && idea && (
-          <Link className="btn btn--key" href="/#scan">Scan your last 10 again <span className="arrow" aria-hidden="true">→</span></Link>
-        )}
-      </section>}
+        </>
+      )}
     </div>
   );
 }

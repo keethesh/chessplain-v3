@@ -39,12 +39,14 @@ export function explainScanError(err: unknown, signedIn: boolean, nextSlot: stri
   return { text: 'Something went wrong. Please try again.' };
 }
 
-export function ScanForm({ id, initial = '', submitLabel = 'Find my gremlin', note = 'Free. No signup. No Chess.com password.', nextSlot = null }: {
+export function ScanForm({ id, initial = '', submitLabel = 'Find my gremlin', note = 'Free. No signup. No Chess.com password.', nextSlot = null, fixedUsername }: {
   id: string;
   initial?: string;
   submitLabel?: string;
   note?: string;
   nextSlot?: string | null;
+  /** Signed-in scan: submit this saved username and don't ask again. */
+  fixedUsername?: string;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,7 +64,7 @@ export function ScanForm({ id, initial = '', submitLabel = 'Find my gremlin', no
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (lock.current) return;
-    const username = name.trim();
+    const username = (fixedUsername ?? name).trim();
     if (!username) {
       setProblem({ text: 'Type your Chess.com username.' });
       inputRef.current?.focus();
@@ -85,6 +87,20 @@ export function ScanForm({ id, initial = '', submitLabel = 'Find my gremlin', no
       setBusy(false);
       inputRef.current?.focus();
     }
+  }
+
+  if (fixedUsername) {
+    return (
+      <form id={id} className="home-form home-form--fixed" onSubmit={onSubmit}>
+        <button className="btn" type="submit" disabled={busy} aria-busy={busy} aria-describedby={noteId}>
+          {submitLabel} <span className="arrow" aria-hidden="true">→</span>
+        </button>
+        <p id={noteId} className="field-note" data-tone={problem ? 'error' : undefined} role={problem ? 'alert' : undefined}>
+          {problem ? problem.text : note}
+          {problem?.href && <> <Link href={problem.href}>{problem.hrefLabel}</Link></>}
+        </p>
+      </form>
+    );
   }
 
   return (

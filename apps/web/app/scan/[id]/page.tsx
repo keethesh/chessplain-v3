@@ -68,6 +68,15 @@ function statusLine(scan: ScanDetail | null, missing: boolean): string {
   return top.games_with_concept >= 3 ? `Found it! ${line}` : line;
 }
 
+function ScanMast({ children }: { children: React.ReactNode }) {
+  return (
+    <header className="scan-mast">
+      <p className="label">Scan</p>
+      <p className="scan-mast-title">{children}</p>
+    </header>
+  );
+}
+
 function Heading({ level, ...props }: { level: 1 | 2; className?: string; id?: string; children: React.ReactNode }) {
   return level === 1 ? <h1 {...props} /> : <h2 {...props} />;
 }
@@ -230,8 +239,9 @@ function Scan({ id }: { id: string }) {
   if (missing) {
     return (
       <div className="page scan">
+        <ScanMast>Can’t find that scan</ScanMast>
         <p className="sr-only" role="status">{statusLine(scan, true)}</p>
-        <h1 className="h1">Can’t find that scan.</h1>
+        <h1 className="h2">Can’t find that scan.</h1>
         <p className="lede">The link may be wrong. Start a new one and we’ll read your last 10 games.</p>
         <Link className="btn" href="/#scan">Find my gremlin <span className="arrow" aria-hidden="true">→</span></Link>
       </div>
@@ -259,6 +269,11 @@ function Scan({ id }: { id: string }) {
 
   return (
     <div className="page scan">
+      <ScanMast>
+        {scan
+          ? <><span translate="no">{scan.chesscom_username}</span>{scan.created_at ? ` · ${shortDate(scan.created_at)}` : ''}</>
+          : 'Last 10 games'}
+      </ScanMast>
       <p className="sr-only" role="status">{statusLine(scan, false)}</p>
       {(!scan || scan.status === 'pending' || scan.status === 'fetching' || scan.status === 'analyzing') && (
         <h1 className="h2 scan-lead">{statusLine(scan, false)}</h1>

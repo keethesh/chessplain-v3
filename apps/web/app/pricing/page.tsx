@@ -6,7 +6,6 @@ import { createCheckoutSession, createBillingPortal, getMe } from '../../lib/api
 import { captureEvent } from '../../lib/posthog';
 import { supabase } from '../../lib/supabase';
 import { invalidateMe, useMe } from '../../lib/use-session';
-import { Gremlin } from '../../components/Gremlin';
 import { Reveal } from '../../components/Reveal';
 import './pricing.css';
 
@@ -83,12 +82,10 @@ export default function PricingPage() {
 
   return (
     <div className="page price">
-      <header className="price-hero">
-        <div className="price-hero__copy">
-          <h1 className="h1">Drop the <span className="hl">weekly limit</span>!</h1>
-          <p className="lede">Free is two scans and two full reviews every 7 days. Premium removes both limits.</p>
-        </div>
-        <Gremlin className="price-gremlin" concept="hanging_piece" size={240} priority />
+      <header className="price-mast">
+        <p className="label">Pricing</p>
+        <h1 className="price-title">Drop the weekly limit.</h1>
+        <p className="lede">Free is two scans and two full reviews every 7 days. Premium removes both limits.</p>
       </header>
 
       {returnedFromCheckout && (

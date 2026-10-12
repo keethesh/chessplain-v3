@@ -1,20 +1,30 @@
 .price {
-  padding-block: clamp(28px, 4vw, 64px);
+  padding-block: 20px 32px;
   display: flex;
   flex-direction: column;
-  gap: clamp(24px, 3vw, 40px);
+  gap: 16px;
 }
 
-.price-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(140px, 260px);
-  gap: 12px 32px;
-  align-items: end;
+.price-mast {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px 20px;
+  background: var(--peach);
+  border: var(--line);
 }
 
-.price-hero__copy { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; min-width: 0; }
-
-.price-gremlin { justify-self: end; }
+.price-title {
+  margin: 0;
+  max-width: 16ch;
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.95;
+  font-size: clamp(32px, 4vw, 48px);
+}
 
 .price-interval { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -29,9 +39,10 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 14px;
+  gap: 10px;
   height: 100%;
 }
+.price-plan.panel { padding: 16px 20px; }
 
 .price-amount { margin: 0; }
 
@@ -89,16 +100,5 @@
 }
 
 @media (max-width: 640px) {
-  .price-hero { grid-template-columns: 1fr; }
-  .price-gremlin { order: -1; justify-self: start; width: 140px; }
   .price-plan .btn, .price-interval .btn { width: 100%; white-space: normal; text-align: center; }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .price-gremlin { animation: price-arrive 560ms var(--ease-out) both; }
-}
-
-@keyframes price-arrive {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: none; }
 }

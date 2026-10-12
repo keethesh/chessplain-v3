@@ -5,9 +5,11 @@ import '../src/http/server.js';
 const state = vi.hoisted(() => ({
   signedIn: true,
   tier: 'free',
+  profileUsername: null as string | null,
   rows: [] as unknown[],
   scans: [] as Array<Record<string, unknown>>,
 }));
+const chesscom = vi.hoisted(() => ({ mode: 'ok' as 'ok' | 'unknown' | 'down', calls: 0 }));
 const routes = vi.hoisted(() => ({ handlers: {} as Record<string, unknown> }));
 
 vi.mock('fastify', () => {
@@ -17,6 +19,7 @@ vi.mock('fastify', () => {
     log: { error: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn() },
     post: vi.fn((route: string, ...rest: unknown[]) => { routes.handlers[`POST ${route}`] = rest[rest.length - 1]; }),
     get: vi.fn((route: string, ...rest: unknown[]) => { routes.handlers[`GET ${route}`] = rest[rest.length - 1]; }),
+    patch: vi.fn((route: string, ...rest: unknown[]) => { routes.handlers[`PATCH ${route}`] = rest[rest.length - 1]; }),
     listen: vi.fn(async () => {}),
     close: vi.fn(async () => {}),
   };
@@ -26,6 +29,28 @@ vi.mock('fastify', () => {
 vi.mock('../src/config.js', () => ({
   config: { port: 0, nodeEnv: 'production', disableQuota: false, trustProxy: false, stripeSecretKey: '' },
 }));
+
+vi.mock('../src/analysis/chesscom.js', () => {
+  class ChessComInputError extends Error {
+    kind: string;
+    constructor(message: string, kind = 'input') {
+      super(message);
+      this.name = 'ChessComInputError';
+      this.kind = kind;
+    }
+  }
+  return {
+    ChessComInputError,
+    fetchScanGames: async () => {
+      chesscom.calls++;
+      if (chesscom.mode === 'unknown') throw new ChessComInputError('Chess.com has no player called that.', 'unknown_username');
+      if (chesscom.mode === 'down') throw new Error('down');
+      return [];
+    },
+    fetchRecentChessComGame: async () => ({}),
+    listRecentChessComGames: async () => [],
+  };
+});
 
 vi.mock('../src/db/supabase.js', () => ({
   supabase: {
@@ -38,9 +63,16 @@ vi.mock('../src/db/supabase.js', () => ({
       for (const method of ['select', 'eq', 'neq', 'gte', 'order', 'limit', 'maybeSingle']) {
         builder[method] = (...args: unknown[]) => { log.push([method, args]); return builder; };
       }
+      builder.update = (payload: unknown) => {
+        log.push(['update', [payload]]);
+        if (table === 'profiles' && payload && typeof payload === 'object' && typeof (payload as { chesscom_username?: unknown }).chesscom_username === 'string') {
+          state.profileUsername = (payload as { chesscom_username: string }).chesscom_username;
+        }
+        return builder;
+      };
       builder.then = (ok: (v: unknown) => unknown, bad: (r: unknown) => unknown) => {
         let result: { data: unknown; error: null };
-        if (table === 'profiles') result = { data: { subscription_tier: state.tier }, error: null };
+        if (table === 'profiles') result = { data: { subscription_tier: state.tier, chesscom_username: state.profileUsername }, error: null };
         else if (table === 'scans' && log.some(e => e[0] === 'gte')) {
           const since = Date.parse(String(log.find(e => e[0] === 'gte')![1][1]));
           let scans = state.scans.filter(s => Date.parse(String(s.created_at)) >= since);
@@ -85,9 +117,23 @@ const row = (over: Record<string, unknown>) => ({
   ...over,
 });
 
+async function patch(body: unknown) {
+  for (let i = 0; i < 1000 && !routes.handlers['PATCH /api/me']; i++) {
+    const { promise, resolve } = Promise.withResolvers<void>();
+    setImmediate(resolve);
+    await promise;
+  }
+  let status = 200;
+  let payload: unknown;
+  const reply = { status(code: number) { status = code; return reply; }, send(value: unknown) { payload = value; return reply; } };
+  await (routes.handlers['PATCH /api/me'] as Handler)({ headers: { authorization: 'Bearer t' }, body }, reply);
+  return { status, body: payload as Record<string, any> };
+}
+
 describe('GET /api/me', () => {
   beforeEach(() => {
-    state.signedIn = true; state.tier = 'free'; state.rows = []; state.scans = [];
+    state.signedIn = true; state.tier = 'free'; state.profileUsername = null; state.rows = []; state.scans = [];
+    chesscom.mode = 'ok'; chesscom.calls = 0;
   });
 
   it('counts the weekly allowance like the submit quota and reports when a slot frees', async () => {
@@ -111,6 +157,15 @@ describe('GET /api/me', () => {
     expect(body.scan_allowance).toBeNull();
     expect(body.open_idea).toBeNull();
     expect(body.chesscom_username).toBe('me');
+    expect(body.chesscom_username_saved).toBe(false);
+  });
+
+  it('prefers the saved profile username over the last game', async () => {
+    state.profileUsername = 'saved_name';
+    state.rows = [row({})];
+    const { body } = await call();
+    expect(body.chesscom_username).toBe('saved_name');
+    expect(body.chesscom_username_saved).toBe(true);
   });
 
   it('does not count a scan example report toward the review allowance', async () => {
@@ -165,5 +220,37 @@ describe('GET /api/me', () => {
   it('rejects an unauthenticated caller', async () => {
     state.signedIn = false;
     expect((await call()).status).toBe(401);
+  });
+});
+
+describe('PATCH /api/me', () => {
+  beforeEach(() => {
+    state.signedIn = true; state.profileUsername = null; chesscom.mode = 'ok'; chesscom.calls = 0;
+  });
+
+  it('saves a known Chess.com username and GET returns it', async () => {
+    const saved = await patch({ chesscom_username: 'Agata16' });
+    expect(saved.status).toBe(200);
+    expect(saved.body.chesscom_username).toBe('agata16');
+    expect(state.profileUsername).toBe('agata16');
+    const { body } = await call();
+    expect(body.chesscom_username).toBe('agata16');
+    expect(body.chesscom_username_saved).toBe(true);
+  });
+
+  it('rejects an invalid username before asking Chess.com', async () => {
+    const res = await patch({ chesscom_username: 'no' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('invalid_username');
+    expect(chesscom.calls).toBe(0);
+    expect(state.profileUsername).toBeNull();
+  });
+
+  it('rejects an unknown Chess.com user', async () => {
+    chesscom.mode = 'unknown';
+    const res = await patch({ chesscom_username: 'not_a_real_player' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('unknown_username');
+    expect(state.profileUsername).toBeNull();
   });
 });

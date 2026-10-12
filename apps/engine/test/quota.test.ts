@@ -29,6 +29,7 @@ vi.mock('fastify', () => {
     log: { error: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn() },
     post: vi.fn((route: string, ...rest: unknown[]) => { routes.handlers[`POST ${route}`] = rest[rest.length - 1]; }),
     get: vi.fn((route: string, ...rest: unknown[]) => { routes.handlers[`GET ${route}`] = rest[rest.length - 1]; }),
+    patch: vi.fn(),
     listen: vi.fn(async () => {}),
     close: vi.fn(async () => {}),
   };

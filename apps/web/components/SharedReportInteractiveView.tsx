@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Chess } from 'chess.js';
 import type { Me, MomentReport, ReportDetail } from '../lib/api';
 import { GREMLINS } from '../lib/gremlins';
-import { assignSquareColors } from '../lib/squares';
+import { assignSquareColors, MARK } from '../lib/squares';
 import { captureEvent } from '../lib/posthog';
 import { ChessboardView } from './ChessboardView';
 import { Gremlin } from './Gremlin';
@@ -21,12 +21,16 @@ interface Attempt {
   from?: string;
   to?: string;
   line?: number;
+  /** Their move is on the board; the checked move has not replaced it. */
+  hold?: boolean;
+  /** Cut back to the original position before the checked move animates. */
+  snapping?: boolean;
 }
 
 interface Frame { fen: string; san: string; from: string; to: string; }
 
-const BLUE = '#2f6bff';
-const RED = '#ff4d6d';
+const REVEAL_PAUSE_MS = 700;
+const REVEAL_CUT_MS = 70;
 
 function stripSan(move: string): string {
   return move.replace(/^\d+\.+\s*/, '').trim();
@@ -79,6 +83,45 @@ function resultLabel(result?: string): string | null {
   if (result === '0-1') return 'Black won';
   if (result === '1/2-1/2') return 'Draw';
   return null;
+}
+
+function formatTimeControl(raw: string | null): string | null {
+  if (!raw || raw === '-' || raw === '?') return null;
+  if (/^1\/\d+$/.test(raw)) return 'Daily';
+  const plus = raw.match(/^(\d+)\+(\d+)$/);
+  if (plus) {
+    const base = Number(plus[1]);
+    const mins = base >= 60 && base % 60 === 0 ? String(base / 60) : `${base}s`;
+    return `${mins}+${plus[2]}`;
+  }
+  if (/^\d+$/.test(raw)) {
+    const seconds = Number(raw);
+    if (seconds >= 60 && seconds % 60 === 0) return `${seconds / 60} min`;
+    if (seconds > 60) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    return `${seconds}s`;
+  }
+  return raw;
+}
+
+/** Last few moves before this position, from the report PGN. */
+function leadIn(pgn: string | undefined, fenBefore: string, count = 4): string | null {
+  if (!pgn) return null;
+  try {
+    const game = new Chess();
+    game.loadPgn(pgn);
+    const history = game.history({ verbose: true });
+    const key = fenBefore.split(' ').slice(0, 4).join(' ');
+    const index = history.findIndex(move => move.before.split(' ').slice(0, 4).join(' ') === key);
+    if (index <= 0) return null;
+    const parts: string[] = [];
+    for (let i = Math.max(0, index - count); i < index; i++) {
+      const n = Math.floor(i / 2) + 1;
+      parts.push(i % 2 === 0 ? `${n}. ${history[i].san}` : `${n}…${history[i].san}`);
+    }
+    return parts.join(' ');
+  } catch {
+    return null;
+  }
 }
 
 function lineFrames(moment: MomentReport): Frame[] {
@@ -138,6 +181,9 @@ export function SharedReportInteractiveView({
   const checksSent = useRef(new Set<number>());
   const stepperRef = useRef<HTMLDivElement>(null);
   const focusStepper = useRef(false);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const momentsRef = useRef(moments);
+  momentsRef.current = moments;
 
   useEffect(() => {
     if (jumped.current || focusPly == null) return;
@@ -151,8 +197,9 @@ export function SharedReportInteractiveView({
   const moment = moments[safe];
   const attempt: Attempt = moment ? tries[moment.ply] ?? { kind: 'prompt' } : { kind: 'prompt' };
   const revealed = attempt.kind !== 'prompt';
+  const showWhy = revealed && !attempt.hold && !attempt.snapping;
   const frames = useMemo(() => (moment ? lineFrames(moment) : []), [moment]);
-  const line = Math.min(attempt.line ?? (frames.length > 1 ? 1 : 0), Math.max(0, frames.length - 1));
+  const line = Math.min(attempt.line ?? 0, Math.max(0, frames.length - 1));
   const best = moment ? stripSan(moment.best_move) : '';
   const played = moment ? stripSan(moment.played) : '';
   const side = moment?.fen_before.split(' ')[1] === 'b' ? 'Black' : 'White';
@@ -163,21 +210,21 @@ export function SharedReportInteractiveView({
   const moveLabel = moment ? `${moment.move_number}${side === 'Black' ? '…' : '.'}${played}` : '';
 
   const squareColors = useMemo(() => {
-    if (!revealed || !moment) return {};
+    if (!showWhy || !moment) return {};
     return assignSquareColors([moment.probable_thought, moment.what_actually_happens, moment.why_better ?? '']);
-  }, [revealed, moment]);
+  }, [showWhy, moment]);
 
   useEffect(() => { setTyped(''); setNote(''); setFocusSquare(null); }, [moment?.ply]);
   useEffect(() => {
     const want = land.current;
     if (!want) return;
     land.current = null;
-    if (want === 'input') moveRef.current?.focus();
-    else (outcomeRef.current ?? ideaRef.current ?? promptRef.current)?.focus();
+    if (want === 'input') moveRef.current?.focus({ preventScroll: true });
+    else (outcomeRef.current ?? ideaRef.current ?? promptRef.current)?.focus({ preventScroll: true });
   });
 
   useEffect(() => {
-    if (!moment || !revealed || !habit) return;
+    if (!moment || !showWhy || !habit) return;
     if (checksSent.current.has(moment.ply)) return;
     checksSent.current.add(moment.ply);
     captureEvent('check_revealed', {
@@ -186,7 +233,7 @@ export function SharedReportInteractiveView({
       concept_id: conceptId,
       is_demo: mode === 'demo',
     });
-  }, [moment, revealed, habit, conceptId, report.id, mode]);
+  }, [moment, showWhy, habit, conceptId, report.id, mode]);
 
   useEffect(() => {
     if (!focusStepper.current) return;
@@ -194,6 +241,45 @@ export function SharedReportInteractiveView({
     const buttons = stepperRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
     buttons?.[buttons.length - 1]?.focus();
   });
+
+  function clearReveal() {
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+    revealTimer.current = null;
+  }
+
+  useEffect(() => () => clearReveal(), [moment?.ply]);
+
+  function playChecked(ply: number) {
+    clearReveal();
+    const current = momentsRef.current.find(item => item.ply === ply);
+    if (!current) return;
+    const bestSan = stripSan(current.best_move);
+    setTries(prev => {
+      const attempt = prev[ply];
+      if (!attempt?.hold) return prev;
+      return { ...prev, [ply]: { ...attempt, fen: current.fen_before, from: undefined, to: undefined, snapping: true } };
+    });
+    revealTimer.current = setTimeout(() => {
+      let fen = current.fen_before;
+      let from: string | undefined;
+      let to: string | undefined;
+      try {
+        const game = new Chess(current.fen_before);
+        const move = game.move(bestSan);
+        if (move) { fen = game.fen(); from = move.from; to = move.to; }
+      } catch { /* The sentence still names the move we checked. */ }
+      setTries(prev => {
+        const attempt = prev[ply];
+        if (!attempt?.snapping && !attempt?.hold) return prev;
+        return { ...prev, [ply]: { ...attempt, fen, from, to, hold: false, snapping: false } };
+      });
+    }, REVEAL_CUT_MS);
+  }
+
+  function armReveal(ply: number) {
+    clearReveal();
+    revealTimer.current = setTimeout(() => playChecked(ply), REVEAL_PAUSE_MS);
+  }
 
   function trackTry(kind: Kind, method: 'drag' | 'tap' | 'type' | 'show_me') {
     if (!moment) return;
@@ -210,24 +296,22 @@ export function SharedReportInteractiveView({
   function commit(san: string, fen: string, from: string | undefined, to: string | undefined, method: 'drag' | 'tap' | 'type') {
     if (!moment) return;
     const kind = classify(san, moment);
-    let next: Attempt = { kind, fen, san, from, to, line: kind === 'played' && frames.length > 1 ? 1 : 0 };
-    // A missed chance lost nothing: show the win, the same way Show me does.
-    if (kind === 'other' || (kind === 'played' && conceptId === 'missed_chance')) {
-      try {
-        const game = new Chess(moment.fen_before);
-        const move = game.move(best);
-        if (move) next = { kind, fen: game.fen(), san, from: move.from, to: move.to };
-      } catch { /* Keep the move they played; the sentence names the one we checked. */ }
-    }
+    // Their move stays where it landed. If it isn't the one we checked, show that
+    // one afterwards, played from the original position — never by swapping now.
+    const hold = kind === 'other' || (kind === 'played' && conceptId === 'missed_chance');
+    const next: Attempt = { kind, fen, san, from, to, line: 0, hold };
     setTries(prev => ({ ...prev, [moment.ply]: next }));
     setNote('');
     setTyped('');
     land.current = 'result';
     trackTry(kind, method);
+    if (hold) armReveal(moment.ply);
+    else clearReveal();
   }
 
   function showMe() {
     if (!moment) return;
+    clearReveal();
     try {
       const game = new Chess(moment.fen_before);
       const move = game.move(best);
@@ -277,6 +361,7 @@ export function SharedReportInteractiveView({
 
   function resetTry() {
     if (!moment) return;
+    clearReveal();
     setTries(prev => ({ ...prev, [moment.ply]: { kind: 'prompt' } }));
     setNote('');
     setTyped('');
@@ -298,6 +383,7 @@ export function SharedReportInteractiveView({
   }
 
   function go(next: number) {
+    clearReveal();
     setIndex(next);
     onMoment?.(next);
     const ply = moments[next]?.ply;
@@ -308,59 +394,78 @@ export function SharedReportInteractiveView({
     land.current = 'result';
   }
 
-  const showPlayedLine = attempt.kind === 'played' && conceptId !== 'missed_chance';
+  const showPlayedLine = attempt.kind === 'played' && conceptId !== 'missed_chance' && !attempt.hold && !attempt.snapping;
   const boardFen = !moment ? ''
     : showPlayedLine ? (frames[line]?.fen ?? moment.fen_after)
     : attempt.kind === 'prompt' ? moment.fen_before
     : (attempt.fen ?? moment.fen_before);
 
-  const arrow = !moment || attempt.kind === 'prompt' ? []
+  const arrow = !moment || attempt.kind === 'prompt' || attempt.snapping ? []
     : showPlayedLine && frames[line]
-      ? [{ startSquare: frames[line].from, endSquare: frames[line].to, color: RED }]
+      ? [{ startSquare: frames[line].from, endSquare: frames[line].to, color: MARK.played }]
       : attempt.from && attempt.to
-        ? [{ startSquare: attempt.from, endSquare: attempt.to, color: BLUE }]
+        ? [{ startSquare: attempt.from, endSquare: attempt.to, color: attempt.hold ? MARK.played : MARK.checked }]
         : [];
 
-  const outcome = attempt.kind === 'checked' ? 'That’s the move we checked.'
+  const outcome = attempt.hold ? `${attempt.san} is on the board. The move we checked is ${best}.`
+    : attempt.kind === 'checked' ? 'That’s the move we checked.'
     : attempt.kind === 'played' && conceptId === 'missed_chance' ? `That’s what ${mode === 'owner' ? 'you' : side} played. The win was ${best}.`
     : attempt.kind === 'played' ? `The line after ${played}.`
     : attempt.kind === 'other' ? `Different from the line we checked. We only verified ${best}.`
     : attempt.kind === 'shown' ? `The move we checked is ${best}.`
     : '';
 
-  const players = [report.player_name, report.opponent_name].filter(Boolean).join(' vs ');
+  const pgn = report.source_games?.pgn;
+  const whiteName = pgnHeader(pgn, 'White') || (report.player_color === 'black' ? report.opponent_name : report.player_name);
+  const blackName = pgnHeader(pgn, 'Black') || (report.player_color === 'black' ? report.player_name : report.opponent_name);
+  const whiteElo = pgnHeader(pgn, 'WhiteElo');
+  const blackElo = pgnHeader(pgn, 'BlackElo');
+  const timeClass = pgnHeader(pgn, 'TimeClass');
+  const clock = formatTimeControl(report.time_control || pgnHeader(pgn, 'TimeControl'));
+  const timeLabel = [timeClass ? timeClass.charAt(0).toUpperCase() + timeClass.slice(1) : null, clock].filter(Boolean).join(' · ') || null;
+  const { gameUrl } = chesscomIdentity(report, null);
   const when = reportWhen(report, mode);
   const result = resultLabel(report.result);
+  const arose = moment ? leadIn(pgn, moment.fen_before) : null;
   const headline = report.summary?.headline || (complete ? 'This game.' : 'Reading this game.');
   const noteId = moment ? `try-note-${moment.ply}` : 'try-note';
-  const boardMove = attempt.kind === 'prompt' ? `${side} to move` : showPlayedLine ? (frames[line]?.san ?? played) : best;
+  const boardMove = attempt.hold ? (attempt.san ?? '')
+    : attempt.kind === 'prompt' ? ''
+    : showPlayedLine ? (frames[line]?.san ?? played)
+    : best;
   const focusedMoment = focusPly == null ? undefined : moments.find(item => item.ply === focusPly);
   const focusedConceptId = focusedMoment?.concept?.id ?? focusedMoment?.concept_id ?? null;
   const focusedGremlin = focusedMoment?.concept?.gremlin ?? (focusedConceptId ? GREMLINS[focusedConceptId]?.name : null);
   const scanExample = report.hero_variant === 'scan' && focusPly != null && mode === 'owner' && Boolean(focusedMoment);
   const hideList = scanExample && !othersOpen;
-  const focusedRevealed = focusedMoment ? (tries[focusedMoment.ply]?.kind ?? 'prompt') !== 'prompt' : false;
+  const focusedAttempt = focusedMoment ? tries[focusedMoment.ply] : undefined;
+  const focusedRevealed = Boolean(focusedAttempt && focusedAttempt.kind !== 'prompt' && !focusedAttempt.hold && !focusedAttempt.snapping);
   const title = scanExample && focusedGremlin ? `Where ${focusedGremlin} showed up.` : headline;
+  const guide = !moment ? 1 : showWhy ? 2 : 1;
+  const guideState = (n: number) => n === guide ? 'current' : n < guide ? 'done' : n === 3 && guide === 2 && habit ? 'next' : 'upcoming';
 
   return (
     <article className="page report">
       <header className="report-head">
         <div className="report-head-copy">
-          <div className="report-kicker">
+          <h1 className="h2 report-title">{title}</h1>
+          <div className="report-ident">
             <p className="report-meta">
               {mode === 'demo' && <span className="tag">Sample</span>}
-              {players && <span translate="no">{players}</span>}
-              {result && <span>{result}</span>}
+              <span className="report-side" data-side="white" translate="no">{['White', whiteName, whiteElo ? `(${whiteElo})` : null].filter(Boolean).join(' ')}</span>
+              <span className="report-side" data-side="black" translate="no">{['Black', blackName, blackElo ? `(${blackElo})` : null].filter(Boolean).join(' ')}</span>
+              {result && <span>{result}{report.result ? ` ${report.result}` : ''}</span>}
+              {timeLabel && <span>{timeLabel}</span>}
               {when && <span>{when}</span>}
+              {gameUrl && <a href={gameUrl} target="_blank" rel="noreferrer">Chess.com</a>}
             </p>
             {conceptId && gremlinName && (
               <p className="report-badge" data-concept={conceptId}>
-                <Gremlin concept={conceptId} size={48} priority />
+                <Gremlin concept={conceptId} size={28} priority />
                 <span>{gremlinName}</span>
               </p>
             )}
           </div>
-          <h1 className="h2 report-title">{title}</h1>
         </div>
         {report.share_id && (
           <div className="report-share">
@@ -371,13 +476,28 @@ export function SharedReportInteractiveView({
         )}
       </header>
 
+      {moment && (
+        <div className="report-guide-row">
+          <ol className="report-guide" aria-label="How this review works">
+            {([[1, 'Find the move'], [2, 'See why'], [3, 'Your check']] as const).map(([n, label]) => (
+              <li key={n} data-state={guideState(n)} aria-current={n === guide ? 'step' : undefined}>{n} {label}</li>
+            ))}
+          </ol>
+          {moments.length > 1 && !hideList && <p className="report-count" aria-live="polite">Moment {safe + 1} of {moments.length}</p>}
+        </div>
+      )}
+
       {progressNote && <p className="report-status" role="status">{progressNote}</p>}
-      {moments.length > 1 && !hideList && <p className="report-count" aria-live="polite">Moment {safe + 1} of {moments.length}</p>}
 
       {moment ? (
         <div className="report-grid">
           <div className="report-board-col">
-            <p className="report-board-label" translate="no">{boardMove}</p>
+            <p className="report-where" translate="no">
+              <span>Move {moment.move_number}</span>
+              <span>{side} to move</span>
+              {boardMove && <span className="move">{boardMove}</span>}
+              {arose && <span>After {arose}</span>}
+            </p>
             <ChessboardView
               fen={boardFen}
               orientation={moment.player_color || report.player_color || 'white'}
@@ -385,6 +505,7 @@ export function SharedReportInteractiveView({
               arrows={arrow}
               markedSquares={squareColors}
               focusSquare={focusSquare}
+              animationMs={attempt.snapping ? 0 : undefined}
               onPieceDrop={attempt.kind === 'prompt' ? onDrop : undefined}
             />
             {showPlayedLine && frames.length > 0 && (
@@ -406,15 +527,12 @@ export function SharedReportInteractiveView({
               <>
                 <h2 ref={promptRef} tabIndex={-1} className="h3">Your move.</h2>
                 <p className="lede report-context">
-                  In the game, {mode === 'owner' ? 'you' : side} played <span className="move" translate="no">{moveLabel}</span> here.
                   {conceptId === 'missed_chance' ? (
-                    <>{' '}{mode === 'owner' ? 'You' : side} had a win. Find it: tap a piece, or type the move.</>
+                    <>{mode === 'owner' ? 'You' : side} had a win here.</>
                   ) : (
-                    <>
-                      {gremlinName ? <> That let <strong translate="no">{gremlinName}</strong> in.</> : null}
-                      {' '}Find a better move: tap a piece, or type the move.
-                    </>
+                    <>In the game, {mode === 'owner' ? 'you' : side} played <span className="move" translate="no">{moveLabel}</span>.</>
                   )}
+                  {' '}Drag a piece, or tap it and then the square.
                 </p>
                 <form className="report-try-form" onSubmit={onType}>
                   <label className="report-try-label" htmlFor={noteId + '-input'}>
@@ -439,6 +557,12 @@ export function SharedReportInteractiveView({
                   <button type="button" className="btn btn--quiet" onClick={showMe}>Show me</button>
                 </form>
                 {note && <p id={noteId} className="field-note" data-tone="error" role="alert">{note}</p>}
+              </>
+            ) : attempt.hold ? (
+              <>
+                <h2 ref={ideaRef} tabIndex={-1} className="h3">Your move landed.</h2>
+                <p className="lede">It stays where you put it. The move we checked was <span className="move" translate="no">{best}</span>, from the same position.</p>
+                <button type="button" className="btn" onClick={() => moment && playChecked(moment.ply)}>See the move we checked</button>
               </>
             ) : (
               <>
@@ -466,7 +590,7 @@ export function SharedReportInteractiveView({
         </div>
       ) : null}
 
-      {revealed && habit && (
+      {showWhy && habit && (
         <section className="report-check" data-concept={conceptId ?? undefined} aria-label="Your check for the next game">
           <h2 className="h3">Your check for the next game.</h2>
           <p className="big">{habit}</p>

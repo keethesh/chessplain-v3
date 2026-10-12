@@ -227,18 +227,30 @@ textarea.input { height: auto; min-height: 140px; padding: 16px 24px; border-rad
 .wordmark__mark { width: 1.75em; height: 1.75em; flex: none; margin-block: -0.4em; }
 .nav { display: flex; align-items: center; gap: clamp(12px, 2vw, 28px); }
 .nav__link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; font-size: 16px; text-decoration: none; white-space: nowrap; }
-.nav__link[aria-current="page"] { text-decoration: underline; }
+.nav__link[aria-current="page"] {
+  text-decoration: none;
+  background: var(--butter);
+  box-shadow: inset 0 0 0 2px var(--ink);
+  border-radius: 999px;
+  padding-inline: 12px;
+}
 @media (hover: hover) and (pointer: fine) { .nav__link:hover { text-decoration: underline; } }
 .nav__cta-short { display: none; }
 @media (max-width: 640px) {
   .nav__link--secondary { display: none; }
+  .nav--app .nav__link--secondary { display: inline-flex; }
+  .nav--app { gap: 2px; }
+  .nav--app .nav__link { font-size: 14px; padding-inline: 8px; }
   .wordmark { font-size: 20px; }
 }
 @media (max-width: 420px) {
   .nav__cta-long { display: none; }
   .nav__cta-short { display: inline; }
-  .wordmark { gap: 4px; }
+  .wordmark { gap: 4px; font-size: 16px; }
   .wordmark__mark { width: 1.5em; height: 1.5em; }
+  .nav--app { gap: 0; }
+  .nav--app .nav__link { font-size: 13px; padding-inline: 6px; }
+  .site-header .page { padding-inline: 12px; }
 }
 @media (max-width: 360px) {
   .wordmark { font-size: 16px; }
@@ -246,7 +258,7 @@ textarea.input { height: auto; min-height: 140px; padding: 16px 24px; border-rad
   .btn--sm { padding-inline: 12px; }
 }
 
-.site-footer { border-top: var(--line); margin-top: clamp(48px, 8vw, 120px); }
+.site-footer { border-top: var(--line); margin-top: 32px; }
 .site-footer__inner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 32px; padding-block: 24px; font-size: 15px; }
 .site-footer__links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .site-footer__links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; text-decoration: none; }

@@ -269,7 +269,7 @@ function ReportNext({ report, id }: { report: ReportDetail; id: string }) {
     <section className="report-end">
       {username ? (
         <>
-          <h2 className="h2">Your next games.</h2>
+          <h2 className="h3">Your next games.</h2>
           {games === null && !error && (
             <div className="report-skeletons" role="status" aria-label="Loading recent games">
               <div className="skeleton" /><div className="skeleton" /><div className="skeleton" />

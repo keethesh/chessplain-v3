@@ -257,14 +257,26 @@ export interface Me {
   /** Scans; null for premium. */
   scan_allowance: Allowance | null;
   chesscom_username: string | null;
+  /** True when `profiles.chesscom_username` is set. False when the name is only a fallback. */
+  chesscom_username_saved: boolean;
   open_idea: OpenIdea | null;
   scans: Array<{ id: string; created_at: string; status: string; top_concept_id: ConceptId | null; games_with_concept: number }>;
   reviews: MeReview[];
   patterns: Array<{ concept: ConceptInfo; count: number }>;
 }
 
+export const CHESSCOM_USERNAME_RE = /^[a-zA-Z0-9_-]{3,25}$/;
+
 export function getMe(token: string): Promise<Me> {
   return request('/api/me', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
+}
+
+export function updateMe(token: string, chesscom_username: string): Promise<{ chesscom_username: string }> {
+  return request('/api/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ chesscom_username }),
+  });
 }
 
 function authHeaders(token?: string | null): Record<string, string> {

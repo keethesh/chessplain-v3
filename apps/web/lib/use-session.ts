@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { getMe, type Me } from './api';
+import { getMe, updateMe, type Me } from './api';
 
 /** Current Supabase session; `ready` is false until the first check finishes. */
 export function useSession() {
@@ -35,6 +35,13 @@ export function safeNextPath(value: string | null | undefined): string {
 let cached: { token: string; at: number; promise: Promise<Me> } | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
+
+/** Save the Chess.com username on the profile, then refresh every `useMe`. */
+export async function saveChesscomUsername(token: string, username: string) {
+  const saved = await updateMe(token, username);
+  invalidateMe();
+  return saved;
+}
 
 /** Call after anything that changes the account (a new review, a plan change); mounted `useMe` hooks refetch. */
 export function invalidateMe() {
