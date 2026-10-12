@@ -12,14 +12,16 @@ reasoning.
 Deployed state verified 2026-10-12 (Phase 1 pivot is live):
 - `scans` table applied to production with `supabase db query --linked -f
   supabase/migrations/20261011000000_scans.sql` (RLS on, no policies, 5 indexes).
-- Engine commit `2ff017a`, prompt `2026-10-12.3`, `openai/gpt-6-luna` through
+- Engine commit `1c49c54` (adds `PATCH /api/me` for the saved username), prompt `2026-10-12.3`, `openai/gpt-6-luna` through
   OpenRouter (key: $10 limit, expires 2026-12-25; account topped up 2026-10-12).
   `verify-deployment.mjs`: 25/25 READY. A real production scan (Agata16) read
   10/10 games in 90 s; its example report completed with 3 moments, no fallback
   text, and the live scan page rendered it on a 390 px screen.
-- Web Worker version `08701496`: the scan front door, gremlin site, darker
-  board, a scan wait that gives the duration (a first scan takes ~90 s), can be
-  closed, and tallies gremlins so far; the Pawn Gremlin logo and favicon.
+- Web Worker version `540591bd`: the scan front door, gremlin site, darker
+  board, scan wait with duration and running tally, the Pawn Gremlin logo, one
+  job per page (dashboard home with one-time username onboarding, settings-only
+  account), and the analysis page with game context, step guide and fixed
+  animations.
 - The previous deploy (engine `3cc9125`, web `a0909c6d`, verified 2026-10-09)
   is superseded.
 
