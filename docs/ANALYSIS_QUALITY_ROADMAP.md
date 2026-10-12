@@ -351,10 +351,16 @@ Held-out per concept after the change (precision, recall): missed chance 16/19,
 16/24; hanging piece 6/7, 6/9; double attack 6/6, 6/10; weak back rank 3/3,
 3/4; missed mate threat 2/2, 2/4; losing exchange 1/1, 1/2.
 
-The gate passes on precision and fails on accuracy, because of recall: the
-rules read the stored lines (3–4 moves plus captures), so wins and losses that
-land later stay `null`. The old rules scored 0.980 on the dev set but 0.667
-on fresh games, so the earlier figure was optimistic.
+On fresh games the gate fails on both counts. Held-out precision is 34/38
+(89%; 95% range 76–96%), one tag short of 90%; the pooled 59/63 (0.937) passes
+only because it includes the 25/25 on the dev set the rules were tuned on.
+`benchmark:concepts` prints the pooled figures; the held-out rows are the ids
+containing `-h<N>-`. Per concept, only the missed chance has enough fresh tags
+to say much (16/19, 84%; 95% range 62–94%); the other five have 1–7 each.
+Accuracy fails because of recall: the rules read the stored lines (3–4 moves
+plus captures), so wins and losses that land later stay `null`. The old rules
+scored 0.980 on the dev set but 0.667 on fresh games, so the earlier figure was
+optimistic.
 
 The four held-out errors all come from that line length. In two missed
 chances the player stayed clearly winning (+11.7 and +3.7 after the move) and
@@ -471,7 +477,7 @@ fixtures hold none of the 6 labelled moments that failed before, so this is
 evidence that the fact is stated and consistent, not a re-run of those
 failures; the netted wording ("a knight and a pawn for nothing" when a bishop
 was taken and a bishop given back) is true but may read oddly. Classification
-is unchanged (precision 0.937, accuracy 0.844).
+is unchanged (pooled precision 0.937, accuracy 0.844; fresh games 34/38).
 
 Two more code-side checks landed with it: the severity label is now
 `candidateType` from code on every return path of `explainMoment` (the model's

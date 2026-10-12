@@ -399,11 +399,12 @@ Built and committed, not deployed (see the deploy order in
 
 - Concept tags (2026-10-12, six concepts: hanging piece, double attack, missed
   mate threat, weak back rank, losing exchange, and the player's own missed
-  chance): 0.937 precision and 0.844 overall accuracy over 212 labelled
-  real moments; on 114 fresh held-out moments, 34/38 precision and 0.807
-  accuracy, up from 16/18 and 0.667 with the five-concept rules (details in
-  [the analysis roadmap](ANALYSIS_QUALITY_ROADMAP.md)). Precision meets the 90%
-  bar; accuracy does not, because many moments stay untagged.
+  chance): on 114 fresh held-out moments, precision 34/38 (89%; 95% range
+  76–96%) and accuracy 0.807, up from 16/18 and 0.667 with the five-concept
+  rules. Both are under the 90% bar. The pooled 0.937 and 0.844 over all 212
+  labelled moments include the 98 the rules were tuned on. The missed chance
+  is the weakest tag (16/19 fresh); details in
+  [the analysis roadmap](ANALYSIS_QUALITY_ROADMAP.md).
 - Scan repeat rate (13 players, 770–1687, scanned like production): a gremlin
   in 2+ of the last 10 games for 12 of 13 players (10 of 13 with the
   five-concept rules); 33% of turning points tagged (18% before). The missed

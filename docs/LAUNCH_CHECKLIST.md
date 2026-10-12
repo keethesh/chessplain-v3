@@ -29,12 +29,13 @@ the commits above. Before deploying, in this order:
 3. Deploy the web Worker. Prompt `2026-10-12.3` adds the code-checked
    missed-chance fact, grounded `why_better`, and neutral intention text; see
    Analysis quality.
-4. Concept tags (six concepts since 2026-10-12): precision passes (0.937 over
-   212 labelled moments; 34/38 on 114 fresh held-out moments), but overall
-   accuracy is 0.844, under the 90% bar, because the rules leave many
-   moments untagged. The owner decides whether precision is the bar (see the
-   analysis roadmap). Rerun `pnpm --filter @chessplain/engine benchmark:concepts`
-   after any change to `concepts.ts`.
+4. Concept tags (six concepts since 2026-10-12) are under the 90% bar on
+   fresh games: precision 34/38 (89%; 95% range 76–96%) and accuracy 0.807
+   on 114 held-out moments. The pooled 0.937 and 0.844 over all 212 include
+   the 98 moments the rules were tuned on. The missed chance is the weakest
+   tag (16/19 fresh). The owner decides the bar (see the analysis roadmap).
+   Rerun `pnpm --filter @chessplain/engine benchmark:concepts` after any
+   change to `concepts.ts`; it prints the pooled figures.
 5. Then the held relaunch email (section 0) can go, rewritten for the scan.
 
 Earlier rows keep dated evidence where it is still useful; don't treat old
