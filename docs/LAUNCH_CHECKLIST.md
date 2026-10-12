@@ -17,8 +17,9 @@ Deployed state verified 2026-10-12 (Phase 1 pivot is live):
   `verify-deployment.mjs`: 25/25 READY. A real production scan (Agata16) read
   10/10 games in 90 s; its example report completed with 3 moments, no fallback
   text, and the live scan page rendered it on a 390 px screen.
-- Web Worker version `9c744a0c`: the scan front door, gremlin site, darker
-  board.
+- Web Worker version `ea61313a`: the scan front door, gremlin site, darker
+  board, and a scan wait that gives the duration (a first scan takes ~90 s),
+  can be closed, and tallies gremlins so far.
 - The previous deploy (engine `3cc9125`, web `a0909c6d`, verified 2026-10-09)
   is superseded.
 
