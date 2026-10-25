@@ -14,6 +14,17 @@ not claims about every host.
 
 Within one process, WORKER_CONCURRENCY job loops (default 2) share the engine pool; jobs spend much of their time waiting on the LLM, so two loops overlap one game's LLM wait with another's Stockfish work. Multiple queue workers are safe: jobs are claimed by compare-and-swap, and only leases older than STALE_LEASE_MINUTES are reclaimed, so a replica that restarts does not steal work another replica is actively running. The remaining limit is CPU — ENGINE_POOL_SIZE × ENGINE_THREADS per replica must fit the host's cores. A second **API** process is not yet safe: the free-quota count-then-insert is serialized by an in-process lock (`withQuotaLock` in `src/http/server.ts`), so two API processes reopen the parallel-submit race. Move that lock to a Postgres advisory lock before scaling the API out.
 
+Queue rows remain durable in Postgres. Successful local submissions, report
+retries, scan example-report inserts and lease recovery wake idle worker loops
+in-process. Loops drain available work, then wait for a wake or a 30-second
+recovery check. A generation captured before each queue read prevents losing a
+wake while that read is in flight. Startup checks and recovery polling discover
+externally inserted jobs and retries whose `next_attempt_at` has become due;
+these can wait up to 30 seconds. Shutdown wakes sleeping loops immediately.
+Local hints do not cross processes; keep the recovery checks if workers are
+split out, and add Postgres `LISTEN/NOTIFY` only when cross-process immediate
+wakeups are needed.
+
 Start with:
 - ENGINE_POOL_SIZE=2 on a 2-vCPU VPS; 4 if at least 4 usable CPU cores are available.
 - ENGINE_THREADS=1 per Stockfish process.
@@ -120,7 +131,15 @@ location / {
 }
 ```
 
-The application sends heartbeat events during analysis. Disable SSE buffering. Configure valid TLS separately. If another CDN sits before nginx, configure trusted real-IP handling explicitly; otherwise all users can appear to share the proxy's quota.
+Report SSE connections read a persisted snapshot on connect, refresh after
+successful local report writes, and recover missed or external writes every
+30 seconds. A change during a read schedules another read before the stream
+idles. Reconnecting reconstructs progress from the database; there is no
+in-memory report cache. Streams send a ping every 15 seconds and release their
+subscriptions and timers on disconnect or completion. Disable SSE buffering.
+Configure valid TLS separately. If another CDN sits before nginx, configure
+trusted real-IP handling explicitly; otherwise all users can appear to share
+the proxy's quota.
 
 ## Database, auth and billing
 

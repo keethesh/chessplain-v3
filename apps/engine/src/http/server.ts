@@ -8,10 +8,13 @@ import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
 import { enginePool } from '../uci/engine-pool.js';
 import { startWorker, stopWorker } from '../queue/worker.js';
+import { wakeWorkers } from '../queue/wakeup.js';
 import { ChessComInputError, fetchRecentChessComGame, fetchScanGames, listRecentChessComGames, type ChessComGameResult } from '../analysis/chesscom.js';
 import { CONCEPT_IDS, conceptInfo, type ConceptId } from '../analysis/concepts.js';
 import type { Checkin, ScanGame, ScanResult } from '../analysis/scan.js';
 import { enqueuePendingReport } from '../db/enqueue-report.js';
+import { notifyReportChanged } from '../queue/report-events.js';
+import { streamReport } from './report-stream.js';
 
 interface RawBodyRequest extends FastifyRequest {
   rawBody?: Buffer;
@@ -344,6 +347,8 @@ async function bootstrap() {
             fastify.log.error(requeueErr, 'Failed to re-queue game_analyses');
             return reply.status(500).send({ error: 'Database error re-queuing game analysis' });
           }
+          wakeWorkers();
+          notifyReportChanged(requeued.id);
           return reply.status(201).send({ id: requeued.id, share_id: requeued.share_id, status: requeued.status });
         }
 
@@ -432,67 +437,22 @@ async function bootstrap() {
 
     reply.raw.flushHeaders?.();
 
-    let lastStatus = '';
-    const sentPlies = new Set<number>();
-    let isFinished = false;
-
-    let lastPing = Date.now();
-    let polling = false;
-    const interval = setInterval(async () => {
-      if (polling || reply.raw.destroyed) return;
-      polling = true;
-      try {
-        if (Date.now() - lastPing > 15000) {
-          // Progress event (not an SSE comment): re-arms the client’s 60s stall
-          // watchdog during long silent stages and keeps proxies from idling
-          reply.raw.write('data: {"type":"ping"}\n\n');
-          lastPing = Date.now();
-        }
-        const { data: analysis, error } = await supabase
+    const dispose = streamReport({
+      id,
+      fetchRow: async () => {
+        const { data, error } = await supabase
           .from('game_analyses')
           .select('id, status, moments, summary, completed_at')
           .eq('id', id)
           .single();
-
-        if (error || !analysis) {
-          reply.raw.write(`data: ${JSON.stringify({ type: 'error', error: 'Report not found' })}\n\n`);
-          clearInterval(interval);
-          reply.raw.end();
-          return;
-        }
-
-        if (analysis.status !== lastStatus) {
-          lastStatus = analysis.status;
-          reply.raw.write(`data: ${JSON.stringify({ type: 'stage', status: analysis.status })}\n\n`);
-        }
-
-        const moments = Array.isArray(analysis.moments) ? analysis.moments : [];
-        for (const moment of moments) {
-          if (sentPlies.has(moment.ply)) continue;
-          reply.raw.write(`data: ${JSON.stringify({ type: 'moment', moment, count: moments.length })}\n\n`);
-          sentPlies.add(moment.ply);
-        }
-
-        if (analysis.status === 'completed') {
-          reply.raw.write(`data: ${JSON.stringify({ type: 'done', report: analysis })}\n\n`);
-          isFinished = true;
-          clearInterval(interval);
-          reply.raw.end();
-        } else if (analysis.status === 'failed') {
-          reply.raw.write(`data: ${JSON.stringify({ type: 'failed', error: 'Analysis processing failed' })}\n\n`);
-          isFinished = true;
-          clearInterval(interval);
-          reply.raw.end();
-        }
-      } catch (err) {
-        console.error('[SSE] Polling error:', err);
-      } finally {
-        polling = false;
-      }
-    }, 500);
+        return { data, error };
+      },
+      write: (chunk) => { reply.raw.write(chunk); },
+      end: () => { reply.raw.end(); },
+    });
 
     reply.raw.on('close', () => {
-      clearInterval(interval);
+      dispose();
       clearTimeout(lifetime);
       const remaining = (streamsByIp.get(request.ip) ?? 1) - 1;
       if (remaining > 0) streamsByIp.set(request.ip, remaining);
@@ -781,6 +741,7 @@ async function bootstrap() {
         fastify.log.error(error, 'Failed to insert scan');
         return reply.status(500).send({ error: 'Database error creating scan' });
       }
+      wakeWorkers();
       return reply.status(201).send(scan);
     };
 

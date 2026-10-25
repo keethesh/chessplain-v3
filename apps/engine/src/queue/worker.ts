@@ -1,4 +1,3 @@
-import { setTimeout as sleep } from 'node:timers/promises';
 import { PostHog } from 'posthog-node';
 import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
@@ -9,6 +8,8 @@ import { PROMPT_VERSION } from '../analysis/prompts.js';
 import { EloBand } from '../types.js';
 import { parsePgn } from '../analysis/pgn.js';
 import { processNextScan, reclaimStaleScanLeases } from './scan-worker.js';
+import { notifyReportChanged } from './report-events.js';
+import { wakeGeneration, wakeWorkers, waitForWake } from './wakeup.js';
 
 // Analytics is optional: with no key configured, posthog-node throws on
 // construction, so skip it rather than stop the worker from booting.
@@ -79,6 +80,7 @@ export async function processNextJob(): Promise<boolean> {
     return false;
   }
 
+  notifyReportChanged(analysis.id);
   console.log(`[Worker] Started processing analysis ${analysis.id}`);
 
   let pgn = '';
@@ -135,6 +137,7 @@ export async function processNextJob(): Promise<boolean> {
           .update({ status: stage })
           .eq('id', analysis.id);
         if (error) throw error;
+        notifyReportChanged(analysis.id);
       },
       onMomentReady: async (_moment, allMoments) => {
         const { error } = await supabase
@@ -142,6 +145,7 @@ export async function processNextJob(): Promise<boolean> {
           .update({ moments: allMoments })
           .eq('id', analysis.id);
         if (error) throw error;
+        notifyReportChanged(analysis.id);
       },
     });
 
@@ -159,6 +163,7 @@ export async function processNextJob(): Promise<boolean> {
       })
       .eq('id', analysis.id);
     if (completionError) throw completionError;
+    notifyReportChanged(analysis.id);
 
     const s = result.stageMs;
     console.log(`[Worker] Analysis ${analysis.id} completed successfully in ${result.durationMs}ms with ${result.momentsCount} moments (sweep ${s.sweep}ms, verify ${s.verify}ms, explain ${s.explain}ms, summary ${s.summary}ms, cache ${Math.round(result.cacheHitRate * 100)}%)`);
@@ -184,7 +189,7 @@ export async function processNextJob(): Promise<boolean> {
     const attempts = (analysis.attempts || 0) + 1;
     const shouldRetry = attempts < 3;
 
-    await supabase
+    const { error: failureError } = await supabase
       .from('game_analyses')
       .update({
         status: shouldRetry ? 'pending' : 'failed',
@@ -195,6 +200,8 @@ export async function processNextJob(): Promise<boolean> {
         next_attempt_at: shouldRetry ? new Date(Date.now() + attempts * 60_000).toISOString() : null,
       })
       .eq('id', analysis.id);
+    if (failureError) console.error(`[Worker] Analysis ${analysis.id} failure update failed:`, failureError.message);
+    else notifyReportChanged(analysis.id);
 
     await recordAnalysisError({
       analysisId: analysis.id,
@@ -226,14 +233,18 @@ export async function processNextJob(): Promise<boolean> {
 // requeue jobs another worker is actively running.
 export async function reclaimStaleLeases(): Promise<void> {
   const cutoff = new Date(Date.now() - config.staleLeaseMinutes * 60_000).toISOString();
-  const { error, count } = await supabase
+  const { data, error, count } = await supabase
     .from('game_analyses')
     .update({ status: 'pending', locked_at: null }, { count: 'exact' })
     .in('status', ['sweeping', 'verifying', 'explaining'])
     .or(`locked_at.is.null,locked_at.lt.${cutoff}`)
     .select('id');
   if (error) console.error('[Worker] Failed to reclaim stale leases:', error.message);
-  else if (count) console.log(`[Worker] Reclaimed ${count} stale job lease(s)`);
+  else if (count) {
+    console.log(`[Worker] Reclaimed ${count} stale job lease(s)`);
+    for (const row of (data ?? []) as { id: string }[]) notifyReportChanged(row.id);
+    wakeWorkers();
+  }
 }
 
 export async function startWorker(): Promise<void> {
@@ -253,21 +264,23 @@ export async function startWorker(): Promise<void> {
   // Jobs spend much of their time waiting on the LLM, so a few loops share the
   // Stockfish pool well. Claims are compare-and-swap, so loops never take the
   // same row.
-  // ponytail: loops race for the oldest pending row and the loser idles 1 s;
+  // ponytail: loops race for the oldest pending row and the loser idles until the next wake or 30 s poll;
   // claim with SKIP LOCKED in a Postgres function if the backlog grows large.
   // Alternate which queue is polled first so a scan backlog cannot starve reports.
   let preferScan = false;
   await Promise.all(Array.from({ length: config.workerConcurrency }, async () => {
     while (isRunning) {
       const scanFirst = (preferScan = !preferScan);
+      // Captured before the queue query so a wake during it is not lost.
+      const seen = wakeGeneration();
       try {
         const processed = scanFirst
           ? (await processNextScan()) || (await processNextJob())
           : (await processNextJob()) || (await processNextScan());
-        if (!processed) await sleep(1000);
+        if (!processed) await waitForWake(seen);
       } catch (err) {
         console.error('[Worker] Loop exception:', err);
-        await sleep(2000);
+        await waitForWake(seen, 2000);
       }
     }
   }));
@@ -275,5 +288,6 @@ export async function startWorker(): Promise<void> {
 
 export function stopWorker(): void {
   isRunning = false;
+  wakeWorkers(); // idle loops exit now instead of at their poll
   if (reclaimTimer) { clearInterval(reclaimTimer); reclaimTimer = undefined; }
 }

@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import { supabase } from './supabase.js';
 import { EloBand } from '../types.js';
+import { wakeWorkers } from '../queue/wakeup.js';
 
 export interface PendingReportInput {
   userId: string | null;
@@ -109,5 +110,6 @@ export async function enqueuePendingReport(input: PendingReportInput): Promise<P
     if (prior?.id) return { ...prior, reused: true };
   }
   if (analysisErr || !analysis) fail(analysisErr, 'Failed to insert game analysis');
+  wakeWorkers();
   return { ...(analysis as ExistingAnalysis), reused: false };
 }

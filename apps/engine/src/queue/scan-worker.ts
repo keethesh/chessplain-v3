@@ -2,6 +2,7 @@ import { config } from '../config.js';
 import { supabase } from '../db/supabase.js';
 import { enqueuePendingReport } from '../db/enqueue-report.js';
 import { ChessComInputError, fetchScanGames, type ChessComScanGame } from '../analysis/chesscom.js';
+import { wakeWorkers } from './wakeup.js';
 import { aggregate, analyzedScanGames, analyzeScanGame, recordScanGame, type ScanGame } from '../analysis/scan.js';
 
 interface ScanRow {
@@ -195,5 +196,8 @@ export async function reclaimStaleScanLeases(): Promise<void> {
     .or(`locked_at.is.null,locked_at.lt.${cutoff}`)
     .select('id');
   if (error) console.error('[Worker] Failed to reclaim stale scan leases:', error.message);
-  else if (count) console.log(`[Worker] Reclaimed ${count} stale scan lease(s)`);
+  else if (count) {
+    console.log(`[Worker] Reclaimed ${count} stale scan lease(s)`);
+    wakeWorkers();
+  }
 }
