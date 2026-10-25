@@ -28,6 +28,7 @@ vi.mock('../src/db/supabase.js', () => ({
   supabase: {
     from: (table: string) => {
       let patch: Record<string, unknown> | undefined;
+      let single = false;
       const filters: Array<(row: Record<string, unknown>) => boolean> = [];
       const builder = {
         select: () => builder,
@@ -37,15 +38,16 @@ vi.mock('../src/db/supabase.js', () => ({
         or: () => builder,
         order: () => builder,
         limit: () => builder,
-        maybeSingle: () => builder,
-        single: () => builder,
+        maybeSingle: () => { single = true; return builder; },
+        single: () => { single = true; return builder; },
         then: (resolve: (value: unknown) => unknown) => {
           if (table === 'source_games') return Promise.resolve(resolve({ data: { pgn: 'game', metadata: {} }, error: null }));
           if (!patch) db.reads++;
           const row = table === 'game_analyses' ? db.row : null;
           const matches = row && filters.every(filter => filter(row));
           if (matches && patch) Object.assign(row, patch);
-          return Promise.resolve(resolve({ data: matches ? { ...row } : null, error: null, count: matches ? 1 : 0 }));
+          const data = matches ? (single ? { ...row } : [{ ...row }]) : (single ? null : []);
+          return Promise.resolve(resolve({ data, error: null, count: matches ? 1 : 0 }));
         },
       };
       return builder;

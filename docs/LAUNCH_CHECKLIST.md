@@ -9,14 +9,22 @@ redirects on, premium reconciled, two games analysed at once. Open owner
 items are in section 0; [`PRODUCT_REVIEW.md`](PRODUCT_REVIEW.md) holds the
 reasoning.
 
-Deployed state verified 2026-10-12 (Phase 1 pivot is live):
+Deployed state verified 2026-10-25 (engine notification cutover; web unchanged):
 - `scans` table applied to production with `supabase db query --linked -f
   supabase/migrations/20261011000000_scans.sql` (RLS on, no policies, 5 indexes).
-- Engine commit `1c49c54` (adds `PATCH /api/me` for the saved username), prompt `2026-10-12.3`, `openai/gpt-6-luna` through
-  OpenRouter (key: $10 limit, expires 2026-12-25; account topped up 2026-10-12).
-  `verify-deployment.mjs`: 25/25 READY. A real production scan (Agata16) read
-  10/10 games in 90 s; its example report completed with 3 moments, no fallback
-  text, and the live scan page rendered it on a 390 px screen.
+- Engine commit `f9e356d`: durable Postgres queue with local worker wakeups,
+  local SSE report-change notifications, and 30-second recovery checks.
+  Prompt `2026-10-12.3`, `openai/gpt-6-luna` through OpenRouter are unchanged.
+  GitHub CI passed; VPS build and 191 tests passed; API verifier: 25/25 READY.
+  Two real report submissions were claimed in 140 ms and 216 ms and completed
+  with 4 and 2 moments. External requeues, live progress, mid-report reconnect
+  and completed replay passed. A new Agata16 scan was claimed in 132 ms,
+  completed 10/10 games, and its example report completed with 4 moments and
+  no fallback text. The 2026-10-12 scan-page visual verification remains the
+  last visual check; this engine-only deploy did not change the web Worker.
+  An idle production sample recorded 8 queue reads in 65.7 seconds, a 96.7%
+  lower rate than the preceding day's approximately 321,000 queue reads.
+  This measures request reduction, not a verified billing reduction.
 - Web Worker version `540591bd`: the scan front door, gremlin site, darker
   board, scan wait with duration and running tally, the Pawn Gremlin logo, one
   job per page (dashboard home with one-time username onboarding, settings-only
